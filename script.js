@@ -2,10 +2,12 @@
 // 1. CONFIGURATION SUPABASE
 // ==========================================
 const SUPABASE_URL = 'https://uduajuxobmywmkjnawjn.supabase.co';
+// NOTE : Assurez-vous qu'il s'agit bien de la clé "anon" (publique) et non "service_role".
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVkdWFqdXhvYm15d21ram5hd2puIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc0NjUyMTUsImV4cCI6MjA4MzA0MTIxNX0.Vn1DpT9l9N7sVb3kVUPRqr141hGvM74vkZULJe59YUU';
 
-// Initialisation du client
-const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+// Initialisation du client (changement de nom pour éviter le conflit avec la librairie globale)
+// Assurez-vous d'avoir importé supabase-js via CDN ou npm avant ce script.
+const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // ==========================================
 // 2. GESTION UTILISATEUR (AUTH)
@@ -14,13 +16,16 @@ let currentUser = null;
 
 // Vérifier au démarrage si l'utilisateur est déjà connecté
 async function checkSession() {
-    const { data: { session } } = await supabase.auth.getSession();
+    const { data: { session } } = await supabaseClient.auth.getSession();
     if (session) {
         loginSuccess(session.user);
     } else {
         // Afficher la page de login si pas connecté
-        document.getElementById('login-page').classList.remove('hidden');
-        document.getElementById('login-page').classList.remove('opacity-0');
+        const loginPage = document.getElementById('login-page');
+        if (loginPage) {
+            loginPage.classList.remove('hidden');
+            loginPage.classList.remove('opacity-0');
+        }
     }
 }
 
@@ -41,14 +46,21 @@ function loginSuccess(user) {
     
     // Transition fluide : Cacher Login -> Afficher App
     const loginPage = document.getElementById('login-page');
-    loginPage.classList.add('opacity-0', 'transition-opacity', 'duration-500');
-    
-    setTimeout(() => {
-        loginPage.classList.add('hidden');
-        document.getElementById('main-app').classList.remove('hidden');
-        // Charger les données de l'app
+    if (loginPage) {
+        loginPage.classList.add('opacity-0', 'transition-opacity', 'duration-500');
+        
+        setTimeout(() => {
+            loginPage.classList.add('hidden');
+            const mainApp = document.getElementById('main-app');
+            if (mainApp) mainApp.classList.remove('hidden');
+            
+            // Charger les données de l'app
+            loadAppData();
+        }, 500);
+    } else {
+        // Si pas de page login (développement), on charge direct
         loadAppData();
-    }, 500);
+    }
 }
 
 function updateUIProfile() {
@@ -72,12 +84,12 @@ async function handleSignUp() {
 
     if(!email || !password) return alert("Veuillez remplir email et mot de passe !");
 
-    const { data, error } = await supabase.auth.signUp({ email, password });
+    const { data, error } = await supabaseClient.auth.signUp({ email, password });
 
     if (error) {
         alert("Erreur : " + error.message);
     } else {
-        alert("Inscription réussie ! Vérifiez vos emails pour confirmer (si la confirmation est activée), ou connectez-vous.");
+        alert("Inscription réussie ! Vérifiez vos emails pour confirmer, ou connectez-vous.");
     }
 }
 
@@ -86,7 +98,7 @@ async function handleLogin() {
     const email = document.getElementById('login-email').value;
     const password = document.getElementById('login-password').value;
 
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
 
     if (error) {
         alert("Erreur de connexion : " + error.message);
@@ -97,7 +109,7 @@ async function handleLogin() {
 
 // Déconnexion
 async function logout() {
-    await supabase.auth.signOut();
+    await supabaseClient.auth.signOut();
     location.reload();
 }
 
@@ -109,7 +121,7 @@ function loadAppData() {
     fetchPosts();          // Charger les messages de la base de données
     subscribeToRealtime(); // Écouter les nouveaux messages
     
-    // Charger les éléments visuels
+    // Charger les éléments visuels (Fonctions placeholders ajoutées plus bas pour éviter les erreurs)
     renderStories();
     renderPrayers();
     renderMessagesList();
@@ -134,11 +146,18 @@ function loadAppData() {
     }
 }
 
+// --- PLACEHOLDERS POUR EVITER LES ERREURS ---
+// Ces fonctions étaient appelées mais n'existaient pas dans votre code
+function renderStories() { console.log("Chargement des stories..."); }
+function renderPrayers() { console.log("Chargement des prières..."); }
+function renderMessagesList() { console.log("Chargement des messages..."); }
+function renderReels() { console.log("Chargement des réels..."); }
+
 // --- POSTS (Base de données) ---
 
 // A. Récupérer les messages existants
 async function fetchPosts() {
-    const { data, error } = await supabase
+    const { data, error } = await supabaseClient
         .from('posts')
         .select('*')
         .order('created_at', { ascending: false });
@@ -152,23 +171,31 @@ async function fetchPosts() {
 
 // B. Écouter le TEMPS RÉEL
 function subscribeToRealtime() {
-    supabase.channel('public:posts')
+    supabaseClient.channel('public:posts')
         .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'posts' }, (payload) => {
             console.log('Nouveau post !', payload.new);
             addPostToHTML(payload.new, true); // true = ajouter en haut
+            
+            // IMPORTANT : Recharger les icônes pour le nouvel élément
+            if(typeof lucide !== 'undefined') lucide.createIcons();
         })
         .subscribe();
 }
 
 // C. Publier un message
 async function publishPost() {
+    if (!currentUser) {
+        alert("Vous devez être connecté pour publier.");
+        return;
+    }
+
     const input = document.getElementById('new-post-input');
     const content = input.value;
 
     if (!content.trim()) return;
 
     // Envoi vers Supabase (Table 'posts')
-    const { error } = await supabase
+    const { error } = await supabaseClient
         .from('posts')
         .insert([
             { 
@@ -189,6 +216,8 @@ async function publishPost() {
 
 function renderPostsList(postsData) {
     const container = document.getElementById('posts-container');
+    if (!container) return;
+    
     container.innerHTML = ''; // Vider le container
 
     if (!postsData || postsData.length === 0) {
@@ -197,15 +226,17 @@ function renderPostsList(postsData) {
     }
 
     postsData.forEach(post => addPostToHTML(post, false));
-    lucide.createIcons();
+    if(typeof lucide !== 'undefined') lucide.createIcons();
 }
 
 function addPostToHTML(post, isNew) {
     const container = document.getElementById('posts-container');
+    if (!container) return;
     
     // Conversion de la date Supabase en heure lisible
     const timeString = new Date(post.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
 
+    // Correction de la structure HTML (fermeture des divs corrigée)
     const postHTML = `
         <div class="bg-gray-800/40 backdrop-blur-xl rounded-2xl p-4 border border-purple-500/30 transition-all hover:bg-gray-800/60 mb-4 ${isNew ? 'animate-pulse' : ''}">
             <div class="flex items-center justify-between mb-3">
@@ -220,28 +251,32 @@ function addPostToHTML(post, isNew) {
                 </div>
                 <button class="text-gray-400 hover:text-white"><i data-lucide="more-vertical" class="w-4 h-4"></i></button>
             </div>
+            
             <p class="text-purple-100 mb-4 text-sm sm:text-base leading-relaxed whitespace-pre-wrap">${post.content}</p>
-                    <div class="flex items-center justify-between border-t border-purple-500/30 pt-3">
-                        <button class="flex items-center space-x-2 text-purple-300 hover:text-pink-400 transition-colors">
-                            <i data-lucide="heart" class="w-5 h-5"></i>
-                            <span class="text-sm">0</span>
-                        </button>
-                        <button class="flex items-center space-x-2 text-purple-300 hover:text-pink-400 transition-colors">
-                            <i data-lucide="message-circle" class="w-5 h-5"></i>
-                            <span class="text-sm">0</span>
-                        </button>
-                        <button class="flex items-center space-x-2 text-purple-300 hover:text-pink-400 transition-colors">
-                            <i data-lucide="share-2" class="w-5 h-5"></i>
-                            <span class="text-sm">Partager</span>
-                        </button>
-                                </div>
-                            </div>
-                        `;
-                
-                if (isNew) {
-                    container.insertAdjacentHTML('afterbegin', postHTML);
-                } else {
-                    container.insertAdjacentHTML('beforeend', postHTML);
-                }
-            }
-                
+            
+            <div class="flex items-center justify-between border-t border-purple-500/30 pt-3">
+                <button class="flex items-center space-x-2 text-purple-300 hover:text-pink-400 transition-colors">
+                    <i data-lucide="heart" class="w-5 h-5"></i>
+                    <span class="text-sm">0</span>
+                </button>
+                <button class="flex items-center space-x-2 text-purple-300 hover:text-pink-400 transition-colors">
+                    <i data-lucide="message-circle" class="w-5 h-5"></i>
+                    <span class="text-sm">0</span>
+                </button>
+                <button class="flex items-center space-x-2 text-purple-300 hover:text-pink-400 transition-colors">
+                    <i data-lucide="share-2" class="w-5 h-5"></i>
+                    <span class="text-sm">Partager</span>
+                </button>
+            </div>
+        </div>
+    `;
+    
+    if (isNew) {
+        container.insertAdjacentHTML('afterbegin', postHTML);
+    } else {
+        container.insertAdjacentHTML('beforeend', postHTML);
+    }
+}
+
+// Lancement automatique au chargement de la page
+document.addEventListener('DOMContentLoaded', checkSession);
