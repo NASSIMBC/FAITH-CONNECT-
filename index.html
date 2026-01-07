@@ -11,18 +11,11 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
-        /* Animation fluide */
         .animate-fade-in { animation: fadeIn 0.3s ease-out; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-
-        /* Cache la barre de scroll mais garde le scroll actif */
         .scrollbar-hide::-webkit-scrollbar { display: none; }
         .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
-
-        /* Animation de chargement pour les boutons */
         .loading { pointer-events: none; opacity: 0.7; }
-        
-        /* Ajustement Safe Area pour iPhone récents */
         body { padding-bottom: env(safe-area-inset-bottom); }
     </style>
 </head>
@@ -40,24 +33,12 @@
                 <h1 class="text-3xl font-bold text-white mb-2">FAITH CONNECT</h1>
                 <p class="text-gray-400 text-sm">Votre communauté de foi connectée.</p>
             </div>
-            
             <div class="space-y-4">
-                <div>
-                    <label class="text-xs text-purple-300 ml-1 mb-1 block font-medium">Email</label>
-                    <input id="login-email" type="email" placeholder="hello@exemple.com" class="w-full px-4 py-3 bg-gray-900/50 border border-white/10 rounded-xl text-white focus:outline-none focus:border-purple-500 transition-all placeholder-gray-600 text-sm">
-                </div>
-                <div>
-                    <label class="text-xs text-purple-300 ml-1 mb-1 block font-medium">Mot de passe</label>
-                    <input id="login-password" type="password" placeholder="••••••••" class="w-full px-4 py-3 bg-gray-900/50 border border-white/10 rounded-xl text-white focus:outline-none focus:border-purple-500 transition-all placeholder-gray-600 text-sm">
-                </div>
-                
+                <input id="login-email" type="email" placeholder="Email" class="w-full px-4 py-3 bg-gray-900/50 border border-white/10 rounded-xl text-white focus:outline-none focus:border-purple-500 transition-all placeholder-gray-600 text-sm">
+                <input id="login-password" type="password" placeholder="Mot de passe" class="w-full px-4 py-3 bg-gray-900/50 border border-white/10 rounded-xl text-white focus:outline-none focus:border-purple-500 transition-all placeholder-gray-600 text-sm">
                 <div class="flex flex-col gap-3 mt-6">
-                    <button onclick="handleLogin()" class="w-full py-3.5 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl font-bold shadow-lg shadow-purple-900/50 active:scale-95 transition-transform text-sm">
-                        Se connecter
-                    </button>
-                    <button onclick="handleSignUp()" class="w-full py-3.5 bg-transparent border border-white/10 text-gray-300 hover:text-white rounded-xl font-semibold transition-colors text-sm">
-                        Créer un compte
-                    </button>
+                    <button onclick="handleLogin()" class="w-full py-3.5 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl font-bold shadow-lg active:scale-95 transition-transform text-sm">Se connecter</button>
+                    <button onclick="handleSignUp()" class="w-full py-3.5 bg-transparent border border-white/10 text-gray-300 hover:text-white rounded-xl font-semibold transition-colors text-sm">Créer un compte</button>
                 </div>
             </div>
         </div>
@@ -70,31 +51,26 @@
                 <i data-lucide="cross" class="w-6 h-6 text-purple-500"></i>
                 <h1 class="text-lg font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">FAITH CONNECT</h1>
             </div>
-            
-            <div class="flex items-center gap-4">
-                <div class="relative">
-                    <button onclick="toggleNotifDropdown()" class="p-2 rounded-full hover:bg-white/5 transition-colors relative">
-                        <i data-lucide="bell" class="w-5 h-5 text-gray-400"></i>
-                        <span id="notif-badge" class="hidden absolute top-1 right-1 w-2.5 h-2.5 bg-pink-500 rounded-full border border-gray-900"></span>
-                    </button>
-                    <div id="notif-dropdown" class="hidden absolute right-0 mt-3 w-72 bg-gray-800 border border-white/10 rounded-xl shadow-xl z-50 overflow-hidden">
-                        <div id="notif-list" class="max-h-64 overflow-y-auto">
-                            <div class="p-4 text-center text-xs text-gray-500">Rien pour le moment 🍃</div>
-                        </div>
-                    </div>
+            <div class="relative">
+                <button onclick="toggleNotifDropdown()" class="p-2 rounded-full hover:bg-white/5 transition-colors relative">
+                    <i data-lucide="bell" class="w-5 h-5 text-gray-400"></i>
+                    <span id="notif-badge" class="hidden absolute top-1 right-1 w-2.5 h-2.5 bg-pink-500 rounded-full border border-gray-900"></span>
+                </button>
+                <div id="notif-dropdown" class="hidden absolute right-0 mt-3 w-72 bg-gray-800 border border-white/10 rounded-xl shadow-xl z-50 overflow-hidden">
+                    <div id="notif-list" class="max-h-64 overflow-y-auto"><div class="p-4 text-center text-xs text-gray-500">Rien pour le moment 🍃</div></div>
                 </div>
             </div>
         </header>
 
-        <div id="main-content" class="flex-1 overflow-y-auto bg-gray-900 relative w-full pb-20">
-            <div class="max-w-4xl mx-auto p-4 min-h-full">
+        <div id="main-content" class="flex-1 overflow-y-auto bg-gray-900 relative w-full pb-24">
+            <div class="max-w-xl mx-auto p-4 min-h-full">
                 
                 <div id="view-home" class="space-y-6">
                     <div class="relative group">
                         <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                            <i data-lucide="search" class="h-5 w-5 text-gray-500 group-focus-within:text-purple-400 transition-colors"></i>
+                            <i data-lucide="search" class="h-5 w-5 text-gray-500"></i>
                         </div>
-                        <input type="text" onkeyup="searchUsers(this.value)" placeholder="Rechercher un ami..." class="block w-full pl-10 pr-3 py-3 border border-white/10 rounded-xl leading-5 bg-gray-800/50 text-gray-300 placeholder-gray-500 focus:outline-none focus:bg-gray-800 focus:border-purple-500/50 transition-all text-sm">
+                        <input type="text" onkeyup="searchUsers(this.value)" placeholder="Rechercher un ami..." class="block w-full pl-10 pr-3 py-3 border border-white/10 rounded-xl bg-gray-800/50 text-gray-300 placeholder-gray-500 focus:outline-none focus:bg-gray-800 focus:border-purple-500/50 transition-all text-sm">
                         <div id="search-results" class="hidden absolute mt-1 w-full bg-gray-800 border border-white/10 rounded-xl shadow-2xl z-50 overflow-hidden max-h-60 overflow-y-auto"></div>
                     </div>
 
@@ -116,9 +92,7 @@
                                         <i data-lucide="image" class="w-5 h-5"></i>
                                         <input type="file" id="post-image-file" accept="image/*" class="hidden" onchange="handleImageSelect(this)">
                                     </label>
-                                    <button onclick="publishPost()" id="btn-publish" class="px-4 py-1.5 bg-purple-600 rounded-full text-xs font-bold text-white flex items-center gap-2">
-                                        <span>Publier</span><i data-lucide="send" class="w-3 h-3"></i>
-                                    </button>
+                                    <button onclick="publishPost()" id="btn-publish" class="px-4 py-1.5 bg-purple-600 rounded-full text-xs font-bold text-white flex items-center gap-2"><span>Publier</span><i data-lucide="send" class="w-3 h-3"></i></button>
                                 </div>
                             </div>
                         </div>
@@ -137,11 +111,9 @@
                 </div>
 
                 <div id="view-reels" class="hidden absolute inset-0 bg-black z-40 flex flex-col">
-                     <div class="absolute top-4 left-0 right-0 z-50 px-4 flex justify-between items-center pt-safe">
+                    <div class="absolute top-4 left-0 right-0 z-50 px-4 flex justify-between items-center pt-safe">
                         <h2 class="text-xl font-bold text-white shadow-lg">Reels Spirituels</h2>
-                        <button onclick="openAddReelModal()" class="bg-purple-600 p-3 rounded-full shadow-xl active:scale-90 transition-transform">
-                            <i data-lucide="plus" class="w-6 h-6 text-white"></i>
-                        </button>
+                        <button onclick="openAddReelModal()" class="bg-purple-600 p-3 rounded-full shadow-xl active:scale-90 transition-transform"><i data-lucide="plus" class="w-6 h-6 text-white"></i></button>
                     </div>
                     <div id="reels-container" class="space-y-4 flex-1 overflow-y-auto snap-y snap-mandatory scrollbar-hide bg-black"></div> 
                 </div>
@@ -151,30 +123,22 @@
                         <div id="profile-avatar-big" class="w-24 h-24 mx-auto rounded-full bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center text-3xl font-bold border-4 border-gray-900 shadow-xl mb-4 overflow-hidden object-cover"></div>
                         <h2 id="profile-name" class="text-2xl font-bold text-white uppercase">Utilisateur</h2>
                         <p id="profile-email" class="text-purple-400/80 text-sm mb-6">@utilisateur</p>
-                        
                         <div class="inline-flex items-center gap-2 bg-gray-900/50 px-4 py-2 rounded-full border border-white/5 mb-6">
-                            <span id="status-emoji-display">👋</span>
-                            <span id="status-text-display" class="text-sm text-gray-300 italic">Mon statut</span>
-                            <button onclick="updateMyStatus()" class="ml-2 text-[10px] text-purple-400 font-bold">MODIFIER</button>
+                            <span id="status-emoji-display">👋</span><span id="status-text-display" class="text-sm text-gray-300 italic">Mon statut</span><button onclick="updateMyStatus()" class="ml-2 text-[10px] text-purple-400 font-bold">MODIFIER</button>
                         </div>
-
                         <div class="grid grid-cols-3 gap-4 mb-8">
                             <div class="bg-gray-900/50 p-3 rounded-2xl border border-white/5"><div class="text-xl font-bold">0</div><div class="text-[10px] text-gray-500 uppercase">Posts</div></div>
                             <div class="bg-gray-900/50 p-3 rounded-2xl border border-white/5"><div class="text-xl font-bold" id="stats-friends-count">0</div><div class="text-[10px] text-gray-500 uppercase">Amis</div></div>
                             <div class="bg-gray-900/50 p-3 rounded-2xl border border-white/5"><div class="text-xl font-bold">0</div><div class="text-[10px] text-gray-500 uppercase">Prières</div></div>
                         </div>
-
                         <div class="flex justify-center gap-3 mb-8">
                             <button onclick="openEditModal()" class="px-6 py-2.5 bg-white text-gray-900 rounded-xl font-bold text-sm">Éditer</button>
                             <button onclick="logout()" class="px-6 py-2.5 bg-red-500/10 text-red-400 border border-red-500/20 rounded-xl font-bold text-sm">Déconnexion</button>
                         </div>
-
                         <div class="border-t border-white/10 pt-6">
                             <div class="flex items-center justify-center space-x-8 mb-4">
                                 <button id="tab-friends" onclick="switchProfileTab('friends')" class="pb-2 text-sm font-bold text-purple-400 border-b-2 border-purple-400">Mes Amis</button>
-                                <button id="tab-requests" onclick="switchProfileTab('requests')" class="pb-2 text-sm font-bold text-gray-500 relative">
-                                    Demandes <span id="profile-req-badge" class="hidden bg-pink-500 text-white text-[9px] px-1.5 py-0.5 rounded-full absolute -top-1 -right-4">0</span>
-                                </button>
+                                <button id="tab-requests" onclick="switchProfileTab('requests')" class="pb-2 text-sm font-bold text-gray-500 relative">Demandes <span id="profile-req-badge" class="hidden bg-pink-500 text-white text-[9px] px-1.5 py-0.5 rounded-full absolute -top-1 -right-4">0</span></button>
                             </div>
                             <div id="profile-social-list" class="space-y-3 px-1"></div>
                         </div>
@@ -198,13 +162,9 @@
 
         <div id="view-live" class="hidden absolute top-16 bottom-16 left-0 right-0 h-full flex flex-col bg-black z-40">
             <div class="flex-none bg-black aspect-video relative border-b border-white/10 mt-safe">
-                <div class="absolute top-4 left-4 bg-red-600 px-3 py-1 rounded-full text-[10px] font-bold flex items-center gap-2 z-20">
-                    <div class="w-2 h-2 bg-white rounded-full animate-pulse"></div> EN DIRECT
-                </div>
+                <div class="absolute top-4 left-4 bg-red-600 px-3 py-1 rounded-full text-[10px] font-bold flex items-center gap-2 z-20"><div class="w-2 h-2 bg-white rounded-full animate-pulse"></div> EN DIRECT</div>
                 <img src="https://images.unsplash.com/photo-1515162305285-0293e4767cc2?auto=format&fit=crop&q=80&w=1000" class="w-full h-full object-cover opacity-60">
-                <div class="absolute inset-0 flex items-center justify-center">
-                    <button class="w-16 h-16 bg-white/10 backdrop-blur-md rounded-full flex items-center justify-center border border-white/20"><i data-lucide="play" class="w-8 h-8 text-white fill-white"></i></button>
-                </div>
+                <div class="absolute inset-0 flex items-center justify-center"><button class="w-16 h-16 bg-white/10 backdrop-blur-md rounded-full flex items-center justify-center border border-white/20"><i data-lucide="play" class="w-8 h-8 text-white fill-white"></i></button></div>
             </div>
             <div class="flex-1 flex flex-col bg-gray-900/80">
                 <div id="live-chat-messages" class="flex-1 overflow-y-auto p-4 space-y-3 text-sm"></div>
@@ -255,14 +215,8 @@
                     <input type="file" id="edit-avatar-input" accept="image/*" class="hidden" onchange="handleAvatarPreview(this)">
                     <p class="text-[10px] text-gray-400 mt-2 uppercase font-bold">Changer la photo</p>
                 </div>
-                <div>
-                    <label class="text-[10px] text-gray-500 uppercase font-bold mb-1 block">Pseudo</label>
-                    <input id="edit-username" type="text" class="w-full bg-gray-900 border border-white/10 rounded-xl p-3 text-sm focus:border-purple-500 outline-none">
-                </div>
-                <div>
-                    <label class="text-[10px] text-gray-500 uppercase font-bold mb-1 block">Bio / Statut</label>
-                    <textarea id="edit-bio" class="w-full bg-gray-900 border border-white/10 rounded-xl p-3 text-sm h-24 focus:border-purple-500 outline-none resize-none"></textarea>
-                </div>
+                <input id="edit-username" type="text" class="w-full bg-gray-900 border border-white/10 rounded-xl p-3 text-sm focus:border-purple-500 outline-none">
+                <textarea id="edit-bio" class="w-full bg-gray-900 border border-white/10 rounded-xl p-3 text-sm h-24 focus:border-purple-500 outline-none resize-none"></textarea>
                 <button onclick="saveProfile()" class="w-full bg-white text-gray-900 font-bold py-3.5 rounded-xl">Enregistrer</button>
             </div>
         </div>
@@ -270,13 +224,12 @@
     
     <div id="add-reel-modal" class="hidden fixed inset-0 z-[110] bg-black/90 backdrop-blur-md flex items-center justify-center p-4">
         <div class="bg-gray-800 p-6 rounded-3xl w-full max-w-sm border border-white/10 shadow-2xl">
-            <h2 class="text-lg font-bold mb-4">Partager un Short / TikTok</h2>
-            <p class="text-xs text-gray-400 mb-4">Collez le lien YouTube Shorts pour partager votre témoignage.</p>
-            <input id="reel-url" type="text" placeholder="Lien YouTube Shorts..." class="w-full bg-gray-900 border border-white/10 rounded-xl p-3 text-sm text-white mb-3 outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500">
-            <textarea id="reel-caption" placeholder="Une petite description..." class="w-full bg-gray-900 border border-white/10 rounded-xl p-3 text-sm text-white mb-4 h-20 resize-none outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500"></textarea>
+            <h2 class="text-lg font-bold mb-4">Partager un Reel</h2>
+            <input id="reel-url" type="text" placeholder="Lien YouTube Shorts..." class="w-full bg-gray-900 border border-white/10 rounded-xl p-3 text-sm text-white mb-3 outline-none focus:border-purple-500">
+            <textarea id="reel-caption" placeholder="Description..." class="w-full bg-gray-900 border border-white/10 rounded-xl p-3 text-sm text-white mb-4 h-20 resize-none outline-none focus:border-purple-500"></textarea>
             <div class="flex gap-2">
-                <button onclick="closeAddReelModal()" class="flex-1 py-3 text-gray-400 font-bold hover:text-white transition-colors">Annuler</button>
-                <button onclick="saveReel()" class="flex-1 bg-purple-600 py-3 rounded-xl font-bold hover:bg-purple-700 transition-colors shadow-lg shadow-purple-900/50">Partager</button>
+                <button onclick="closeAddReelModal()" class="flex-1 py-3 text-gray-400 font-bold hover:text-white">Annuler</button>
+                <button onclick="saveReel()" class="flex-1 bg-purple-600 py-3 rounded-xl font-bold hover:bg-purple-700 shadow-lg shadow-purple-900/50">Partager</button>
             </div>
         </div>
     </div>
@@ -298,20 +251,12 @@
             </div>
         </div>
         <div class="flex-1 flex items-center justify-center relative"><img id="story-viewer-image" src="" class="max-h-full max-w-full object-contain"></div>
-        <div id="story-delete-btn-container" class="absolute bottom-10 right-4 z-20"></div>
     </div>
 
     <script src="script.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             if(typeof lucide !== 'undefined') lucide.createIcons();
-            // Fix pour la hauteur sur mobile (supprime l'effet de rebond)
-            const setVh = () => {
-                let vh = window.innerHeight * 0.01;
-                document.documentElement.style.setProperty('--vh', `${vh}px`);
-            };
-            window.addEventListener('resize', setVh);
-            setVh();
         });
     </script>
 </body>
