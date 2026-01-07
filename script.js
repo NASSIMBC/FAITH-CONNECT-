@@ -77,21 +77,16 @@ function switchView(viewName) {
         const btn = document.getElementById('nav-' + v);
         if(btn) { btn.classList.remove('text-purple-400'); btn.classList.add('text-gray-500'); }
     });
-
     const target = document.getElementById('view-' + viewName);
     if(target) target.classList.remove('hidden');
-    
     const activeBtn = document.getElementById('nav-' + viewName);
     if(activeBtn) { activeBtn.classList.remove('text-gray-500'); activeBtn.classList.add('text-purple-400'); }
-
     if (viewName === 'live') fetchLiveMessages();
     if (viewName === 'messages') {
         document.getElementById('msg-badge').classList.add('hidden');
         if(!activeChatUser) resetChat();
     }
-    if (viewName === 'profile') {
-        switchProfileTab('friends'); 
-    }
+    if (viewName === 'profile') switchProfileTab('friends'); 
     if(viewName !== 'messages' && viewName !== 'public-profile') activeChatUser = null;
 }
 
@@ -123,14 +118,12 @@ function updateUIProfile() {
     const initials = userProfile.username ? userProfile.username.substring(0, 2).toUpperCase() : "??";
     document.querySelectorAll('#user-display, #profile-name').forEach(el => el.innerText = userProfile.username);
     if(document.getElementById('profile-email')) document.getElementById('profile-email').innerText = "@" + userProfile.username;
-    
     const textDisplay = document.getElementById('status-text-display');
     const emojiDisplay = document.getElementById('status-emoji-display');
     if (textDisplay && emojiDisplay) {
         textDisplay.innerText = userProfile.status_text || "Ajouter un statut...";
         emojiDisplay.innerText = userProfile.status_emoji || "👋";
     }
-
     const avatarElements = ['current-user-avatar-small', 'profile-avatar-big'];
     avatarElements.forEach(id => {
         const el = document.getElementById(id);
@@ -139,8 +132,7 @@ function updateUIProfile() {
             el.innerHTML = `<img src="${userProfile.avatar_url}" class="w-full h-full object-cover rounded-full">`;
             el.innerText = ""; 
         } else {
-            el.innerHTML = ""; 
-            el.innerText = initials;
+            el.innerHTML = ""; el.innerText = initials;
         }
     });
 }
@@ -155,9 +147,7 @@ function openEditModal() {
     selectedAvatarFile = null;
 }
 
-function closeEditModal() { 
-    document.getElementById('edit-profile-modal').classList.add('hidden'); 
-}
+function closeEditModal() { document.getElementById('edit-profile-modal').classList.add('hidden'); }
 
 function handleAvatarPreview(input) {
     if (input.files && input.files[0]) {
@@ -173,8 +163,7 @@ async function saveProfile() {
     const newBio = document.getElementById('edit-bio').value;
     const btn = document.querySelector('#edit-profile-modal button:last-child');
     if (!newUsername.trim()) return alert("Pseudo requis");
-    btn.innerText = "Sauvegarde...";
-    btn.disabled = true;
+    btn.innerText = "Sauvegarde..."; btn.disabled = true;
     try {
         let finalAvatarUrl = userProfile.avatar_url; 
         if (selectedAvatarFile) {
@@ -185,22 +174,11 @@ async function saveProfile() {
             const { data } = supabaseClient.storage.from('avatars').getPublicUrl(fileName);
             finalAvatarUrl = data.publicUrl;
         }
-        const { error } = await supabaseClient.from('profiles').update({ 
-            username: newUsername, bio: newBio, avatar_url: finalAvatarUrl 
-        }).eq('id', currentUser.id);
+        const { error } = await supabaseClient.from('profiles').update({ username: newUsername, bio: newBio, avatar_url: finalAvatarUrl }).eq('id', currentUser.id);
         if (error) throw error;
-        userProfile.username = newUsername;
-        userProfile.bio = newBio;
-        userProfile.avatar_url = finalAvatarUrl;
-        updateUIProfile();
-        closeEditModal();
-        alert("Profil mis à jour !");
-    } catch (error) {
-        alert("Erreur : " + error.message);
-    } finally {
-        btn.innerText = "Enregistrer";
-        btn.disabled = false;
-    }
+        userProfile.username = newUsername; userProfile.bio = newBio; userProfile.avatar_url = finalAvatarUrl;
+        updateUIProfile(); closeEditModal(); alert("Profil mis à jour !");
+    } catch (error) { alert("Erreur : " + error.message); } finally { btn.innerText = "Enregistrer"; btn.disabled = false; }
 }
 
 // ==========================================
@@ -210,9 +188,7 @@ async function saveProfile() {
 async function getFriendIds() {
     const { data } = await supabaseClient.from('friendships').select('requester_id, receiver_id').eq('status', 'accepted').or(`requester_id.eq.${currentUser.id},receiver_id.eq.${currentUser.id}`);
     const friendIds = new Set([currentUser.id]); 
-    if (data) {
-        data.forEach(f => { friendIds.add(f.requester_id === currentUser.id ? f.receiver_id : f.requester_id); });
-    }
+    if (data) data.forEach(f => { friendIds.add(f.requester_id === currentUser.id ? f.receiver_id : f.requester_id); });
     return Array.from(friendIds);
 }
 
@@ -222,12 +198,12 @@ async function switchProfileTab(tabName) {
     const container = document.getElementById('profile-social-list');
     if(!btnFriends || !btnRequests || !container) return;
     if(tabName === 'friends') {
-        btnFriends.className = "pb-2 text-sm font-bold text-purple-400 border-b-2 border-purple-400 transition-all";
-        btnRequests.className = "pb-2 text-sm font-bold text-gray-500 hover:text-white transition-all relative";
+        btnFriends.className = "pb-2 text-sm font-bold text-purple-400 border-b-2 border-purple-400";
+        btnRequests.className = "pb-2 text-sm font-bold text-gray-500 hover:text-white";
         await fetchMyFriendsList(container);
     } else {
-        btnRequests.className = "pb-2 text-sm font-bold text-purple-400 border-b-2 border-purple-400 transition-all relative";
-        btnFriends.className = "pb-2 text-sm font-bold text-gray-500 hover:text-white transition-all";
+        btnRequests.className = "pb-2 text-sm font-bold text-purple-400 border-b-2 border-purple-400";
+        btnFriends.className = "pb-2 text-sm font-bold text-gray-500 hover:text-white";
         await fetchMyRequestsList(container);
     }
 }
@@ -241,7 +217,7 @@ async function fetchMyFriendsList(container) {
     container.innerHTML = '';
     if(profiles) profiles.forEach(p => {
         const avatarHtml = p.avatar_url ? `<img src="${p.avatar_url}" class="w-10 h-10 rounded-full object-cover">` : `<div class="w-10 h-10 rounded-full bg-purple-600 flex items-center justify-center font-bold text-xs text-white">${p.username.substring(0,2).toUpperCase()}</div>`;
-        container.insertAdjacentHTML('beforeend', `<div class="flex items-center justify-between bg-gray-900/50 p-3 rounded-2xl border border-white/5 mb-2"><div class="flex items-center gap-3">${avatarHtml}<div class="text-left"><p class="text-sm font-bold text-white">${p.username}</p><p class="text-[10px] text-gray-500 truncate w-24">${p.status_text || 'En ligne'}</p></div></div><div class="flex gap-2"><button onclick="openDirectChat('${p.id}', '${p.username}')" class="p-2 bg-purple-600/20 text-purple-400 rounded-xl hover:bg-purple-600 hover:text-white"><i data-lucide="message-circle" class="w-4 h-4"></i></button><button onclick="removeFriend('${p.id}')" class="p-2 bg-red-600/10 text-red-400 rounded-xl hover:bg-red-600 hover:text-white"><i data-lucide="user-minus" class="w-4 h-4"></i></button></div></div>`);
+        container.insertAdjacentHTML('beforeend', `<div class="flex items-center justify-between bg-gray-900/50 p-3 rounded-2xl border border-white/5 mb-2"><div class="flex items-center gap-3">${avatarHtml}<div class="text-left"><p class="text-sm font-bold text-white">${p.username}</p><p class="text-[10px] text-gray-500 truncate w-24">${p.status_text || 'En ligne'}</p></div></div><div class="flex gap-2"><button onclick="openDirectChat('${p.id}', '${p.username}')" class="p-2 bg-purple-600/20 text-purple-400 rounded-xl hover:bg-purple-600"><i data-lucide="message-circle" class="w-4 h-4"></i></button><button onclick="removeFriend('${p.id}')" class="p-2 bg-red-600/10 text-red-400 rounded-xl hover:bg-red-600"><i data-lucide="user-minus" class="w-4 h-4"></i></button></div></div>`);
     });
     if(typeof lucide !== 'undefined') lucide.createIcons();
     const countEl = document.getElementById('stats-friends-count');
@@ -268,8 +244,7 @@ async function fetchMyRequestsList(container) {
 async function removeFriend(friendId) {
     if(!confirm("Retirer cet ami ?")) return;
     await supabaseClient.from('friendships').delete().or(`and(requester_id.eq.${currentUser.id},receiver_id.eq.${friendId}),and(requester_id.eq.${friendId},receiver_id.eq.${currentUser.id})`);
-    switchProfileTab('friends');
-    updateFriendCount(currentUser.id);
+    switchProfileTab('friends'); updateFriendCount(currentUser.id);
 }
 
 // ==========================================
@@ -310,8 +285,7 @@ async function loadConversations() {
 }
 
 function startChat(targetProfile) {
-    activeChatUser = targetProfile;
-    switchView('messages');
+    activeChatUser = targetProfile; switchView('messages');
     document.getElementById('chat-with-name').innerHTML = `<span class="text-purple-400">@</span>${targetProfile.username}`;
     const input = document.getElementById('chat-input');
     if(input) { input.disabled = false; input.focus(); }
@@ -365,7 +339,7 @@ async function sendLiveMessage() {
 }
 
 // ==========================================
-// 8. GESTION DES POSTS (STABLE VERSION)
+// 8. GESTION DES POSTS (STABLE & CORRIGÉE)
 // ==========================================
 
 function handleImageSelect(input) {
@@ -399,17 +373,13 @@ async function publishPost() {
     } catch (error) { alert("Erreur : " + error.message); } finally { btn.innerHTML = 'Publier'; btn.disabled = false; }
 }
 
-// --- D. Affichage des Posts (FIXÉ POUR RÉAPPARITION) ---
 async function fetchPosts() {
     const container = document.getElementById('posts-container');
     if(!container) return;
     try {
         const friendIds = await getFriendIds();
-        // 1. Récupération des posts
         const { data: posts, error: postError } = await supabaseClient.from('posts').select('*, profiles:user_id(avatar_url)').in('user_id', friendIds).order('created_at', { ascending: false });
         if (postError) throw postError;
-
-        // 2. Récupération des likes séparément
         const { data: allLikes } = await supabaseClient.from('likes').select('post_id, user_id');
         
         container.innerHTML = ''; 
@@ -417,13 +387,11 @@ async function fetchPosts() {
             container.innerHTML = `<div class="text-center py-10 px-4"><p class="text-gray-500 italic">Aucune publication... 🍃</p></div>`;
             return;
         }
-
         posts.forEach(post => {
             const isMyPost = post.user_id === currentUser.id;
             const date = new Date(post.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
             const userAvatarUrl = post.profiles && post.profiles.avatar_url;
             const avatarHtml = userAvatarUrl ? `<img src="${userAvatarUrl}" class="w-8 h-8 rounded-full object-cover border border-white/10 shadow-lg">` : `<div class="w-8 h-8 bg-gradient-to-tr from-purple-500 to-pink-500 rounded-full flex items-center justify-center font-bold text-white text-[10px] shadow-lg">${post.avatar_initials || "??"}</div>`;
-            
             const postLikes = allLikes ? allLikes.filter(l => l.post_id === post.id) : [];
             const isAmened = postLikes.some(l => l.user_id === currentUser.id);
             const amenColor = isAmened ? 'text-pink-500 font-bold' : 'text-gray-500 hover:text-pink-400';
@@ -433,7 +401,7 @@ async function fetchPosts() {
                 <div class="bg-gray-800/30 rounded-2xl p-4 border border-white/5 mb-4" id="post-${post.id}">
                     <div class="flex justify-between items-start mb-3">
                         <div class="flex items-center space-x-3">${avatarHtml}<div><h3 class="font-bold text-white text-sm">${post.user_name}</h3><p class="text-[10px] text-gray-500">${date}</p></div></div>
-                        ${isMyPost ? `<button onclick="deletePost('${post.id}')" class="text-gray-500 hover:text-red-500"><i data-lucide="trash-2" class="w-4 h-4"></i></button>` : ''}
+                        ${isMyPost ? `<button onclick="deletePost('${post.id}')" class="text-gray-500 hover:text-red-500 transition-colors"><i data-lucide="trash-2" class="w-4 h-4"></i></button>` : ''}
                     </div>
                     <p class="text-gray-200 text-sm leading-relaxed whitespace-pre-wrap">${post.content}</p>
                     ${post.image_url ? `<div class="mt-3 rounded-xl overflow-hidden border border-white/5"><img src="${post.image_url}" class="w-full max-h-96 object-cover"></div>` : ''}
@@ -443,11 +411,23 @@ async function fetchPosts() {
                             <button onclick="toggleComments('${post.id}')" class="hover:text-blue-400 flex items-center gap-1 text-xs"><i data-lucide="message-square" class="w-4 h-4"></i> Commenter</button>
                         </div>
                     </div>
-                    <div id="comments-section-${post.id}" class="hidden mt-3 pt-3 bg-black/20 rounded-lg p-3"><div id="comments-list-${post.id}" class="space-y-2 mb-3"></div></div>
+                    <div id="comments-section-${post.id}" class="hidden mt-3 pt-3 bg-black/20 rounded-lg p-3">
+                        <div id="comments-list-${post.id}" class="space-y-2 mb-3 max-h-40 overflow-y-auto"></div>
+                        <div class="flex gap-2">
+                            <input type="text" id="input-comment-${post.id}" placeholder="Votre commentaire..." class="flex-1 bg-gray-900 border border-white/10 rounded-lg px-3 py-1 text-xs text-white outline-none">
+                            <button onclick="sendComment('${post.id}')" class="text-purple-400 font-bold text-xs hover:text-purple-300">Envoyer</button>
+                        </div>
+                    </div>
                 </div>`);
         });
         if(typeof lucide !== 'undefined') lucide.createIcons();
     } catch (err) { console.error("Erreur fetchPosts:", err); }
+}
+
+async function deletePost(id) {
+    if(!confirm("Supprimer ce post ?")) return;
+    const { error } = await supabaseClient.from('posts').delete().eq('id', id).eq('user_id', currentUser.id);
+    if(!error) { document.getElementById(`post-${id}`).remove(); } else { alert("Erreur: " + error.message); }
 }
 
 async function toggleAmen(postId) {
@@ -457,21 +437,27 @@ async function toggleAmen(postId) {
     fetchPosts();
 }
 
-async function deletePost(id) {
-    if(!confirm("Supprimer ce post ?")) return;
-    await supabaseClient.from('posts').delete().eq('id', id);
-    fetchPosts();
-}
-
 async function toggleComments(postId) {
     const section = document.getElementById(`comments-section-${postId}`);
     const list = document.getElementById(`comments-list-${postId}`);
     section.classList.toggle('hidden');
     if (!section.classList.contains('hidden')) {
         const { data: comments } = await supabaseClient.from('comments').select('*').eq('post_id', postId).order('created_at', { ascending: true });
-        list.innerHTML = (comments && comments.length > 0) ? comments.map(c => `<div class="text-xs text-gray-300"><span class="font-bold text-purple-400">${c.user_name}:</span> ${c.content}</div>`).join('') : '<div class="text-[10px] text-gray-500 italic">Aucun commentaire.</div>';
+        list.innerHTML = (comments && comments.length > 0) ? comments.map(c => `<div class="text-[11px] text-gray-300"><span class="font-bold text-purple-400">${c.user_name}:</span> ${c.content}</div>`).join('') : '<div class="text-[10px] text-gray-500 italic">Soyez le premier à commenter !</div>';
     }
 }
+
+async function sendComment(postId) {
+    const input = document.getElementById(`input-comment-${postId}`);
+    const content = input.value.trim(); if(!content) return;
+    const { error } = await supabaseClient.from('comments').insert([{ post_id: postId, user_id: currentUser.id, user_name: userProfile.username, content: content }]);
+    if(!error) { input.value = ''; const section = document.getElementById(`comments-section-${postId}`); section.classList.add('hidden'); toggleComments(postId); } 
+    else { alert("Erreur : " + error.message); }
+}
+
+// ==========================================
+// 9. RECHERCHE & PRIÈRES
+// ==========================================
 
 async function searchUsers(query) {
     const resultBox = document.getElementById('search-results');
@@ -499,28 +485,23 @@ async function openUserProfile(userId) {
 }
 
 async function fetchPrayers() {
-    const container = document.getElementById('prayers-list');
-    if(!container) return;
+    const container = document.getElementById('prayers-list'); if(!container) return;
     const { data: prayers } = await supabaseClient.from('prayers').select('*').order('created_at', { ascending: false });
-    container.innerHTML = (prayers && prayers.length > 0) ? prayers.map(p => `<div class="bg-gray-900/60 p-3 rounded-xl border border-pink-500/10 flex justify-between items-center mb-2"><div class="flex-1"><p class="text-[10px] font-bold text-pink-400 mb-0.5">${p.user_name}</p><p class="text-xs text-gray-300 italic">"${p.content}"</p></div><button onclick="prayFor('${p.id}', ${p.count})" class="ml-3 flex flex-col items-center"><div class="bg-gray-800 p-2 rounded-full border border-gray-600 hover:border-pink-500 transition-all"><span class="text-sm">🙏</span></div><span class="text-[9px] text-gray-500 font-bold mt-1">${p.count}</span></button></div>`).join('') : '<div class="text-center text-[10px] text-gray-500 py-4 italic">Soyez le premier ! 🙏</div>';
+    container.innerHTML = (prayers && prayers.length > 0) ? prayers.map(p => `<div class="bg-gray-900/60 p-3 rounded-xl border border-pink-500/10 flex justify-between items-center mb-2"><div class="flex-1"><p class="text-[10px] font-bold text-pink-400 mb-0.5">${p.user_name}</p><p class="text-xs text-gray-300 italic">"${p.content}"</p></div><button onclick="prayFor('${p.id}', ${p.count})" class="ml-3 flex flex-col items-center"><div class="bg-gray-800 p-2 rounded-full border border-gray-600 hover:border-pink-500 transition-all text-sm">🙏</div><span class="text-[9px] text-gray-500 font-bold mt-1">${p.count}</span></button></div>`).join('') : '<div class="text-center text-[10px] text-gray-500 py-4 italic">Soyez le premier ! 🙏</div>';
 }
 
 async function addPrayer() {
-    const input = document.getElementById('prayer-input');
-    if (!input || !input.value.trim()) return;
+    const input = document.getElementById('prayer-input'); if (!input || !input.value.trim()) return;
     await supabaseClient.from('prayers').insert([{ user_id: currentUser.id, user_name: userProfile.username, content: input.value, count: 0 }]);
     input.value = ''; fetchPrayers();
 }
 
-async function prayFor(id, current) {
-    await supabaseClient.from('prayers').update({ count: (current || 0) + 1 }).eq('id', id);
-    fetchPrayers();
-}
+async function prayFor(id, current) { await supabaseClient.from('prayers').update({ count: (current || 0) + 1 }).eq('id', id); fetchPrayers(); }
 
 function subscribeToRealtime() {
     supabaseClient.channel('global-updates').on('postgres_changes', { event: '*', schema: 'public' }, (payload) => {
         if (payload.table === 'messages') { fetchMessages(); loadConversations(); }
-        if (payload.table === 'posts') { fetchPosts(); }
+        if (payload.table === 'posts') fetchPosts();
         if (payload.table === 'friendships') { fetchNotifications(); updateFriendCount(currentUser.id); }
     }).subscribe();
 }
@@ -528,8 +509,7 @@ function subscribeToRealtime() {
 async function updateFriendCount(userId) {
     const { count: c1 } = await supabaseClient.from('friendships').select('*', { count: 'exact', head: true }).eq('requester_id', userId).eq('status', 'accepted');
     const { count: c2 } = await supabaseClient.from('friendships').select('*', { count: 'exact', head: true }).eq('receiver_id', userId).eq('status', 'accepted');
-    const el = document.getElementById('stats-friends-count');
-    if(el) el.innerText = (c1 || 0) + (c2 || 0);
+    const el = document.getElementById('stats-friends-count'); if(el) el.innerText = (c1 || 0) + (c2 || 0);
 }
 
 function showNotification(senderName, message) {
@@ -559,8 +539,7 @@ async function fetchNotifications() {
 async function handleFriendRequest(id, accepted) {
     if (accepted) await supabaseClient.from('friendships').update({ status: 'accepted' }).eq('id', id);
     else await supabaseClient.from('friendships').delete().eq('id', id);
-    fetchNotifications(); updateFriendCount(currentUser.id);
-    switchProfileTab('requests');
+    fetchNotifications(); updateFriendCount(currentUser.id); switchProfileTab('requests');
 }
 
 async function addFriend(targetId) {
@@ -579,8 +558,7 @@ function triggerAddStory() { document.getElementById('btn-add-story-input').clic
 async function uploadStory(input) {
     if (!input.files || !input.files[0]) return;
     try {
-        const file = input.files[0];
-        const fileName = `${currentUser.id}/${Date.now()}`;
+        const file = input.files[0]; const fileName = `${currentUser.id}/${Date.now()}`;
         const { error: uploadError } = await supabaseClient.storage.from('story-images').upload(fileName, file);
         if (uploadError) throw uploadError;
         const { data } = supabaseClient.storage.from('story-images').getPublicUrl(fileName);
@@ -590,8 +568,7 @@ async function uploadStory(input) {
 }
 
 async function renderStoriesList() {
-    const container = document.getElementById('stories-container');
-    if (!container) return;
+    const container = document.getElementById('stories-container'); if (!container) return;
     const yesterday = new Date(); yesterday.setHours(yesterday.getHours() - 24);
     const { data: stories } = await supabaseClient.from('stories').select('*, profiles(username, avatar_url)').gt('created_at', yesterday.toISOString()).order('created_at', { ascending: false });
     let html = `<div onclick="triggerAddStory()" class="flex flex-col items-center space-y-1 cursor-pointer shrink-0"><div class="w-14 h-14 rounded-full bg-gray-800 border-2 border-dashed border-gray-600 flex items-center justify-center relative"><i data-lucide="plus" class="w-5 h-5 text-gray-400"></i></div><span class="text-[9px] text-gray-300">Ma Story</span></div>`;
@@ -601,8 +578,7 @@ async function renderStoriesList() {
         const avatarContent = s.profiles.avatar_url ? `<img src="${s.profiles.avatar_url}" class="w-full h-full object-cover rounded-full">` : `<div class="w-full h-full rounded-full bg-gray-700 flex items-center justify-center font-bold text-white text-[10px]">${s.profiles.username[0].toUpperCase()}</div>`;
         html += `<div onclick="openStoryViewer('${storyData}')" class="flex flex-col items-center space-y-1 cursor-pointer shrink-0"><div class="w-14 h-14 rounded-full bg-gradient-to-tr from-pink-500 to-purple-600 p-[2px]"><div class="w-full h-full rounded-full bg-gray-900 border-2 border-gray-900 overflow-hidden">${avatarContent}</div></div><span class="text-[9px] text-gray-300 truncate w-14 text-center">${s.profiles.username}</span></div>`;
     });
-    container.innerHTML = html;
-    if (typeof lucide !== 'undefined') lucide.createIcons();
+    container.innerHTML = html; if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
 let currentStoryTimer = null;
@@ -623,5 +599,4 @@ function openStoryViewer(storyDataEncoded) {
 }
 
 function closeStoryViewer() { document.getElementById('story-viewer').classList.add('hidden'); if (currentStoryTimer) clearTimeout(currentStoryTimer); }
-
 async function deleteStory(id) { if (confirm("Supprimer ?")) { await supabaseClient.from('stories').delete().eq('id', id); closeStoryViewer(); renderStoriesList(); } }
