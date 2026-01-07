@@ -98,7 +98,9 @@
 
                     <div class="bg-gray-800/30 rounded-2xl p-4 border border-white/5">
                         <div class="flex gap-3 items-start">
-                            <div id="current-user-avatar-small" class="w-10 h-10 rounded-full bg-gradient-to-tr from-purple-500 to-blue-500 flex items-center justify-center text-xs font-bold text-white shrink-0">ME</div>
+                            <div id="current-user-avatar-small" class="w-10 h-10 rounded-full bg-gradient-to-tr from-purple-500 to-blue-500 flex items-center justify-center text-xs font-bold text-white shrink-0 overflow-hidden object-cover">
+                                ME
+                            </div>
                             
                             <div class="flex-1">
                                 <textarea id="new-post-input" rows="2" placeholder="Exprimez votre foi..." class="w-full bg-transparent border-none text-white focus:ring-0 placeholder-gray-600 text-sm resize-none"></textarea>
@@ -152,7 +154,8 @@
                     <div class="bg-gray-800/30 rounded-3xl p-6 border border-white/5 text-center relative overflow-hidden">
                         <div class="absolute inset-0 bg-gradient-to-b from-purple-900/20 to-transparent pointer-events-none"></div>
                         <div class="relative z-10">
-                            <div id="profile-avatar-big" class="w-24 h-24 mx-auto rounded-full bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center text-3xl font-bold border-4 border-gray-900 shadow-xl mb-4"></div>
+                            <div id="profile-avatar-big" class="w-24 h-24 mx-auto rounded-full bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center text-3xl font-bold border-4 border-gray-900 shadow-xl mb-4 overflow-hidden object-cover"></div>
+                            
                             <h2 id="profile-name" class="text-2xl font-bold text-white">Utilisateur</h2>
                             <p id="profile-email" class="text-purple-400/80 text-sm mb-6">@utilisateur</p>
                             
@@ -190,7 +193,7 @@
                 <div id="view-public-profile" class="hidden">
                     <div class="bg-gray-800/30 rounded-3xl p-6 border border-white/5 text-center relative">
                         <button onclick="switchView('home')" class="absolute top-4 left-4 p-2 bg-gray-900 rounded-full hover:bg-gray-700 text-gray-400"><i data-lucide="arrow-left" class="w-5 h-5"></i></button>
-                        <div id="public-avatar" class="w-24 h-24 mx-auto rounded-full bg-gray-700 flex items-center justify-center text-3xl font-bold border-4 border-gray-900 mb-4 mt-8">?</div>
+                        <div id="public-avatar" class="w-24 h-24 mx-auto rounded-full bg-gray-700 flex items-center justify-center text-3xl font-bold border-4 border-gray-900 mb-4 mt-8 overflow-hidden object-cover">?</div>
                         <h2 id="public-username" class="text-2xl font-bold text-white">Nom</h2>
                         <p id="public-bio" class="text-gray-400 text-sm mb-6">Description...</p>
                         <div id="public-status-container" class="mb-8 flex items-center justify-center gap-2">
@@ -280,11 +283,38 @@
     </div>
 
     <div id="edit-profile-modal" class="hidden fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-        <div class="bg-gray-800 p-6 rounded-3xl w-full max-w-sm border border-white/10 shadow-2xl">
-            <div class="flex justify-between items-center mb-6"><h2 class="text-lg font-bold text-white">Modifier le profil</h2><button onclick="closeEditModal()" class="p-2 hover:bg-gray-700 rounded-full text-gray-400"><i data-lucide="x" class="w-5 h-5"></i></button></div>
+        <div class="bg-gray-800 p-6 rounded-3xl w-full max-w-sm border border-white/10 shadow-2xl animate-fade-in">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-lg font-bold text-white">Modifier le profil</h2>
+                <button onclick="closeEditModal()" class="p-2 hover:bg-gray-700 rounded-full text-gray-400">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            
             <div class="space-y-4">
-                <div><label class="text-xs text-gray-400 block mb-1.5 uppercase font-bold tracking-wider">Pseudo</label><input id="edit-username" type="text" class="w-full bg-gray-900 border border-white/10 rounded-xl p-3 text-white focus:border-purple-500 outline-none"></div>
-                <div><label class="text-xs text-gray-400 block mb-1.5 uppercase font-bold tracking-wider">Bio / Statut</label><textarea id="edit-bio" class="w-full bg-gray-900 border border-white/10 rounded-xl p-3 text-white h-24 focus:border-purple-500 outline-none resize-none"></textarea></div>
+                <div class="flex flex-col items-center mb-4">
+                    <div class="relative group cursor-pointer" onclick="document.getElementById('edit-avatar-input').click()">
+                        <img id="edit-avatar-preview" src="" class="w-24 h-24 rounded-full object-cover border-4 border-gray-900 bg-gray-700">
+                        
+                        <div class="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                            <i data-lucide="camera" class="w-8 h-8 text-white"></i>
+                        </div>
+                        
+                        <input type="file" id="edit-avatar-input" accept="image/*" class="hidden" onchange="handleAvatarPreview(this)">
+                    </div>
+                    <p class="text-xs text-gray-400 mt-2">Cliquez pour changer la photo</p>
+                </div>
+
+                <div>
+                    <label class="text-xs text-gray-400 block mb-1.5 uppercase font-bold tracking-wider">Pseudo</label>
+                    <input id="edit-username" type="text" class="w-full bg-gray-900 border border-white/10 rounded-xl p-3 text-white focus:border-purple-500 outline-none">
+                </div>
+                
+                <div>
+                    <label class="text-xs text-gray-400 block mb-1.5 uppercase font-bold tracking-wider">Bio / Statut</label>
+                    <textarea id="edit-bio" class="w-full bg-gray-900 border border-white/10 rounded-xl p-3 text-white h-24 focus:border-purple-500 outline-none resize-none"></textarea>
+                </div>
+                
                 <button onclick="saveProfile()" class="w-full bg-white text-gray-900 hover:bg-gray-200 font-bold py-3.5 rounded-xl transition-colors">Enregistrer</button>
             </div>
         </div>
