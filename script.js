@@ -121,13 +121,12 @@ function switchView(viewName) {
 }
 
 async function loadAppData() {
-    // MODIFICATION : Chargement des nouvelles sections
     await Promise.all([
         fetchPosts(),
         renderStoriesList(),
         fetchPrayers(),
-        fetchHelpRequests(), // NOUVEAU
-        fetchEvents(),       // NOUVEAU
+        fetchHelpRequests(), 
+        fetchEvents(),
         loadConversations(),
         fetchNotifications()
     ]);
@@ -283,7 +282,7 @@ async function removeFriend(friendId) {
 }
 
 // ==========================================
-// 6. CHAT & MESSAGERIE
+// 6. CHAT & MESSAGERIE (AMÉLIORÉ)
 // ==========================================
 
 function openDirectChat(userId, username) {
@@ -300,6 +299,8 @@ async function loadConversations() {
     if(!container) return;
     const { data: messages } = await supabaseClient.from('messages').select('*').or(`sender_id.eq.${currentUser.id},receiver_id.eq.${currentUser.id}`).not('receiver_id', 'is', null).order('created_at', { ascending: false });
     if (!messages || messages.length === 0) { container.innerHTML = '<div class="text-gray-500 text-center mt-4 text-xs italic">Aucune discussion.</div>'; return; }
+    
+    // Grouper par utilisateur
     const uniqueConversations = {};
     for (const msg of messages) {
         const otherUserId = msg.sender_id === currentUser.id ? msg.receiver_id : msg.sender_id;
@@ -307,6 +308,7 @@ async function loadConversations() {
         uniqueConversations[otherUserId] = { userId: otherUserId, lastMessage: msg.content, time: new Date(msg.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) };
     }
     const conversationArray = Object.values(uniqueConversations);
+    
     if(conversationArray.length > 0) {
         const ids = conversationArray.map(c => c.userId);
         const { data: profiles } = await supabaseClient.from('profiles').select('id, username, avatar_url').in('id', ids);
@@ -314,14 +316,45 @@ async function loadConversations() {
             const p = profiles.find(x => x.id === conv.userId);
             const name = p ? p.username : "Ami";
             const avatarDisplay = p && p.avatar_url ? `<img src="${p.avatar_url}" class="w-10 h-10 rounded-full object-cover">` : `<div class="w-10 h-10 bg-purple-600 rounded-full flex items-center justify-center font-bold text-xs text-white">${name.substring(0,2).toUpperCase()}</div>`;
-            return `<div onclick="openDirectChat('${conv.userId}', '${name.replace(/'/g, "\\'")}')" class="p-3 hover:bg-white/5 rounded-xl cursor-pointer flex items-center space-x-3 border-b border-white/5">${avatarDisplay}<div class="flex-1 min-w-0"><div class="flex justify-between items-baseline mb-0.5"><h4 class="font-bold text-sm text-white truncate">${name}</h4><span class="text-[10px] text-gray-500">${conv.time}</span></div><p class="text-xs text-gray-400 truncate">${conv.lastMessage}</p></div></div>`;
+            return `
+            <div onclick="openDirectChat('${conv.userId}', '${name.replace(/'/g, "\\'")}')" class="p-3 hover:bg-white/5 rounded-2xl cursor-pointer flex items-center space-x-3 border-b border-white/5 transition-colors">
+                <div class="relative">
+                    ${avatarDisplay}
+                    <div class="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 border-2 border-gray-900 rounded-full"></div>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <div class="flex justify-between items-baseline mb-0.5">
+                        <h4 class="font-bold text-sm text-white truncate">${name}</h4>
+                        <span class="text-[10px] text-gray-500">${conv.time}</span>
+                    </div>
+                    <p class="text-xs text-gray-400 truncate">${conv.lastMessage}</p>
+                </div>
+            </div>`;
         }).join('');
     }
 }
 
 function startChat(targetProfile) {
     activeChatUser = targetProfile; switchView('messages');
-    document.getElementById('chat-with-name').innerHTML = `<span class="text-purple-400">@</span>${targetProfile.username}`;
+    
+    // Mise à jour Header Chat
+    document.getElementById('chat-with-name').innerHTML = `${targetProfile.username}`;
+    const headerAvatar = document.getElementById('chat-header-avatar');
+    const headerInitials = document.getElementById('chat-header-initials');
+    
+    // Récupérer infos profil complètes si besoin
+    supabaseClient.from('profiles').select('*').eq('id', targetProfile.id).single().then(({data}) => {
+         if(data && data.avatar_url) {
+             headerAvatar.src = data.avatar_url;
+             headerAvatar.classList.remove('hidden');
+             headerInitials.classList.add('hidden');
+         } else {
+             headerAvatar.classList.add('hidden');
+             headerInitials.classList.remove('hidden');
+             headerInitials.innerText = targetProfile.username.substring(0,2).toUpperCase();
+         }
+    });
+
     const input = document.getElementById('chat-input');
     if(input) { input.disabled = false; input.focus(); }
     fetchMessages(); 
@@ -329,8 +362,7 @@ function startChat(targetProfile) {
 
 function resetChat() {
     activeChatUser = null;
-    const title = document.getElementById('chat-with-name');
-    if(title) title.innerText = "Sélectionnez un ami";
+    document.getElementById('chat-with-name').innerText = "Sélectionnez un ami";
     const container = document.getElementById('chat-history');
     if(container) container.innerHTML = `<div class="flex flex-col items-center justify-center h-full text-gray-600 italic text-sm"><p>Cliquez sur une discussion</p></div>`;
     const input = document.getElementById('chat-input');
@@ -342,10 +374,33 @@ async function fetchMessages() {
     if(!container || !activeChatUser) return;
     const { data } = await supabaseClient.from('messages').select('*').or(`and(sender_id.eq.${currentUser.id},receiver_id.eq.${activeChatUser.id}),and(sender_id.eq.${activeChatUser.id},receiver_id.eq.${currentUser.id})`).order('created_at', { ascending: true });
     container.innerHTML = '';
+    
     if(data && data.length > 0) {
+        let lastSenderId = null;
+        
         data.forEach(msg => {
             const isMe = msg.sender_id === currentUser.id;
-            container.insertAdjacentHTML('beforeend', `<div class="flex ${isMe ? 'justify-end' : 'justify-start'} mb-2"><div class="${isMe ? 'bg-purple-600 text-white' : 'bg-gray-800 text-gray-200'} px-4 py-2 rounded-2xl max-w-[85%] text-sm border border-white/5 shadow-sm">${msg.content}</div></div>`);
+            const isSameSender = lastSenderId === msg.sender_id;
+            const time = new Date(msg.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+            
+            // Design Amélioré
+            const bubbleClass = isMe 
+                ? 'bg-purple-600 text-white rounded-tr-sm' 
+                : 'bg-gray-800 text-gray-200 rounded-tl-sm';
+            
+            const marginClass = isSameSender ? 'mt-1' : 'mt-4';
+
+            container.insertAdjacentHTML('beforeend', `
+                <div class="flex ${isMe ? 'justify-end' : 'justify-start'} ${marginClass} group">
+                    <div class="max-w-[75%]">
+                        <div class="${bubbleClass} px-4 py-2 rounded-2xl text-sm shadow-sm relative">
+                            ${msg.content}
+                            <span class="text-[9px] opacity-60 block text-right mt-1 w-full ${isMe ? 'text-purple-200' : 'text-gray-400'}">${time}</span>
+                        </div>
+                    </div>
+                </div>
+            `);
+            lastSenderId = msg.sender_id;
         });
         container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
     } else { container.innerHTML = '<div class="text-center text-gray-600 text-xs mt-10 italic">Dites bonjour ! 👋</div>'; }
@@ -559,110 +614,6 @@ async function fetchEvents() {
 }
 
 // ==========================================
-// 10. RECHERCHE & PRIÈRES
-// ==========================================
-
-async function searchUsers(query) {
-    const resultBox = document.getElementById('search-results');
-    if (!query || query.length < 2) { resultBox.classList.add('hidden'); return; }
-    const { data } = await supabaseClient.from('profiles').select('*').ilike('username', `%${query}%`).neq('id', currentUser.id).limit(5);
-    resultBox.classList.remove('hidden');
-    resultBox.innerHTML = (data && data.length > 0) ? data.map(u => {
-        const avatarHtml = u.avatar_url ? `<img src="${u.avatar_url}" class="w-8 h-8 rounded-full object-cover">` : `<div class="w-8 h-8 bg-purple-600 rounded-full flex items-center justify-center font-bold text-[10px] text-white">${u.username.substring(0,2).toUpperCase()}</div>`;
-        return `<div onclick="openUserProfile('${u.id}')" class="p-3 border-b border-white/5 flex justify-between items-center hover:bg-white/5 cursor-pointer"><div class="flex items-center gap-3">${avatarHtml}<span class="text-sm font-bold text-white">${u.username}</span></div><i data-lucide="chevron-right" class="w-4 h-4 text-gray-500"></i></div>`
-    }).join('') : '<div class="p-3 text-gray-500 text-xs text-center italic">Aucun utilisateur trouvé</div>';
-    if(typeof lucide !== 'undefined') lucide.createIcons();
-}
-
-async function openUserProfile(userId) {
-    const { data: profile } = await supabaseClient.from('profiles').select('*').eq('id', userId).single();
-    if(profile) {
-        document.getElementById('public-username').innerText = profile.username;
-        document.getElementById('public-bio').innerText = profile.bio || "Pas de bio.";
-        const avatarEl = document.getElementById('public-avatar');
-        if(profile.avatar_url) { avatarEl.innerHTML = `<img src="${profile.avatar_url}" class="w-full h-full object-cover">`; avatarEl.innerText = ""; } else { avatarEl.innerHTML = ""; avatarEl.innerText = profile.username.substring(0,2).toUpperCase(); }
-        document.getElementById('btn-message').onclick = () => startChat(profile);
-        document.getElementById('btn-add-friend').onclick = () => addFriend(profile.id);
-        switchView('public-profile');
-    }
-}
-
-async function fetchPrayers() {
-    const container = document.getElementById('prayers-list'); if(!container) return;
-    const { data: prayers } = await supabaseClient.from('prayers').select('*').order('created_at', { ascending: false });
-    container.innerHTML = (prayers && prayers.length > 0) ? prayers.map(p => `<div class="bg-gray-900/60 p-3 rounded-xl border border-pink-500/10 flex justify-between items-center mb-2"><div class="flex-1"><p class="text-[10px] font-bold text-pink-400 mb-0.5">${p.user_name}</p><p class="text-xs text-gray-300 italic">"${p.content}"</p></div><button onclick="prayFor('${p.id}', ${p.count})" class="ml-3 flex flex-col items-center"><div class="bg-gray-800 p-2 rounded-full border border-gray-600 hover:border-pink-500 transition-all text-sm">🙏</div><span class="text-[9px] text-gray-500 font-bold mt-1">${p.count}</span></button></div>`).join('') : '<div class="text-center text-[10px] text-gray-500 py-4 italic">Soyez le premier ! 🙏</div>';
-}
-
-async function addPrayer() {
-    const input = document.getElementById('prayer-input'); if (!input || !input.value.trim()) return;
-    await supabaseClient.from('prayers').insert([{ user_id: currentUser.id, user_name: userProfile.username, content: input.value, count: 0 }]);
-    input.value = ''; fetchPrayers();
-}
-
-async function prayFor(id, current) { await supabaseClient.from('prayers').update({ count: (current || 0) + 1 }).eq('id', id); fetchPrayers(); }
-
-function subscribeToRealtime() {
-    supabaseClient.channel('global-updates').on('postgres_changes', { event: '*', schema: 'public' }, async (payload) => {
-        if (payload.table === 'messages') { fetchMessages(); loadConversations(); }
-        if (payload.table === 'posts') fetchPosts();
-        if (payload.table === 'friendships') { fetchNotifications(); updateFriendCount(currentUser.id); }
-        if (payload.table === 'likes' && payload.eventType === 'INSERT') {
-            const { data: post } = await supabaseClient.from('posts').select('user_id').eq('id', payload.new.post_id).single();
-            if (post && post.user_id === currentUser.id && payload.new.user_id !== currentUser.id) {
-                showNotification("Bénédiction", "Quelqu'un a dit Amen à votre publication ! ✨");
-            }
-            fetchPosts(); 
-        }
-    }).subscribe();
-}
-
-async function updateFriendCount(userId) {
-    const { count: c1 } = await supabaseClient.from('friendships').select('*', { count: 'exact', head: true }).eq('requester_id', userId).eq('status', 'accepted');
-    const { count: c2 } = await supabaseClient.from('friendships').select('*', { count: 'exact', head: true }).eq('receiver_id', userId).eq('status', 'accepted');
-    const el = document.getElementById('stats-friends-count'); if(el) el.innerText = (c1 || 0) + (c2 || 0);
-}
-
-function showNotification(senderName, message) {
-    const container = document.getElementById('notification-container');
-    const audio = document.getElementById('notif-sound');
-    if(audio) audio.play().catch(() => {});
-    const notif = document.createElement('div');
-    notif.className = "bg-gray-800 border-l-4 border-purple-500 text-white p-3 rounded-xl shadow-2xl mb-2 animate-fade-in";
-    notif.innerHTML = `<h4 class="font-bold text-xs text-purple-400">${senderName}</h4><p class="text-xs text-gray-300 truncate">${message}</p>`;
-    container.appendChild(notif); 
-    setTimeout(() => notif.remove(), 4000);
-}
-
-async function fetchNotifications() {
-    const badge = document.getElementById('notif-badge');
-    const list = document.getElementById('notif-list');
-    const { data: requests } = await supabaseClient.from('friendships').select('*').eq('receiver_id', currentUser.id).eq('status', 'pending');
-    if (requests && requests.length > 0) {
-        badge.classList.remove('hidden');
-        const ids = requests.map(r => r.requester_id);
-        const { data: profiles } = await supabaseClient.from('profiles').select('id, username').in('id', ids);
-        if(list) list.innerHTML = requests.map(req => {
-            const p = profiles.find(x => x.id === req.requester_id);
-            return `<div class="p-3 border-b border-white/5 flex items-center justify-between"><span class="text-xs font-bold text-white">${p ? p.username : 'Ami'}</span><div class="flex gap-2"><button onclick="handleFriendRequest('${req.id}', true)" class="text-green-400"><i data-lucide="check" class="w-4 h-4"></i></button></div></div>`;
-        }).join('');
-        if(typeof lucide !== 'undefined') lucide.createIcons();
-    } else { badge.classList.add('hidden'); if(list) list.innerHTML = '<div class="p-4 text-center text-xs text-gray-500">🍃</div>'; }
-}
-
-async function handleFriendRequest(id, accepted) {
-    if (accepted) await supabaseClient.from('friendships').update({ status: 'accepted' }).eq('id', id);
-    else await supabaseClient.from('friendships').delete().eq('id', id);
-    fetchNotifications(); updateFriendCount(currentUser.id); switchProfileTab('requests');
-}
-
-async function addFriend(targetId) {
-    const { error } = await supabaseClient.from('friendships').insert([{ requester_id: currentUser.id, receiver_id: targetId, status: 'pending' }]);
-    if (!error) alert("Demande envoyée !");
-}
-
-function toggleNotifDropdown() { document.getElementById('notif-dropdown').classList.toggle('hidden'); }
-
-// ==========================================
 // 12. GESTION DES STORIES
 // ==========================================
 
@@ -811,16 +762,6 @@ async function fetchReels() {
 function toggleReelSound(reelId) {
     const iframe = document.getElementById(`reel-iframe-${reelId}`);
     if (iframe && iframe.contentWindow) {
-        // On envoie une commande à l'API YouTube
-        // Si l'iframe a la classe 'muted', on unmute, sinon on mute.
-        // Comme on ne peut pas lire l'état facilement sans API lourde, on alterne simplement.
-        // Pour faire simple ici : on envoie 'unMute' par défaut car autoplay démarre souvent en mute sur mobile.
-        // Ou on alterne. Mais ici, pour "bloquer la pause", le simple fait que le clic soit intercepté suffit.
-        
-        // Si on veut vraiment gérer le son :
-        // iframe.contentWindow.postMessage('{"event":"command","func":"isMuted","args":""}', '*'); // Compliqué en one-way
-        
-        // Approche simple : On envoie "unMute" au clic pour être sûr d'avoir du son.
         iframe.contentWindow.postMessage('{"event":"command","func":"unMute","args":""}', '*');
     }
 }
