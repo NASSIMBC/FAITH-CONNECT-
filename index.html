@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Faith Connect</title>
+    
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="bg-gray-900 text-white font-sans antialiased">
+
+    <div id="login-page" class="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900 flex items-center justify-center p-4 relative overflow-hidden">
+        <div class="absolute inset-0 flex items-center justify-center opacity-5 pointer-events-none"><i data-lucide="cross" class="w-96 h-96"></i></div>
+        
+        <div class="absolute top-20 left-20 w-72 h-72 bg-purple-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-pulse"></div>
+        <div class="absolute bottom-20 right-20 w-72 h-72 bg-pink-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-pulse delay-700"></div>
+
+        <div class="relative z-10 w-full max-w-md bg-gray-800/40 backdrop-blur-xl p-8 rounded-3xl border border-purple-500/30 shadow-2xl">
+            <div class="text-center mb-8">
+                <div class="inline-block p-3 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full mb-4 shadow-lg shadow-purple-500/30">
+                    <i data-lucide="cross" class="w-8 h-8 text-white"></i>
+                </div>
+                <h1 class="text-4xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent mb-2">FAITH CONNECT</h1>
+                <p class="text-purple-300 text-sm">Bienvenue, connectez-vous ou créez un compte.</p>
+            </div>
+            
+            <div id="verse-container" class="mb-8 p-4 bg-gradient-to-r from-purple-900/50 to-pink-900/50 rounded-2xl border border-purple-400/30 text-center text-sm italic text-gray-300"></div>
+
+            <div class="space-y-4">
+                <div>
+                    <label class="text-xs text-purple-300 ml-2 mb-1 block">Email</label>
+                    <input id="login-email" type="email" placeholder="ex: achour@email.com" class="w-full px-4 py-3 bg-gray-900/50 border border-purple-500/50 rounded-xl text-white focus:outline-none focus:border-purple-400 transition-colors">
+                </div>
+                <div>
+                    <label class="text-xs text-purple-300 ml-2 mb-1 block">Mot de passe</label>
+                    <input id="login-password" type="password" placeholder="••••••••" class="w-full px-4 py-3 bg-gray-900/50 border border-purple-500/50 rounded-xl text-white focus:outline-none focus:border-purple-400 transition-colors">
+                </div>
+                
+                <div class="flex flex-col gap-3 mt-6">
+                    <button onclick="handleLogin()" class="w-full py-3 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white rounded-xl font-semibold shadow-lg shadow-purple-500/30 transition-all transform hover:scale-[1.02]">
+                        Se connecter
+                    </button>
+
+                    <button onclick="handleSignUp()" class="w-full py-3 bg-transparent border border-purple-500/50 text-purple-300 hover:bg-purple-500/10 hover:text-white rounded-xl font-semibold transition-all">
+                        Créer un compte
+                    </button>
+                </div>
+                
+                <p class="text-center text-xs text-gray-400 mt-2">
+                    Remplissez les champs ci-dessus puis choisissez une option.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <div id="main-app" class="hidden min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900 pb-20 md:pb-6">
+        
+        <header class="sticky top-0 z-50 bg-gray-900/80 backdrop-blur-xl border-b border-purple-500/30">
+            <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+                <div class="flex items-center space-x-2" onclick="switchView('home')">
+                    <i data-lucide="cross" class="w-6 h-6 text-purple-400"></i>
+                    <h1 class="text-xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">FAITH CONNECT</h1>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <div id="user-display" class="hidden sm:block text-sm text-purple-200 font-medium"></div>
+                    <button class="relative">
+                        <i data-lucide="bell" class="w-6 h-6 text-purple-300 hover:text-white transition-colors"></i>
+                        <span class="absolute -top-1 -right-1 bg-pink-500 text-white text-[10px] rounded-full w-4 h-4 flex items-center justify-center animate-pulse">3</span>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <div class="max-w-7xl mx-auto px-4 py-4 relative z-10">
+            
+            <div id="view-home" class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div class="lg:col-span-2 space-y-6">
+                    <div class="bg-gray-800/40 backdrop-blur-xl rounded-2xl p-4 border border-purple-500/30">
+                        <div id="stories-container" class="flex space-x-4 overflow-x-auto pb-2 scrollbar-hide"></div>
+                    </div>
+
+                    <div class="bg-gray-800/40 backdrop-blur-xl rounded-2xl p-4 border border-purple-500/30 flex items-center space-x-3">
+                        <div id="current-user-avatar-small" class="w-10 h-10 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center text-white font-bold">You</div>
+                        <input id="new-post-input" placeholder="Partager votre foi..." class="flex-1 bg-gray-900/50 border border-purple-500/50 rounded-full px-4 py-2 text-white focus:outline-none focus:border-purple-400">
+                        <button onclick="publishPost()" class="p-2 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full hover:shadow-lg transition-all transform hover:scale-110">
+                            <i data-lucide="send" class="w-5 h-5 text-white"></i>
+                        </button>
+                    </div>
+
+                    <div id="posts-container" class="space-y-4"></div>
+                </div>
+
+                <div class="hidden lg:block space-y-6">
+                    <div class="bg-gray-800/40 backdrop-blur-xl rounded-2xl p-4 border border-purple-500/30">
+                        <h3 class="text-purple-300 font-semibold mb-4">🙏 Demandes de prière</h3>
+                        <div id="prayers-container" class="space-y-3"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="view-reels" class="hidden h-[80vh] flex justify-center overflow-y-auto snap-y snap-mandatory scrollbar-hide">
+                <div class="w-full max-w-md space-y-4" id="reels-container"></div>
+            </div>
+
+            <div id="view-live" class="hidden">
+                <div class="bg-gray-800 rounded-2xl overflow-hidden border border-purple-500/30 aspect-video relative flex items-center justify-center bg-black shadow-2xl">
+                    <div class="absolute top-4 left-4 bg-red-600 text-white px-3 py-1 rounded-full text-xs font-bold animate-pulse flex items-center gap-2">
+                        <span class="w-2 h-2 bg-white rounded-full"></span> EN DIRECT
+                    </div>
+                    <div class="text-center">
+                        <i data-lucide="video" class="w-16 h-16 text-gray-600 mx-auto mb-2"></i>
+                        <p class="text-gray-400">Culte du dimanche en streaming...</p>
+                    </div>
+                </div>
+                <div class="mt-4 bg-gray-800/40 p-4 rounded-xl h-64 overflow-y-auto border border-purple-500/20">
+                    <p class="text-purple-300 text-sm mb-2 font-bold uppercase tracking-wide">Chat du direct</p>
+                    <div class="space-y-2 text-sm text-gray-300">
+                        <p><span class="text-purple-400 font-bold">Marie:</span> Amen! 🙏</p>
+                        <p><span class="text-pink-400 font-bold">Paul:</span> Alléluia!</p>
+                        <p><span class="text-blue-400 font-bold">Lucas:</span> Le son est top 👍</p>
+                    </div>
+                </div>
+            </div>
+
+            <div id="view-messages" class="hidden grid grid-cols-1 md:grid-cols-3 gap-4 h-[80vh]">
+                <div class="md:col-span-1 bg-gray-800/40 backdrop-blur-xl rounded-2xl p-4 border border-purple-500/30 overflow-y-auto">
+                    <h2 class="text-xl font-bold text-purple-300 mb-4">Messages</h2>
+                    <div id="messages-list" class="space-y-2"></div>
+                </div>
+                <div id="chat-detail" class="hidden md:flex md:col-span-2 bg-gray-900/80 rounded-2xl border border-purple-500/30 flex-col">
+                    <div class="p-4 border-b border-purple-500/20 flex items-center space-x-3 bg-gray-800/50 rounded-t-2xl">
+                        <div class="w-10 h-10 bg-gray-700 rounded-full flex items-center justify-center text-xl">👤</div>
+                        <h3 id="chat-with-name" class="font-bold text-white">Sélectionnez un contact</h3>
+                    </div>
+                    <div id="chat-history" class="flex-1 p-4 overflow-y-auto space-y-4"></div>
+                    <div class="p-4 border-t border-purple-500/20 flex space-x-2 bg-gray-800/30 rounded-b-2xl">
+                        <input id="chat-input" type="text" placeholder="Écrire un message..." class="flex-1 bg-gray-800 rounded-full px-4 py-2 focus:outline-none border border-purple-500/30 focus:border-purple-500 text-white">
+                        <button onclick="sendChatMessage()" class="p-2 bg-purple-600 rounded-full hover:bg-purple-500 transition-colors text-white"><i data-lucide="send" class="w-4 h-4"></i></button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="view-profile" class="hidden">
+                <div class="bg-gray-800/40 backdrop-blur-xl rounded-2xl p-8 border border-purple-500/30 text-center relative overflow-hidden">
+                    <div class="absolute top-0 left-0 w-full h-32 bg-gradient-to-r from-purple-900 to-pink-900 opacity-50"></div>
+                    <div class="relative z-10 pt-10">
+                        <div id="profile-avatar-big" class="w-32 h-32 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full mx-auto flex items-center justify-center text-5xl font-bold text-white border-4 border-gray-900 mb-4 shadow-xl"></div>
+                        <h2 id="profile-name" class="text-3xl font-bold text-white mb-1">Utilisateur</h2>
+                        <p id="profile-email" class="text-purple-300 mb-6">@utilisateur</p>
+                        
+                        <div class="flex justify-center space-x-8 text-center mb-8">
+                            <div class="bg-gray-900/50 px-6 py-3 rounded-xl border border-purple-500/20">
+                                <div class="text-2xl font-bold text-white">0</div>
+                                <div class="text-xs text-gray-400 uppercase tracking-wider">Posts</div>
+                            </div>
+                            <div class="bg-gray-900/50 px-6 py-3 rounded-xl border border-purple-500/20">
+                                <div class="text-2xl font-bold text-white">0</div>
+                                <div class="text-xs text-gray-400 uppercase tracking-wider">Amis</div>
+                            </div>
+                            <div class="bg-gray-900/50 px-6 py-3 rounded-xl border border-purple-500/20">
+                                <div class="text-2xl font-bold text-white">0</div>
+                                <div class="text-xs text-gray-400 uppercase tracking-wider">Prières</div>
+                            </div>
+                        </div>
+                        
+                        <button class="px-8 py-2 bg-purple-600 rounded-full text-white font-semibold hover:bg-purple-500 transition-all shadow-lg hover:shadow-purple-500/50">Modifier le profil</button>
+                        <button onclick="logout()" class="ml-2 px-8 py-2 border border-red-500/50 text-red-400 rounded-full font-semibold hover:bg-red-500/10 transition-all">Déconnexion</button>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <nav class="fixed bottom-0 left-0 right-0 bg-gray-900/95 backdrop-blur-xl border-t border-purple-500/30 z-50 safe-area-bottom">
+            <div class="max-w-7xl mx-auto px-2 py-2 flex justify-around items-center h-16">
+                <button onclick="switchView('home')" id="nav-home" class="nav-btn text-purple-400 flex flex-col items-center justify-center w-16 h-full transition-all hover:scale-105"><i data-lucide="home" class="w-6 h-6"></i><span class="text-[10px] mt-1">Accueil</span></button>
+                <button onclick="switchView('reels')" id="nav-reels" class="nav-btn text-gray-400 flex flex-col items-center justify-center w-16 h-full transition-all hover:scale-105 hover:text-purple-300"><i data-lucide="video" class="w-6 h-6"></i><span class="text-[10px] mt-1">Reels</span></button>
+                <button onclick="switchView('live')" id="nav-live" class="nav-btn text-gray-400 flex flex-col items-center justify-center w-16 h-full transition-all hover:scale-105 hover:text-purple-300"><div class="relative"><i data-lucide="radio" class="w-6 h-6"></i><span class="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full animate-pulse border border-gray-900"></span></div><span class="text-[10px] mt-1">Live</span></button>
+                <button onclick="switchView('messages')" id="nav-messages" class="nav-btn text-gray-400 flex flex-col items-center justify-center w-16 h-full transition-all hover:scale-105 hover:text-purple-300"><i data-lucide="message-circle" class="w-6 h-6"></i><span class="text-[10px] mt-1">Chat</span></button>
+                <button onclick="switchView('profile')" id="nav-profile" class="nav-btn text-gray-400 flex flex-col items-center justify-center w-16 h-full transition-all hover:scale-105 hover:text-purple-300"><i data-lucide="user" class="w-6 h-6"></i><span class="text-[10px] mt-1">Profil</span></button>
+            </div>
+        </nav>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
