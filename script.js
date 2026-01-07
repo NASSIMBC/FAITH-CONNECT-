@@ -13,7 +13,7 @@ let currentUser = null;
 let userProfile = null;
 let activeChatUser = null; 
 let selectedImageFile = null;     // Pour les posts
-let selectedAvatarFile = null;    // NOUVEAU : Pour la photo de profil
+let selectedAvatarFile = null;    // Pour la photo de profil
 
 document.addEventListener('DOMContentLoaded', checkSession);
 
@@ -119,11 +119,10 @@ async function updateMyStatus() {
     else { userProfile.status_text = text; userProfile.status_emoji = emoji || "👋"; updateUIProfile(); }
 }
 
-// --- Mise à jour visuelle du profil (Image ou Initiales) ---
 function updateUIProfile() {
     const initials = userProfile.username ? userProfile.username.substring(0, 2).toUpperCase() : "??";
     
-    // 1. Textes
+    // Textes
     document.querySelectorAll('#user-display, #profile-name').forEach(el => el.innerText = userProfile.username);
     if(document.getElementById('profile-email')) document.getElementById('profile-email').innerText = "@" + userProfile.username;
     
@@ -134,22 +133,17 @@ function updateUIProfile() {
         emojiDisplay.innerText = userProfile.status_emoji || "👋";
     }
 
-    // 2. Avatars (Le gros changement est ici)
+    // Avatars
     const avatarElements = ['current-user-avatar-small', 'profile-avatar-big'];
-    
     avatarElements.forEach(id => {
         const el = document.getElementById(id);
         if(!el) return;
 
-        // Si l'utilisateur a une URL d'avatar enregistrée
         if (userProfile.avatar_url) {
             el.innerHTML = `<img src="${userProfile.avatar_url}" class="w-full h-full object-cover rounded-full">`;
-            el.innerText = ""; // On enlève les initiales
-            // Optionnel : on peut enlever le fond de couleur par défaut s'il gêne
-            // el.classList.remove('bg-gradient-to-tr', 'from-purple-500', 'to-blue-500'); 
+            el.innerText = ""; 
         } else {
-            // Sinon on garde les initiales
-            el.innerHTML = ""; // On vide l'image
+            el.innerHTML = ""; 
             el.innerText = initials;
         }
     });
@@ -160,12 +154,10 @@ function openEditModal() {
     document.getElementById('edit-username').value = userProfile.username; 
     document.getElementById('edit-bio').value = userProfile.bio; 
     
-    // Reset de la preview
     const preview = document.getElementById('edit-avatar-preview');
     if (userProfile.avatar_url) {
         preview.src = userProfile.avatar_url;
     } else {
-        // Une image par défaut si pas d'avatar
         preview.src = "https://ui-avatars.com/api/?name=" + userProfile.username + "&background=random";
     }
     selectedAvatarFile = null;
@@ -175,7 +167,6 @@ function closeEditModal() {
     document.getElementById('edit-profile-modal').classList.add('hidden'); 
 }
 
-// --- NOUVEAU : Prévisualisation de l'avatar ---
 function handleAvatarPreview(input) {
     if (input.files && input.files[0]) {
         selectedAvatarFile = input.files[0];
@@ -187,11 +178,10 @@ function handleAvatarPreview(input) {
     }
 }
 
-// --- MODIFIÉ : Sauvegarde avec Upload Image ---
 async function saveProfile() {
     const newUsername = document.getElementById('edit-username').value;
     const newBio = document.getElementById('edit-bio').value;
-    const btn = document.querySelector('#edit-profile-modal button:last-child'); // Bouton enregistrer
+    const btn = document.querySelector('#edit-profile-modal button:last-child');
 
     if (!newUsername.trim()) return alert("Pseudo requis");
 
@@ -199,35 +189,30 @@ async function saveProfile() {
     btn.disabled = true;
 
     try {
-        let finalAvatarUrl = userProfile.avatar_url; // Par défaut, on garde l'ancienne
+        let finalAvatarUrl = userProfile.avatar_url; 
 
-        // 1. Si une nouvelle image est sélectionnée, on l'upload
         if (selectedAvatarFile) {
             const fileExt = selectedAvatarFile.name.split('.').pop();
             const fileName = `${currentUser.id}/${Date.now()}.${fileExt}`;
 
-            // Upload vers le bucket 'avatars'
             const { error: uploadError } = await supabaseClient.storage
                 .from('avatars')
                 .upload(fileName, selectedAvatarFile);
 
             if (uploadError) throw uploadError;
 
-            // Récupérer l'URL publique
             const { data } = supabaseClient.storage.from('avatars').getPublicUrl(fileName);
             finalAvatarUrl = data.publicUrl;
         }
 
-        // 2. Mise à jour de la table profiles
         const { error } = await supabaseClient.from('profiles').update({ 
             username: newUsername, 
             bio: newBio,
-            avatar_url: finalAvatarUrl // On ajoute l'URL
+            avatar_url: finalAvatarUrl 
         }).eq('id', currentUser.id);
 
         if (error) throw error;
 
-        // 3. Mise à jour locale pour affichage immédiat
         userProfile.username = newUsername;
         userProfile.bio = newBio;
         userProfile.avatar_url = finalAvatarUrl;
@@ -248,7 +233,6 @@ async function saveProfile() {
 // ==========================================
 // 5. GESTION DES AMIS
 // ==========================================
-// (Pas de changement ici, mais je garde le code pour la cohérence)
 
 async function switchProfileTab(tabName) {
     const btnFriends = document.getElementById('tab-friends');
@@ -286,7 +270,6 @@ async function fetchMyFriendsList(container) {
 
     container.innerHTML = '';
     profiles.forEach(p => {
-        // Affichage avatar ami (si dispo) ou initiales
         const avatarHtml = p.avatar_url 
             ? `<img src="${p.avatar_url}" class="w-10 h-10 rounded-full object-cover">`
             : `<div class="w-10 h-10 rounded-full bg-purple-600 flex items-center justify-center font-bold text-xs text-white">${p.username.substring(0,2).toUpperCase()}</div>`;
@@ -413,12 +396,11 @@ async function loadConversations() {
             if(c) { 
                 c.name = p.username; 
                 c.initials = p.username.substring(0,2).toUpperCase();
-                c.avatar_url = p.avatar_url; // On récupère l'avatar
+                c.avatar_url = p.avatar_url; 
             }
         });
     }
     container.innerHTML = conversationArray.map(conv => {
-        // Avatar chat
         const avatarDisplay = conv.avatar_url 
             ? `<img src="${conv.avatar_url}" class="w-10 h-10 rounded-full object-cover">`
             : `<div class="w-10 h-10 bg-purple-600 rounded-full flex items-center justify-center font-bold text-xs text-white">${conv.initials}</div>`;
@@ -502,7 +484,6 @@ async function sendLiveMessage() {
 // 8. GESTION DES POSTS (AVEC IMAGES & COMMENTAIRES)
 // ==========================================
 
-// --- A. Fonction pour trouver qui sont mes amis ---
 async function getFriendIds() {
     const { data } = await supabaseClient
         .from('friendships')
@@ -521,7 +502,6 @@ async function getFriendIds() {
     return Array.from(friendIds);
 }
 
-// --- B. Gestion de l'image POST (Preview) ---
 function handleImageSelect(input) {
     if (input.files && input.files[0]) {
         selectedImageFile = input.files[0];
@@ -540,21 +520,18 @@ function removeImage() {
     document.getElementById('image-preview-container').classList.add('hidden');
 }
 
-// --- C. Publication (Texte + Image) ---
 async function publishPost() {
     const input = document.getElementById('new-post-input');
     const btn = document.getElementById('btn-publish');
 
     if (!input.value.trim() && !selectedImageFile) return alert("Le post est vide !");
 
-    // Bouton chargement
     btn.innerHTML = 'Envoi...';
     btn.disabled = true;
 
     try {
         let imageUrl = null;
 
-        // 1. Upload Image si présente
         if (selectedImageFile) {
             const fileExt = selectedImageFile.name.split('.').pop();
             const fileName = `${currentUser.id}/${Date.now()}.${fileExt}`;
@@ -569,18 +546,14 @@ async function publishPost() {
             imageUrl = data.publicUrl;
         }
 
-        // 2. Insert Post (On ajoute aussi l'avatar de l'user pour l'afficher plus tard si besoin)
         await supabaseClient.from('posts').insert([{ 
             user_id: currentUser.id, 
             content: input.value, 
             user_name: userProfile.username, 
             image_url: imageUrl,
             avatar_initials: userProfile.username.substring(0,2).toUpperCase() 
-            // Note: Si tu veux que l'avatar du post se mette à jour quand l'user change de photo,
-            // il faudra faire un "join" avec la table profiles. Pour l'instant on reste simple.
         }]);
 
-        // Reset
         input.value = '';
         removeImage();
         fetchPosts();
@@ -595,24 +568,20 @@ async function publishPost() {
     }
 }
 
-// --- D. Affichage des Posts (FILTRÉ PAR AMIS) ---
 async function fetchPosts() {
     const container = document.getElementById('posts-container');
     if(!container) return;
 
-    // 1. Récupère liste des amis
     const friendIds = await getFriendIds();
 
-    // 2. Requête filtrée avec .in() + On récupère les infos du PROFIL pour avoir l'avatar à jour
     const { data } = await supabaseClient
         .from('posts')
-        .select('*, profiles:user_id(avatar_url)') // Join avec profiles pour l'avatar
+        .select('*, profiles:user_id(avatar_url)')
         .in('user_id', friendIds)
         .order('created_at', { ascending: false });
     
     container.innerHTML = ''; 
 
-    // 3. Gestion cas vide
     if (!data || data.length === 0) {
         container.innerHTML = `
             <div class="text-center py-10 px-4 animate-fade-in">
@@ -624,18 +593,15 @@ async function fetchPosts() {
         return;
     }
 
-    // 4. Affichage
     data.forEach(post => {
         const isMyPost = post.user_id === currentUser.id;
         const date = new Date(post.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
         
-        // Avatar du post (priorité à l'image du profil, sinon initiales)
         const userAvatarUrl = post.profiles && post.profiles.avatar_url;
         const avatarHtml = userAvatarUrl 
             ? `<img src="${userAvatarUrl}" class="w-8 h-8 rounded-full object-cover shadow-lg border border-white/10">`
             : `<div class="w-8 h-8 bg-gradient-to-tr from-purple-500 to-pink-500 rounded-full flex items-center justify-center font-bold text-white text-[10px] shadow-lg">${post.avatar_initials || "??"}</div>`;
 
-        // Image du post
         const postImageHtml = post.image_url 
             ? `<div class="mt-3 rounded-xl overflow-hidden border border-white/5"><img src="${post.image_url}" class="w-full max-h-96 object-cover"></div>` 
             : '';
@@ -680,8 +646,6 @@ async function fetchPosts() {
     if(typeof lucide !== 'undefined') lucide.createIcons();
 }
 
-// --- E. Actions sur les Posts ---
-
 async function deletePost(id) {
     if(!confirm("Supprimer ce post ?")) return;
     const { error } = await supabaseClient.from('posts').delete().eq('id', id);
@@ -701,7 +665,6 @@ async function toggleComments(postId) {
     section.classList.toggle('hidden');
 
     if (!section.classList.contains('hidden')) {
-        // Charger commentaires depuis la table 'comments'
         const { data: comments } = await supabaseClient
             .from('comments')
             .select('*')
@@ -734,7 +697,6 @@ async function sendComment(postId) {
     
     input.value = '';
     
-    // Astuce : On ferme et rouvre pour recharger
     document.getElementById(`comments-section-${postId}`).classList.add('hidden');
     toggleComments(postId);
 }
@@ -905,19 +867,162 @@ function toggleNotifDropdown() {
     if(!dropdown.classList.contains('hidden')) fetchNotifications();
 }
 
-async function addStory() {
-    const text = prompt("Votre story :");
-    if(text) await supabaseClient.from('stories').insert([{ user_id: currentUser.id, content_text: text }]);
-    renderStoriesList();
+// ==========================================
+// 12. GESTION DES STORIES (NOUVEAU SYSTÈME AVEC PHOTOS)
+// ==========================================
+
+// --- A. Déclencher l'ajout ---
+function triggerAddStory() {
+    document.getElementById('btn-add-story-input').click();
 }
+
+// --- B. Upload et Création ---
+async function uploadStory(input) {
+    if (!input.files || !input.files[0]) return;
+    const file = input.files[0];
+
+    const container = document.getElementById('stories-container');
+    const oldHTML = container.innerHTML;
+    container.innerHTML = `<div class="flex flex-col items-center space-y-1"><div class="w-14 h-14 rounded-full border-2 border-purple-500 border-t-transparent animate-spin"></div><span class="text-[9px]">Envoi...</span></div>` + oldHTML;
+
+    try {
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${currentUser.id}/${Date.now()}.${fileExt}`;
+
+        // 1. Upload Image
+        const { error: uploadError } = await supabaseClient.storage
+            .from('story-images')
+            .upload(fileName, file);
+        if (uploadError) throw uploadError;
+
+        // 2. Get URL
+        const { data } = supabaseClient.storage.from('story-images').getPublicUrl(fileName);
+        
+        // 3. Save to DB
+        await supabaseClient.from('stories').insert([{
+            user_id: currentUser.id,
+            image_url: data.publicUrl
+        }]);
+
+        // 4. Refresh
+        renderStoriesList();
+
+    } catch (error) {
+        alert("Erreur upload story: " + error.message);
+        renderStoriesList(); 
+    }
+}
+
+// --- C. Affichage de la liste (Filtre 24h) ---
 async function renderStoriesList() {
     const container = document.getElementById('stories-container');
-    let html = `<div onclick="addStory()" class="flex flex-col items-center space-y-1 cursor-pointer"><div class="w-14 h-14 rounded-full bg-gray-800 border-2 border-dashed border-gray-600 flex items-center justify-center hover:border-purple-500 transition-colors"><i data-lucide="plus" class="w-5 h-5 text-gray-400"></i></div><span class="text-[9px] text-gray-500">Ajouter</span></div>`;
-    const { data } = await supabaseClient.from('stories').select('*, profiles(username)').order('created_at', { ascending: false });
-    if(data) data.forEach(s => {
-        const name = s.profiles ? s.profiles.username : "Ami";
-        html += `<div onclick="alert('${s.content_text}')" class="flex flex-col items-center space-y-1 cursor-pointer"><div class="w-14 h-14 rounded-full bg-gradient-to-tr from-yellow-400 to-purple-600 p-0.5"><div class="w-full h-full rounded-full bg-gray-900 flex items-center justify-center text-[10px] font-bold text-white">${name.substring(0,1).toUpperCase()}</div></div><span class="text-[9px] text-gray-400 truncate w-14 text-center">${name}</span></div>`;
-    });
+    if (!container) return;
+
+    // 1. Calculer la date d'il y a 24h
+    const yesterday = new Date();
+    yesterday.setHours(yesterday.getHours() - 24);
+
+    // 2. Récupérer les stories RÉCENTES + info profil
+    const { data: stories } = await supabaseClient
+        .from('stories')
+        .select('*, profiles(username, avatar_url)')
+        .gt('created_at', yesterday.toISOString()) // Seulement > 24h
+        .order('created_at', { ascending: false });
+
+    // 3. Bouton "Ajouter" toujours au début
+    let html = `
+    <div onclick="triggerAddStory()" class="flex flex-col items-center space-y-1 cursor-pointer shrink-0">
+        <div class="w-14 h-14 rounded-full bg-gray-800 border-2 border-dashed border-gray-600 flex items-center justify-center hover:border-purple-500 transition-colors relative">
+            <i data-lucide="plus" class="w-5 h-5 text-gray-400"></i>
+            <div class="absolute bottom-0 right-0 w-4 h-4 bg-purple-600 rounded-full border-2 border-gray-900 flex items-center justify-center text-[8px] text-white">+</div>
+        </div>
+        <span class="text-[9px] text-gray-300">Ma Story</span>
+    </div>`;
+
+    // 4. Afficher les bulles des autres
+    if (stories && stories.length > 0) {
+        stories.forEach(s => {
+            if (!s.profiles) return;
+            
+            const storyData = encodeURIComponent(JSON.stringify(s));
+            
+            const hasAvatar = s.profiles.avatar_url;
+            const avatarContent = hasAvatar 
+                ? `<img src="${s.profiles.avatar_url}" class="w-full h-full object-cover rounded-full">`
+                : `<div class="w-full h-full rounded-full bg-gray-700 flex items-center justify-center font-bold text-white">${s.profiles.username[0].toUpperCase()}</div>`;
+
+            html += `
+            <div onclick="openStoryViewer('${storyData}')" class="flex flex-col items-center space-y-1 cursor-pointer shrink-0">
+                <div class="w-14 h-14 rounded-full bg-gradient-to-tr from-pink-500 to-purple-600 p-[2px]">
+                    <div class="w-full h-full rounded-full bg-gray-900 border-2 border-gray-900 overflow-hidden">
+                        ${avatarContent}
+                    </div>
+                </div>
+                <span class="text-[9px] text-gray-300 truncate w-14 text-center">${s.profiles.username}</span>
+            </div>`;
+        });
+    }
+
     container.innerHTML = html;
-    if(typeof lucide !== 'undefined') lucide.createIcons();
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+// --- D. Le Lecteur (Viewer) ---
+let currentStoryTimer = null;
+
+function openStoryViewer(storyDataEncoded) {
+    const story = JSON.parse(decodeURIComponent(storyDataEncoded));
+    const viewer = document.getElementById('story-viewer');
+    
+    // Remplir les infos
+    document.getElementById('story-viewer-image').src = story.image_url;
+    document.getElementById('story-viewer-name').innerText = story.profiles.username;
+    
+    // Avatar
+    const avatarEl = document.getElementById('story-viewer-avatar');
+    if (story.profiles.avatar_url) avatarEl.src = story.profiles.avatar_url;
+    else avatarEl.src = "https://ui-avatars.com/api/?name=" + story.profiles.username;
+
+    // Temps (Calcul simple)
+    const date = new Date(story.created_at);
+    const now = new Date();
+    const diffHours = Math.floor((now - date) / (1000 * 60 * 60));
+    document.getElementById('story-viewer-time').innerText = diffHours + "h";
+
+    // Bouton Supprimer (si c'est moi)
+    const deleteContainer = document.getElementById('story-delete-btn-container');
+    if (story.user_id === currentUser.id) {
+        deleteContainer.innerHTML = `<button onclick="deleteStory('${story.id}')" class="bg-red-500/20 text-red-400 border border-red-500/50 px-4 py-2 rounded-full text-xs font-bold hover:bg-red-500 hover:text-white transition-colors">Supprimer</button>`;
+    } else {
+        deleteContainer.innerHTML = "";
+    }
+
+    // Afficher le viewer
+    viewer.classList.remove('hidden');
+
+    // Animation barre de progression (5 secondes)
+    const progress = document.getElementById('story-progress');
+    progress.style.transition = 'none';
+    progress.style.width = '0%';
+    setTimeout(() => {
+        progress.style.transition = 'width 5s linear';
+        progress.style.width = '100%';
+    }, 10);
+
+    // Fermeture automatique après 5s
+    if (currentStoryTimer) clearTimeout(currentStoryTimer);
+    currentStoryTimer = setTimeout(() => closeStoryViewer(), 5000);
+}
+
+function closeStoryViewer() {
+    document.getElementById('story-viewer').classList.add('hidden');
+    document.getElementById('story-viewer-image').src = ""; // Stop chargement
+    if (currentStoryTimer) clearTimeout(currentStoryTimer);
+}
+
+async function deleteStory(id) {
+    if (!confirm("Supprimer cette story ?")) return;
+    await supabaseClient.from('stories').delete().eq('id', id);
+    closeStoryViewer();
+    renderStoriesList();
 }
