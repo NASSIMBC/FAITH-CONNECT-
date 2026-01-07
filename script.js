@@ -12,12 +12,12 @@ const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 let currentUser = null;
 let userProfile = null;
 let activeChatUser = null; 
-let selectedImageFile = null;      
-let selectedAvatarFile = null;     
+let selectedImageFile = null;       
+let selectedAvatarFile = null;      
 
 document.addEventListener('DOMContentLoaded', checkSession);
 
-// --- AMÉLIORATION : GESTION TOUCHE ENTRÉE ---
+// --- GESTION TOUCHE ENTRÉE ---
 document.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
         if (document.activeElement.id === 'chat-input') {
@@ -28,6 +28,11 @@ document.addEventListener('keydown', (e) => {
             e.preventDefault();
             const postId = document.activeElement.id.replace('input-comment-', '');
             sendComment(postId);
+        }
+        // Pour les commentaires Reels
+        if (document.activeElement.id === 'reel-comment-input') {
+            e.preventDefault();
+            sendReelComment();
         }
     }
 });
@@ -82,7 +87,7 @@ async function handleLogin() {
 async function logout() { await supabaseClient.auth.signOut(); location.reload(); }
 
 // ==========================================
-// 3. NAVIGATION & UI
+// 3. NAVIGATION & UI (MODIFIÉ POUR REELS)
 // ==========================================
 
 function switchView(viewName) {
@@ -92,10 +97,21 @@ function switchView(viewName) {
         const btn = document.getElementById('nav-' + v);
         if(btn) { btn.classList.remove('text-purple-400'); btn.classList.add('text-gray-500'); }
     });
+
     const target = document.getElementById('view-' + viewName);
     if(target) target.classList.remove('hidden');
+    
     const activeBtn = document.getElementById('nav-' + viewName);
     if(activeBtn) { activeBtn.classList.remove('text-gray-500'); activeBtn.classList.add('text-purple-400'); }
+
+    // --- LOGIQUE REELS : CHARGER/ARRÊTER ---
+    const reelsContainer = document.getElementById('reels-container');
+    if (viewName === 'reels') {
+        fetchReels(); // Charge et mélange à l'entrée
+    } else {
+        if(reelsContainer) reelsContainer.innerHTML = ''; // Vide le conteneur pour arrêter la lecture
+    }
+
     if (viewName === 'live') fetchLiveMessages();
     if (viewName === 'messages') {
         document.getElementById('msg-badge').classList.add('hidden');
@@ -317,7 +333,6 @@ function resetChat() {
     if(input) { input.value = ""; input.disabled = true; input.placeholder = "Sélectionnez un ami d'abord"; }
 }
 
-// --- AMÉLIORATION : AUTO-SCROLL FLUIDE ---
 async function fetchMessages() {
     const container = document.getElementById('chat-history');
     if(!container || !activeChatUser) return;
@@ -328,7 +343,6 @@ async function fetchMessages() {
             const isMe = msg.sender_id === currentUser.id;
             container.insertAdjacentHTML('beforeend', `<div class="flex ${isMe ? 'justify-end' : 'justify-start'} mb-2"><div class="${isMe ? 'bg-purple-600 text-white' : 'bg-gray-800 text-gray-200'} px-4 py-2 rounded-2xl max-w-[85%] text-sm border border-white/5 shadow-sm">${msg.content}</div></div>`);
         });
-        // Scroll vers le bas
         container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
     } else { container.innerHTML = '<div class="text-center text-gray-600 text-xs mt-10 italic">Dites bonjour ! 👋</div>'; }
 }
@@ -356,7 +370,7 @@ async function sendLiveMessage() {
 }
 
 // ==========================================
-// 8. GESTION DES POSTS (STABLE & NETTOYAGE STORAGE)
+// 8. GESTION DES POSTS
 // ==========================================
 
 function handleImageSelect(input) {
@@ -441,19 +455,14 @@ async function fetchPosts() {
     } catch (err) { console.error("Erreur fetchPosts:", err); }
 }
 
-// --- AMÉLIORATION : SUPPRESSION AVEC NETTOYAGE STORAGE ---
 async function deletePost(id) {
     if(!confirm("Supprimer ce post ?")) return;
-
     try {
-        // 1. Chercher si le post a une image pour la supprimer du Storage
         const { data: post } = await supabaseClient.from('posts').select('image_url').eq('id', id).single();
         if (post && post.image_url) {
             const fileName = post.image_url.split('/').pop();
             await supabaseClient.storage.from('post-images').remove([`${currentUser.id}/${fileName}`]);
         }
-
-        // 2. Supprimer le post de la table
         const { error } = await supabaseClient.from('posts').delete().eq('id', id).eq('user_id', currentUser.id);
         if(!error) { 
             document.getElementById(`post-${id}`).remove(); 
@@ -531,14 +540,11 @@ async function addPrayer() {
 
 async function prayFor(id, current) { await supabaseClient.from('prayers').update({ count: (current || 0) + 1 }).eq('id', id); fetchPrayers(); }
 
-// --- AMÉLIORATION : TEMPS RÉEL ÉTENDU (LIKES) ---
 function subscribeToRealtime() {
     supabaseClient.channel('global-updates').on('postgres_changes', { event: '*', schema: 'public' }, async (payload) => {
         if (payload.table === 'messages') { fetchMessages(); loadConversations(); }
         if (payload.table === 'posts') fetchPosts();
         if (payload.table === 'friendships') { fetchNotifications(); updateFriendCount(currentUser.id); }
-        
-        // Notifications pour les Amens
         if (payload.table === 'likes' && payload.eventType === 'INSERT') {
             const { data: post } = await supabaseClient.from('posts').select('user_id').eq('id', payload.new.post_id).single();
             if (post && post.user_id === currentUser.id && payload.new.user_id !== currentUser.id) {
@@ -559,7 +565,6 @@ function showNotification(senderName, message) {
     const container = document.getElementById('notification-container');
     const audio = document.getElementById('notif-sound');
     if(audio) audio.play().catch(() => {});
-    
     const notif = document.createElement('div');
     notif.className = "bg-gray-800 border-l-4 border-purple-500 text-white p-3 rounded-xl shadow-2xl mb-2 animate-fade-in";
     notif.innerHTML = `<h4 class="font-bold text-xs text-purple-400">${senderName}</h4><p class="text-xs text-gray-300 truncate">${message}</p>`;
@@ -647,3 +652,121 @@ function openStoryViewer(storyDataEncoded) {
 
 function closeStoryViewer() { document.getElementById('story-viewer').classList.add('hidden'); if (currentStoryTimer) clearTimeout(currentStoryTimer); }
 async function deleteStory(id) { if (confirm("Supprimer ?")) { await supabaseClient.from('stories').delete().eq('id', id); closeStoryViewer(); renderStoriesList(); } }
+
+// ==========================================
+// 13. GESTION DES REELS (NOUVELLE SECTION)
+// ==========================================
+
+// Fonction de mélange
+function shuffleArray(array) {
+    for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+    }
+    return array;
+}
+
+function openAddReelModal() { document.getElementById('add-reel-modal').classList.remove('hidden'); }
+function closeAddReelModal() { document.getElementById('add-reel-modal').classList.add('hidden'); }
+
+async function saveReel() {
+    const url = document.getElementById('reel-url').value.trim();
+    const caption = document.getElementById('reel-caption').value.trim();
+    if(!url) return alert("Veuillez mettre un lien.");
+    await supabaseClient.from('reels').insert([{ user_id: currentUser.id, video_url: url, caption: caption }]);
+    closeAddReelModal();
+    document.getElementById('reel-url').value = '';
+    document.getElementById('reel-caption').value = '';
+    fetchReels(); 
+}
+
+async function fetchReels() {
+    const container = document.getElementById('reels-container');
+    container.innerHTML = '<div class="flex items-center justify-center h-full"><div class="w-8 h-8 border-4 border-purple-500 border-t-transparent rounded-full animate-spin"></div></div>';
+    
+    const { data: reels } = await supabaseClient.from('reels').select('*, profiles:user_id(username, avatar_url)').order('created_at', { ascending: false });
+    
+    container.innerHTML = '';
+    if (reels && reels.length > 0) {
+        const shuffledReels = shuffleArray([...reels]); // Mélange
+        shuffledReels.forEach(reel => {
+            let embedUrl = reel.video_url;
+            if (embedUrl.includes('youtube.com') || embedUrl.includes('youtu.be')) {
+                let videoId = '';
+                if(embedUrl.includes('shorts/')) videoId = embedUrl.split('shorts/')[1].split('?')[0];
+                else if(embedUrl.includes('v=')) videoId = embedUrl.split('v=')[1].split('&')[0];
+                else videoId = embedUrl.split('/').pop();
+                embedUrl = `https://www.youtube.com/embed/${videoId}?autoplay=1&controls=0&loop=1&playlist=${videoId}&rel=0&playsinline=1&iv_load_policy=3`;
+            }
+            const avatar = reel.profiles?.avatar_url || 'https://ui-avatars.com/api/?name=' + reel.profiles?.username;
+            
+            const html = `
+                <div class="reel-item relative w-full h-full flex items-center justify-center bg-black snap-start snap-always">
+                    <div class="absolute inset-0 z-0 pointer-events-auto">
+                        <iframe src="${embedUrl}" class="w-full h-full" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+                        <div class="absolute inset-0 bg-transparent pointer-events-none"></div>
+                    </div>
+                    <div class="absolute bottom-20 right-4 z-20 flex flex-col gap-6 items-center">
+                        <div class="flex flex-col items-center gap-1">
+                            <button onclick="toggleReelAmen('${reel.id}')" class="bg-black/40 backdrop-blur-md p-3 rounded-full active:scale-90 transition-transform">
+                                <i data-lucide="heart" class="w-7 h-7 text-white" id="reel-heart-${reel.id}"></i>
+                            </button>
+                            <span class="text-white text-xs font-bold drop-shadow-md">Amen</span>
+                        </div>
+                        <div class="flex flex-col items-center gap-1">
+                            <button onclick="openReelComments('${reel.id}')" class="bg-black/40 backdrop-blur-md p-3 rounded-full active:scale-90 transition-transform">
+                                <i data-lucide="message-circle" class="w-7 h-7 text-white"></i>
+                            </button>
+                            <span class="text-white text-xs font-bold drop-shadow-md">Coms</span>
+                        </div>
+                    </div>
+                    <div class="absolute bottom-4 left-4 right-16 z-20">
+                        <div class="flex items-center gap-3 mb-3">
+                            <img src="${avatar}" class="w-10 h-10 rounded-full border-2 border-white shadow-md object-cover">
+                            <span class="text-white font-bold text-sm shadow-black drop-shadow-md">@${reel.profiles?.username}</span>
+                        </div>
+                        <p class="text-white text-sm line-clamp-2 drop-shadow-md">${reel.caption || ''}</p>
+                    </div>
+                </div>`;
+            container.insertAdjacentHTML('beforeend', html);
+        });
+        if(typeof lucide !== 'undefined') lucide.createIcons();
+    }
+}
+
+async function toggleReelAmen(reelId) {
+    const icon = document.getElementById(`reel-heart-${reelId}`);
+    if(icon.classList.contains('text-pink-500')) {
+        icon.classList.remove('text-pink-500', 'fill-pink-500'); icon.classList.add('text-white');
+    } else {
+        icon.classList.add('text-pink-500', 'fill-pink-500'); icon.classList.remove('text-white');
+    }
+    await supabaseClient.from('reel_likes').insert([{ reel_id: reelId, user_id: currentUser.id }]);
+}
+
+let currentReelIdForComments = null;
+async function openReelComments(reelId) {
+    currentReelIdForComments = reelId;
+    document.getElementById('reel-comments-modal').classList.remove('hidden');
+    const list = document.getElementById('reel-comments-list');
+    list.innerHTML = '<div class="text-center text-gray-500 mt-4">Chargement...</div>';
+    const { data: comments } = await supabaseClient.from('reel_comments').select('*, profiles(username)').eq('reel_id', reelId).order('created_at', { ascending: true });
+    list.innerHTML = '';
+    if(comments && comments.length > 0) {
+        comments.forEach(c => {
+            list.insertAdjacentHTML('beforeend', `<div class="flex gap-2 mb-2"><span class="font-bold text-purple-400 text-sm">${c.profiles.username}</span><span class="text-gray-300 text-sm">${c.content}</span></div>`);
+        });
+    } else { list.innerHTML = '<div class="text-center text-gray-600 mt-10">Aucun commentaire.</div>'; }
+}
+
+async function sendReelComment() {
+    const input = document.getElementById('reel-comment-input');
+    const text = input.value;
+    if(!text || !currentReelIdForComments) return;
+    input.value = ''; 
+    const list = document.getElementById('reel-comments-list');
+    if(list.innerText.includes('Aucun commentaire')) list.innerHTML = '';
+    list.insertAdjacentHTML('beforeend', `<div class="flex gap-2 mb-2 opacity-50"><span class="font-bold text-purple-400 text-sm">Moi</span><span class="text-gray-300 text-sm">${text}</span></div>`);
+    await supabaseClient.from('reel_comments').insert([{ reel_id: currentReelIdForComments, user_id: currentUser.id, content: text }]);
+    openReelComments(currentReelIdForComments);
+}
