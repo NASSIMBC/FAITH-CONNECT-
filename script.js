@@ -1,8 +1,12 @@
 // ==========================================
 // 1. CONFIGURATION SUPABASE
 // ==========================================
+// Assure-toi que ces clés sont les bonnes
 const SUPABASE_URL = 'https://uduajuxobmywmkjnawjn.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVkdWFqdXhvYm15d21ram5hd2puIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc0NjUyMTUsImV4cCI6MjA4MzA0MTIxNX0.Vn1DpT9l9N7sVb3kVUPRqr141hGvM74vkZULJe59YUU';
+
+// Initialisation du client
+// Note: On utilise window.supabase si le CDN est chargé via <script>
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // ==========================================
@@ -11,6 +15,7 @@ const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 let currentUser = null;
 let userProfile = null;
 let activeChatUser = null; 
+let selectedImageFile = null; // NOUVEAU : Pour stocker l'image avant upload
 
 document.addEventListener('DOMContentLoaded', checkSession);
 
@@ -87,7 +92,6 @@ function switchView(viewName) {
         document.getElementById('msg-badge').classList.add('hidden');
         if(!activeChatUser) resetChat();
     }
-    // C'EST ICI QUE CA BLOQUAIT : J'ai vérifié que switchProfileTab existe bien plus bas
     if (viewName === 'profile') {
         switchProfileTab('friends'); 
     }
@@ -133,7 +137,7 @@ function updateUIProfile() {
 }
 
 // ==========================================
-// 5. GESTION DES AMIS (CETTE SECTION ÉTAIT MANQUANTE/CASSÉE)
+// 5. GESTION DES AMIS
 // ==========================================
 
 async function switchProfileTab(tabName) {
@@ -141,7 +145,6 @@ async function switchProfileTab(tabName) {
     const btnRequests = document.getElementById('tab-requests');
     const container = document.getElementById('profile-social-list');
     
-    // Sécurité si les éléments n'existent pas encore
     if(!btnFriends || !btnRequests || !container) return;
 
     if(tabName === 'friends') {
@@ -241,7 +244,6 @@ async function removeFriend(friendId) {
     updateFriendCount(currentUser.id);
 }
 
-// --- MODALE MODIFIER PROFIL ---
 function openEditModal() { 
     document.getElementById('edit-profile-modal').classList.remove('hidden'); 
     document.getElementById('edit-username').value = userProfile.username; 
@@ -366,7 +368,7 @@ async function sendChatMessage() {
 }
 
 // ==========================================
-// 7. GESTION DU LIVE (STREAM & CHAT)
+// 7. GESTION DU LIVE
 // ==========================================
 
 async function fetchLiveMessages() {
@@ -392,7 +394,201 @@ async function sendLiveMessage() {
 }
 
 // ==========================================
-// 8. FONCTIONS GÉNÉRALES (RECHERCHE, POSTS, PRIÈRES)
+// 8. GESTION DES POSTS (AVEC IMAGES & COMMENTAIRES)
+// ==========================================
+
+// --- A. Gestion de l'image (Preview) ---
+function handleImageSelect(input) {
+    if (input.files && input.files[0]) {
+        selectedImageFile = input.files[0];
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            document.getElementById('image-preview').src = e.target.result;
+            document.getElementById('image-preview-container').classList.remove('hidden');
+        }
+        reader.readAsDataURL(input.files[0]);
+    }
+}
+
+function removeImage() {
+    selectedImageFile = null;
+    document.getElementById('post-image-file').value = ""; 
+    document.getElementById('image-preview-container').classList.add('hidden');
+}
+
+// --- B. Publication (Texte + Image) ---
+async function publishPost() {
+    const input = document.getElementById('new-post-input');
+    const btn = document.getElementById('btn-publish');
+
+    if (!input.value.trim() && !selectedImageFile) return alert("Le post est vide !");
+
+    // Bouton chargement
+    btn.innerHTML = 'Envoi...';
+    btn.disabled = true;
+
+    try {
+        let imageUrl = null;
+
+        // 1. Upload Image si présente
+        if (selectedImageFile) {
+            const fileExt = selectedImageFile.name.split('.').pop();
+            const fileName = `${currentUser.id}/${Date.now()}.${fileExt}`;
+            
+            const { error: uploadError } = await supabaseClient.storage
+                .from('post-images') // Assure-toi d'avoir créé ce bucket "Public" dans Supabase
+                .upload(fileName, selectedImageFile);
+
+            if (uploadError) throw uploadError;
+
+            const { data } = supabaseClient.storage.from('post-images').getPublicUrl(fileName);
+            imageUrl = data.publicUrl;
+        }
+
+        // 2. Insert Post
+        await supabaseClient.from('posts').insert([{ 
+            user_id: currentUser.id, 
+            content: input.value, 
+            user_name: userProfile.username, 
+            image_url: imageUrl,
+            avatar_initials: userProfile.username.substring(0,2).toUpperCase() 
+        }]);
+
+        // Reset
+        input.value = '';
+        removeImage();
+        fetchPosts();
+
+    } catch (error) {
+        console.error(error);
+        alert("Erreur lors de la publication : " + error.message);
+    } finally {
+        btn.innerHTML = 'Publier';
+        btn.disabled = false;
+        if(typeof lucide !== 'undefined') lucide.createIcons();
+    }
+}
+
+// --- C. Affichage des Posts (Complet) ---
+async function fetchPosts() {
+    const container = document.getElementById('posts-container');
+    if(!container) return;
+
+    const { data } = await supabaseClient.from('posts').select('*').order('created_at', { ascending: false });
+    
+    container.innerHTML = ''; 
+    if (data) data.forEach(post => {
+        const isMyPost = post.user_id === currentUser.id;
+        const date = new Date(post.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+        
+        // HTML Image
+        const imageHtml = post.image_url 
+            ? `<div class="mt-3 rounded-xl overflow-hidden border border-white/5"><img src="${post.image_url}" class="w-full max-h-96 object-cover"></div>` 
+            : '';
+
+        // Bouton Supprimer
+        const deleteBtn = isMyPost 
+            ? `<button onclick="deletePost('${post.id}')" class="text-gray-500 hover:text-red-500"><i data-lucide="trash-2" class="w-4 h-4"></i></button>` 
+            : '';
+
+        container.insertAdjacentHTML('beforeend', `
+            <div class="bg-gray-800/30 rounded-2xl p-4 border border-white/5 mb-4 animate-fade-in" id="post-${post.id}">
+                <div class="flex justify-between items-start mb-3">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-8 h-8 bg-gradient-to-tr from-purple-500 to-pink-500 rounded-full flex items-center justify-center font-bold text-white text-[10px] shadow-lg">${post.avatar_initials || "??"}</div>
+                        <div>
+                            <h3 class="font-bold text-white text-sm">${post.user_name}</h3>
+                            <p class="text-[10px] text-gray-500">${date}</p>
+                        </div>
+                    </div>
+                    ${deleteBtn}
+                </div>
+                
+                <p class="text-gray-200 text-sm leading-relaxed whitespace-pre-wrap">${post.content}</p>
+                ${imageHtml}
+                
+                <div class="border-t border-white/5 mt-3 pt-3 flex justify-between text-gray-500">
+                    <div class="flex gap-4">
+                        <button class="hover:text-pink-400 transition-colors flex items-center gap-1 text-xs"><i data-lucide="heart" class="w-4 h-4"></i> Amen</button>
+                        <button onclick="toggleComments('${post.id}')" class="hover:text-blue-400 transition-colors flex items-center gap-1 text-xs"><i data-lucide="message-square" class="w-4 h-4"></i> Commenter</button>
+                    </div>
+                    <button onclick="sharePost('${post.content}')" class="hover:text-green-400 transition-colors flex items-center gap-1 text-xs"><i data-lucide="share-2" class="w-4 h-4"></i> Partager</button>
+                </div>
+
+                <div id="comments-section-${post.id}" class="hidden mt-3 pt-3 bg-black/20 rounded-lg p-3">
+                    <div id="comments-list-${post.id}" class="space-y-2 mb-3"></div>
+                    <div class="flex gap-2">
+                        <input type="text" id="input-comment-${post.id}" placeholder="Votre commentaire..." class="flex-1 bg-gray-900 border border-white/10 rounded-lg px-3 py-1 text-xs text-white">
+                        <button onclick="sendComment('${post.id}')" class="text-purple-400 font-bold text-xs">Envoyer</button>
+                    </div>
+                </div>
+            </div>`);
+    });
+    if(typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+// --- D. Actions sur les Posts ---
+
+async function deletePost(id) {
+    if(!confirm("Supprimer ce post ?")) return;
+    const { error } = await supabaseClient.from('posts').delete().eq('id', id);
+    if(!error) document.getElementById(`post-${id}`).remove();
+    else alert("Erreur: " + error.message);
+}
+
+function sharePost(text) {
+    navigator.clipboard.writeText(text);
+    alert("Texte copié dans le presse-papier !");
+}
+
+async function toggleComments(postId) {
+    const section = document.getElementById(`comments-section-${postId}`);
+    const list = document.getElementById(`comments-list-${postId}`);
+    
+    section.classList.toggle('hidden');
+
+    if (!section.classList.contains('hidden')) {
+        // Charger commentaires depuis la table 'comments'
+        // Assure-toi d'avoir créé la table 'comments' (id, post_id, user_id, user_name, content)
+        const { data: comments } = await supabaseClient
+            .from('comments')
+            .select('*')
+            .eq('post_id', postId)
+            .order('created_at', { ascending: true });
+
+        list.innerHTML = '';
+        if(comments && comments.length > 0) {
+            comments.forEach(c => {
+                list.innerHTML += `<div class="text-xs text-gray-300"><span class="font-bold text-purple-400">${c.user_name}:</span> ${c.content}</div>`;
+            });
+        } else {
+            list.innerHTML = '<div class="text-[10px] text-gray-500 italic">Aucun commentaire.</div>';
+        }
+    }
+}
+
+async function sendComment(postId) {
+    const input = document.getElementById(`input-comment-${postId}`);
+    const content = input.value;
+
+    if(!content.trim()) return;
+
+    await supabaseClient.from('comments').insert([{ 
+        post_id: postId, 
+        user_id: currentUser.id, 
+        user_name: userProfile.username,
+        content: content 
+    }]);
+    
+    input.value = '';
+    
+    // Astuce : On ferme et rouvre pour recharger
+    document.getElementById(`comments-section-${postId}`).classList.add('hidden');
+    toggleComments(postId);
+}
+
+// ==========================================
+// 9. RECHERCHE & PRIÈRES
 // ==========================================
 
 async function searchUsers(query) {
@@ -420,28 +616,6 @@ async function openUserProfile(userId) {
     }
 }
 
-async function fetchPosts() {
-    const { data } = await supabaseClient.from('posts').select('*').order('created_at', { ascending: false });
-    const container = document.getElementById('posts-container');
-    if(!container) return;
-    container.innerHTML = ''; 
-    if (data) data.forEach(post => {
-        container.insertAdjacentHTML('beforeend', `
-            <div class="bg-gray-800/30 rounded-2xl p-4 border border-white/5 mb-4 animate-fade-in">
-                <div class="flex items-center space-x-3 mb-3"><div class="w-8 h-8 bg-gradient-to-tr from-purple-500 to-pink-500 rounded-full flex items-center justify-center font-bold text-white text-[10px] shadow-lg">${post.avatar_initials || "??"}</div><div><h3 class="font-bold text-white text-sm">${post.user_name}</h3><p class="text-[10px] text-gray-500">${new Date(post.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p></div></div><p class="text-gray-300 text-sm leading-relaxed">${post.content}</p><div class="border-t border-white/5 mt-3 pt-3 flex gap-4 text-gray-500"><button class="hover:text-pink-400 transition-colors"><i data-lucide="heart" class="w-4 h-4"></i></button></div>
-            </div>`);
-    });
-    if(typeof lucide !== 'undefined') lucide.createIcons();
-}
-
-async function publishPost() {
-    const input = document.getElementById('new-post-input');
-    if (!input.value.trim()) return;
-    await supabaseClient.from('posts').insert([{ user_id: currentUser.id, content: input.value, user_name: userProfile.username, avatar_initials: userProfile.username.substring(0,2).toUpperCase() }]);
-    input.value = ''; fetchPosts();
-}
-
-// --- PRIÈRES ---
 async function fetchPrayers() {
     const container = document.getElementById('prayers-list');
     if(!container) return;
@@ -463,7 +637,7 @@ async function prayFor(id, current) {
 }
 
 // ==========================================
-// 9. SYSTÈME TEMPS RÉEL (REALTIME)
+// 10. SYSTÈME TEMPS RÉEL (REALTIME)
 // ==========================================
 
 function subscribeToRealtime() {
@@ -490,7 +664,7 @@ function subscribeToRealtime() {
 }
 
 // ==========================================
-// 10. NOTIFICATIONS ET UTILITAIRES
+// 11. NOTIFICATIONS ET UTILITAIRES
 // ==========================================
 
 async function updateFriendCount(userId) {
@@ -545,7 +719,6 @@ async function handleFriendRequest(id, accepted) {
 
 async function addFriend(targetId) {
     const btn = document.getElementById('btn-add-friend');
-    // CORRECTION DU BUG 409 ICI
     const { error } = await supabaseClient.from('friendships').insert([{ requester_id: currentUser.id, receiver_id: targetId, status: 'pending' }]);
     if (!error) { 
         btn.innerText = "Envoyé !"; btn.disabled = true; btn.className = "px-8 py-3 bg-gray-600 rounded-xl text-white font-bold text-sm cursor-default"; 
