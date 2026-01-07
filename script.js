@@ -647,3 +647,86 @@ function openStoryViewer(storyDataEncoded) {
 
 function closeStoryViewer() { document.getElementById('story-viewer').classList.add('hidden'); if (currentStoryTimer) clearTimeout(currentStoryTimer); }
 async function deleteStory(id) { if (confirm("Supprimer ?")) { await supabaseClient.from('stories').delete().eq('id', id); closeStoryViewer(); renderStoriesList(); } }
+
+// ==========================================
+// 13. GESTION DES REELS (YOUTUBE SHORTS)
+// ==========================================
+
+function openAddReelModal() { document.getElementById('add-reel-modal').classList.remove('hidden'); }
+function closeAddReelModal() { document.getElementById('add-reel-modal').classList.add('hidden'); }
+
+async function saveReel() {
+    const url = document.getElementById('reel-url').value.trim();
+    const caption = document.getElementById('reel-caption').value.trim();
+
+    if(!url.includes('youtube.com') && !url.includes('youtu.be')) {
+        return alert("Veuillez coller un lien YouTube valide.");
+    }
+
+    // Extraction de l'ID vidéo (pour transformer le lien en lecteur embed)
+    let videoId = "";
+    if(url.includes('shorts/')) videoId = url.split('shorts/')[1].split('?')[0];
+    else if(url.includes('watch?v=')) videoId = url.split('v=')[1].split('&')[0];
+    else videoId = url.split('/').pop();
+
+    const embedUrl = `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=0&loop=1&playlist=${videoId}&controls=0&rel=0`;
+
+    const { error } = await supabaseClient.from('reels').insert([{
+        user_id: currentUser.id,
+        user_name: userProfile.username,
+        video_url: embedUrl,
+        caption: caption
+    }]);
+
+    if(!error) {
+        document.getElementById('reel-url').value = "";
+        document.getElementById('reel-caption').value = "";
+        closeAddReelModal();
+        fetchReels();
+    } else {
+        alert("Erreur : " + error.message);
+    }
+}
+
+async function fetchReels() {
+    const container = document.getElementById('reels-container');
+    if(!container) return;
+
+    const { data: reels, error } = await supabaseClient.from('reels').select('*').order('created_at', { ascending: false });
+
+    if(reels) {
+        container.innerHTML = reels.map(r => `
+            <div class="w-full h-full snap-start relative flex-none bg-black">
+                <iframe class="w-full h-full" src="${r.video_url}" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>
+                
+                <div class="absolute bottom-20 left-4 right-16 pointer-events-none">
+                    <p class="font-bold text-white text-lg">@${r.user_name}</p>
+                    <p class="text-sm text-gray-200 mt-1 line-clamp-2">${r.caption || ""}</p>
+                </div>
+
+                <div class="absolute bottom-24 right-4 flex flex-col gap-6 items-center">
+                    <button class="flex flex-col items-center gap-1 group">
+                        <div class="bg-white/10 p-3 rounded-full backdrop-blur-md group-active:scale-90 transition-transform">
+                            <i data-lucide="heart" class="w-6 h-6 text-white"></i>
+                        </div>
+                        <span class="text-[10px] font-bold">Amen</span>
+                    </button>
+                    <button class="flex flex-col items-center gap-1">
+                        <div class="bg-white/10 p-3 rounded-full backdrop-blur-md">
+                            <i data-lucide="message-circle" class="w-6 h-6 text-white"></i>
+                        </div>
+                        <span class="text-[10px] font-bold">Chat</span>
+                    </button>
+                </div>
+            </div>
+        `).join('');
+        if(typeof lucide !== 'undefined') lucide.createIcons();
+    }
+}
+
+// Modifier la fonction switchView pour charger les reels
+const originalSwitchView = switchView;
+switchView = function(viewName) {
+    originalSwitchView(viewName);
+    if(viewName === 'reels') fetchReels();
+};
