@@ -103,12 +103,12 @@ function switchView(viewName) {
     const activeBtn = document.getElementById('nav-' + viewName);
     if(activeBtn) { activeBtn.classList.remove('text-gray-500'); activeBtn.classList.add('text-purple-400'); }
 
-    // GESTION REELS : Arrêt propre
+    // GESTION REELS
     const reelsContainer = document.getElementById('reels-container');
     if (viewName === 'reels') {
         fetchReels(); 
     } else {
-        if(reelsContainer) reelsContainer.innerHTML = ''; // Coupe tout
+        if(reelsContainer) reelsContainer.innerHTML = '';
     }
 
     if (viewName === 'live') fetchLiveMessages();
@@ -121,12 +121,17 @@ function switchView(viewName) {
 }
 
 async function loadAppData() {
-    fetchPosts();
-    renderStoriesList();
+    // MODIFICATION : Chargement des nouvelles sections
+    await Promise.all([
+        fetchPosts(),
+        renderStoriesList(),
+        fetchPrayers(),
+        fetchHelpRequests(), // NOUVEAU
+        fetchEvents(),       // NOUVEAU
+        loadConversations(),
+        fetchNotifications()
+    ]);
     resetChat();
-    loadConversations(); 
-    fetchNotifications(); 
-    fetchPrayers(); 
     subscribeToRealtime();
     if(typeof lucide !== 'undefined') lucide.createIcons();
 }
@@ -497,7 +502,64 @@ async function sendComment(postId) {
 }
 
 // ==========================================
-// 9. RECHERCHE & PRIÈRES
+// 9. NOUVEAU : ENTRAIDE & ÉVÉNEMENTS
+// ==========================================
+
+async function fetchHelpRequests() {
+    const container = document.getElementById('help-list');
+    if(!container) return;
+    const { data: requests } = await supabaseClient.from('help_requests').select('*').order('created_at', { ascending: false }).limit(3);
+    if(requests && requests.length > 0) {
+        container.innerHTML = requests.map(req => `
+            <div class="bg-gray-900/50 p-3 rounded-xl border border-white/5 flex gap-3 items-center">
+                <div class="bg-blue-900/30 p-2.5 rounded-full h-fit flex-shrink-0"><i data-lucide="hand-heart" class="w-4 h-4 text-blue-400"></i></div>
+                <div class="flex-1">
+                    <h4 class="text-xs font-bold text-white">${req.title}</h4>
+                    <p class="text-[10px] text-gray-400 mt-0.5">${req.description} - <span class="text-blue-300">@${req.user_name}</span></p>
+                </div>
+                ${req.user_id !== currentUser.id ? `<button onclick="openDirectChat('${req.user_id}', '${req.user_name}')" class="p-2 bg-blue-600/20 rounded-lg text-blue-400 hover:bg-blue-600/30"><i data-lucide="message-circle" class="w-4 h-4"></i></button>` : ''}
+            </div>
+        `).join('');
+    } else { container.innerHTML = '<div class="text-center text-[10px] text-gray-500 py-2">Aucune demande.</div>'; }
+    if(typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+async function askForHelp() {
+    const title = prompt("Titre de votre demande (ex: Déménagement)");
+    if(!title) return;
+    const desc = prompt("Description courte");
+    await supabaseClient.from('help_requests').insert([{ user_id: currentUser.id, user_name: userProfile.username, title: title, description: desc || "" }]);
+    fetchHelpRequests();
+}
+
+async function fetchEvents() {
+    // Liste simulée pour l'instant (facile à connecter à une table 'events' plus tard)
+    const events = [
+        { id: 1, title: "Soirée Louange", date: "12 FÉV", location: "Église Centrale", icon: "music", color: "purple" },
+        { id: 2, title: "Maraude", date: "15 FÉV", location: "Gare du Nord", icon: "heart", color: "pink" },
+        { id: 3, title: "Étude Biblique", date: "20 FÉV", location: "En ligne", icon: "video", color: "blue" }
+    ];
+    const container = document.getElementById('events-list');
+    if(!container) return;
+    
+    // Si tu as créé une table 'events', décommente ceci :
+    // const { data: events } = await supabaseClient.from('events').select('*');
+
+    container.innerHTML = events.map(evt => `
+        <div class="min-w-[150px] bg-gray-800 rounded-2xl p-3 border border-white/5 relative overflow-hidden group shrink-0">
+            <div class="absolute top-0 right-0 p-2 bg-${evt.color}-600 rounded-bl-xl text-[10px] font-bold text-white shadow-lg">${evt.date}</div>
+            <div class="mt-7">
+                <h4 class="font-bold text-white text-sm leading-tight">${evt.title}</h4>
+                <p class="text-[10px] text-gray-400 mt-1 flex items-center gap-1"><i data-lucide="${evt.icon}" class="w-3 h-3"></i> ${evt.location}</p>
+                <button onclick="alert('Inscrit !')" class="mt-3 w-full py-1.5 bg-white/5 hover:bg-${evt.color}-600/20 rounded-lg text-[10px] text-${evt.color}-300 font-bold transition-colors border border-white/5">Participer</button>
+            </div>
+        </div>
+    `).join('');
+    if(typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+// ==========================================
+// 10. RECHERCHE & PRIÈRES
 // ==========================================
 
 async function searchUsers(query) {
