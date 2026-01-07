@@ -1,301 +1,286 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    
-    <link rel="icon" type="image/png" href="https://img.icons8.com/color/48/cross.png">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Faith Connect</title>
+    
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        /* Animation fluide */
+        .animate-fade-in { animation: fadeIn 0.3s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
-    <title>Faith Connect</title>
-    
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/lucide@latest"></script>
-    
-    <style>
-        /* Animation fluide */
-        .animate-fade-in { animation: fadeIn 0.3s ease-out; }
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        /* Cache la barre de scroll mais garde le scroll actif */
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
+        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
 
-        /* Cache la barre de scroll mais garde le scroll actif */
-        .scrollbar-hide::-webkit-scrollbar { display: none; }
-        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
-
-        /* Style spécifique pour les Reels */
-        .reel-video-container iframe {
-            width: 100%;
-            height: 100%;
-            pointer-events: auto;
-        }
-
-        /* Gestion de la zone sûre (Safe Area) pour iPhone */
-        body {
-            padding-top: env(safe-area-inset-top);
-            padding-bottom: env(safe-area-inset-bottom);
-        }
-    </style>
+        /* Animation de chargement pour les boutons */
+        .loading { pointer-events: none; opacity: 0.7; }
+    </style>
 </head>
-<body class="bg-gray-900 text-white font-sans antialiased h-[100dvh] w-screen overflow-hidden fixed inset-0 selection:bg-purple-500 selection:text-white"> 
+<body class="bg-gray-900 text-white font-sans antialiased h-[100dvh] w-screen overflow-hidden fixed inset-0"> 
 
-    <div id="login-page" class="absolute inset-0 z-[100] bg-gray-900 flex items-center justify-center p-4">
-        <div class="absolute top-20 left-20 w-72 h-72 bg-purple-600 rounded-full mix-blend-multiply filter blur-[100px] opacity-20 animate-pulse"></div>
-        <div class="absolute bottom-20 right-20 w-72 h-72 bg-pink-600 rounded-full mix-blend-multiply filter blur-[100px] opacity-20 animate-pulse delay-700"></div>
+    <div id="login-page" class="absolute inset-0 z-[100] bg-gray-900 flex items-center justify-center p-4">
+        <div class="absolute top-20 left-20 w-72 h-72 bg-purple-600 rounded-full mix-blend-multiply filter blur-[100px] opacity-20 animate-pulse"></div>
+        <div class="absolute bottom-20 right-20 w-72 h-72 bg-pink-600 rounded-full mix-blend-multiply filter blur-[100px] opacity-20 animate-pulse delay-700"></div>
 
-        <div class="relative z-10 w-full max-w-md bg-gray-800/50 backdrop-blur-xl p-8 rounded-3xl border border-white/10 shadow-2xl">
-            <div class="text-center mb-8">
-                <div class="inline-flex p-3 bg-gradient-to-r from-purple-500 to-pink-500 rounded-2xl mb-4 shadow-lg shadow-purple-500/30">
-                    <i data-lucide="cross" class="w-8 h-8 text-white"></i>
-                </div>
-                <h1 class="text-3xl font-bold text-white mb-2">FAITH CONNECT</h1>
-                <p class="text-gray-400 text-sm">Votre communauté de foi connectée.</p>
-            </div>
-            
-            <div class="space-y-4">
-                <input id="login-email" type="email" autocomplete="email" placeholder="Email" class="w-full px-4 py-3 bg-gray-900/50 border border-white/10 rounded-xl text-white focus:border-purple-500 outline-none text-sm transition-all">
-                <input id="login-password" type="password" autocomplete="current-password" placeholder="Mot de passe" class="w-full px-4 py-3 bg-gray-900/50 border border-white/10 rounded-xl text-white focus:border-purple-500 outline-none text-sm transition-all">
-                
-                <div class="flex flex-col gap-3 mt-6">
-                    <button onclick="handleLogin()" class="w-full py-3.5 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl font-bold shadow-lg active:scale-95 transition-transform text-sm">Se connecter</button>
-                    <button onclick="handleSignUp()" class="w-full py-3.5 bg-transparent border border-white/10 text-gray-300 rounded-xl font-semibold text-sm hover:bg-white/5">Créer un compte</button>
-                </div>
-            </div>
-        </div>
-    </div>
+        <div class="relative z-10 w-full max-w-md bg-gray-800/50 backdrop-blur-xl p-8 rounded-3xl border border-white/10 shadow-2xl">
+            <div class="text-center mb-8">
+                <div class="inline-flex p-3 bg-gradient-to-r from-purple-500 to-pink-500 rounded-2xl mb-4 shadow-lg shadow-purple-500/30">
+                    <i data-lucide="cross" class="w-8 h-8 text-white"></i>
+                </div>
+                <h1 class="text-3xl font-bold text-white mb-2">FAITH CONNECT</h1>
+                <p class="text-gray-400 text-sm">Votre communauté de foi connectée.</p>
+            </div>
+            
+            <div class="space-y-4">
+                <div>
+                    <label class="text-xs text-purple-300 ml-1 mb-1 block font-medium">Email</label>
+                    <input id="login-email" type="email" placeholder="hello@exemple.com" class="w-full px-4 py-3 bg-gray-900/50 border border-white/10 rounded-xl text-white focus:outline-none focus:border-purple-500 transition-all placeholder-gray-600 text-sm">
+                </div>
+                <div>
+                    <label class="text-xs text-purple-300 ml-1 mb-1 block font-medium">Mot de passe</label>
+                    <input id="login-password" type="password" placeholder="••••••••" class="w-full px-4 py-3 bg-gray-900/50 border border-white/10 rounded-xl text-white focus:outline-none focus:border-purple-500 transition-all placeholder-gray-600 text-sm">
+                </div>
+                
+                <div class="flex flex-col gap-3 mt-6">
+                    <button onclick="handleLogin()" class="w-full py-3.5 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl font-bold shadow-lg shadow-purple-900/50 active:scale-95 transition-transform text-sm">
+                        Se connecter
+                    </button>
+                    <button onclick="handleSignUp()" class="w-full py-3.5 bg-transparent border border-white/10 text-gray-300 hover:text-white rounded-xl font-semibold transition-colors text-sm">
+                        Créer un compte
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
 
-    <div id="main-app" class="hidden h-full w-full flex flex-col relative bg-gray-900">
-        
-        <header class="flex-none h-16 bg-gray-900/95 backdrop-blur-md border-b border-white/5 z-50 px-4 flex items-center justify-between">
-            <div class="flex items-center space-x-2 cursor-pointer" onclick="switchView('home')">
-                <i data-lucide="cross" class="w-6 h-6 text-purple-500"></i>
-                <h1 class="text-lg font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent uppercase tracking-wider">Faith Connect</h1>
-            </div>
-            
-            <div class="relative">
-                <button onclick="toggleNotifDropdown()" class="p-2 rounded-full hover:bg-white/5 transition-colors relative">
-                    <i data-lucide="bell" class="w-5 h-5 text-gray-400"></i>
-                    <span id="notif-badge" class="hidden absolute top-1 right-1 w-2 h-2 bg-pink-500 rounded-full animate-pulse"></span>
-                </button>
-                <div id="notif-dropdown" class="hidden absolute right-0 top-12 w-72 bg-gray-800 border border-white/10 rounded-2xl shadow-2xl z-[60] overflow-hidden">
-                    <div id="notif-list" class="max-h-64 overflow-y-auto"></div>
-                </div>
-            </div>
-        </header>
+    <div id="main-app" class="hidden h-full w-full flex flex-col relative bg-gray-900">
+        
+        <header class="flex-none h-16 bg-gray-900/95 backdrop-blur-md border-b border-white/5 z-50 px-4 flex items-center justify-between">
+            <div class="flex items-center space-x-2 cursor-pointer" onclick="switchView('home')">
+                <i data-lucide="cross" class="w-6 h-6 text-purple-500"></i>
+                <h1 class="text-lg font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">FAITH CONNECT</h1>
+            </div>
+            
+            <div class="flex items-center gap-4">
+                <div class="relative">
+                    <button onclick="toggleNotifDropdown()" class="p-2 rounded-full hover:bg-white/5 transition-colors relative">
+                        <i data-lucide="bell" class="w-5 h-5 text-gray-400"></i>
+                        <span id="notif-badge" class="hidden absolute top-1 right-1 w-2.5 h-2.5 bg-pink-500 rounded-full border border-gray-900"></span>
+                    </button>
+                    <div id="notif-dropdown" class="hidden absolute right-0 mt-3 w-72 bg-gray-800 border border-white/10 rounded-xl shadow-xl z-50 overflow-hidden">
+                        <div id="notif-list" class="max-h-64 overflow-y-auto">
+                            <div class="p-4 text-center text-xs text-gray-500">Rien pour le moment 🍃</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </header>
 
-        <div id="main-content" class="flex-1 overflow-y-auto bg-gray-900 relative w-full pb-20">
-            <div class="max-w-4xl mx-auto p-4 min-h-full">
-                
-                <div id="view-home" class="space-y-6 animate-fade-in">
-                    <div class="relative group">
-                        <i data-lucide="search" class="absolute left-3 top-3 w-5 h-5 text-gray-500 group-focus-within:text-purple-500 transition-colors"></i>
-                        <input type="text" onkeyup="searchUsers(this.value)" placeholder="Chercher un frère ou une sœur..." class="w-full pl-10 pr-4 py-3 bg-gray-800/50 border border-white/10 rounded-2xl focus:border-purple-500 outline-none text-sm transition-all">
-                        <div id="search-results" class="hidden absolute mt-2 w-full bg-gray-800 border border-white/10 rounded-2xl shadow-2xl z-50 overflow-hidden"></div>
-                    </div>
+        <div id="main-content" class="flex-1 overflow-y-auto bg-gray-900 relative w-full pb-20">
+            <div class="max-w-4xl mx-auto p-4 min-h-full">
+                
+                <div id="view-home" class="space-y-6">
+                    <div class="relative group">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <i data-lucide="search" class="h-5 w-5 text-gray-500 group-focus-within:text-purple-400 transition-colors"></i>
+                        </div>
+                        <input type="text" onkeyup="searchUsers(this.value)" placeholder="Rechercher un ami..." class="block w-full pl-10 pr-3 py-3 border border-white/10 rounded-xl leading-5 bg-gray-800/50 text-gray-300 placeholder-gray-500 focus:outline-none focus:bg-gray-800 focus:border-purple-500/50 transition-all text-sm">
+                        <div id="search-results" class="hidden absolute mt-1 w-full bg-gray-800 border border-white/10 rounded-xl shadow-2xl z-50 overflow-hidden max-h-60 overflow-y-auto"></div>
+                    </div>
 
-                    <div id="stories-container" class="flex space-x-4 overflow-x-auto scrollbar-hide pb-2 px-1"></div>
+                    <div class="overflow-x-auto pb-2 scrollbar-hide">
+                        <div id="stories-container" class="flex space-x-4 min-w-max px-1"></div>
+                    </div>
 
-                    <div class="bg-gray-800/30 rounded-3xl p-4 border border-white/5 shadow-lg">
-                        <div class="flex gap-3">
-                            <div id="current-user-avatar-small" class="w-10 h-10 rounded-full bg-purple-600 flex-none overflow-hidden object-cover flex items-center justify-center font-bold text-xs">MOI</div>
-                            <div class="flex-1">
-                                <textarea id="new-post-input" rows="2" placeholder="Que voulez-vous partager ?" class="w-full bg-transparent border-none text-white focus:ring-0 text-sm resize-none outline-none placeholder-gray-600"></textarea>
-                                <div id="image-preview-container" class="hidden mt-2 relative w-fit">
-                                    <img id="image-preview" src="" class="h-24 rounded-xl border border-white/10">
-                                    <button onclick="removeImage()" class="absolute -top-2 -right-2 bg-red-500 rounded-full p-1 shadow-md"><i data-lucide="x" class="w-3 h-3"></i></button>
-                                </div>
-                                <div class="flex justify-between items-center mt-3 border-t border-white/5 pt-3">
-                                    <label class="cursor-pointer text-gray-400 hover:text-purple-400 p-2 rounded-full hover:bg-white/5 transition-colors">
-                                        <i data-lucide="image" class="w-5 h-5"></i>
-                                        <input type="file" id="post-image-file" accept="image/*" class="hidden" onchange="handleImageSelect(this)">
-                                    </label>
-                                    <button onclick="publishPost()" id="btn-publish" class="bg-purple-600 hover:bg-purple-700 px-6 py-2 rounded-full text-xs font-bold active:scale-95 transition-all shadow-lg shadow-purple-900/20">Publier</button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                    <div class="bg-gray-800/30 rounded-2xl p-4 border border-white/5">
+                        <div class="flex gap-3 items-start">
+                            <div id="current-user-avatar-small" class="w-10 h-10 rounded-full bg-purple-600 flex items-center justify-center text-xs font-bold shrink-0 overflow-hidden object-cover">ME</div>
+                            <div class="flex-1">
+                                <textarea id="new-post-input" rows="2" placeholder="Exprimez votre foi..." class="w-full bg-transparent border-none text-white focus:ring-0 placeholder-gray-600 text-sm resize-none outline-none"></textarea>
+                                <div id="image-preview-container" class="hidden mt-2 relative w-fit">
+                                    <img id="image-preview" src="" class="h-24 w-auto rounded-lg border border-white/10">
+                                    <button onclick="removeImage()" class="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 shadow-md"><i data-lucide="x" class="w-3 h-3"></i></button>
+                                </div>
+                                <div class="flex justify-between items-center mt-3 border-t border-white/5 pt-3">
+                                    <label for="post-image-file" class="cursor-pointer text-gray-400 hover:text-purple-400 p-2 rounded-full hover:bg-white/5 transition-colors">
+                                        <i data-lucide="image" class="w-5 h-5"></i>
+                                        <input type="file" id="post-image-file" accept="image/*" class="hidden" onchange="handleImageSelect(this)">
+                                    </label>
+                                    <button onclick="publishPost()" id="btn-publish" class="px-4 py-1.5 bg-purple-600 rounded-full text-xs font-bold text-white flex items-center gap-2">
+                                        <span>Publier</span><i data-lucide="send" class="w-3 h-3"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
 
-                    <div class="bg-gray-800/40 rounded-3xl p-4 border border-pink-500/20 shadow-lg shadow-pink-900/10">
-                        <h3 class="text-pink-400 font-bold flex items-center gap-2 text-sm mb-4"><i data-lucide="heart-handshake" class="w-4 h-4"></i> Mur de Prières</h3>
-                        <div class="flex gap-2 mb-4">
-                            <input id="prayer-input" placeholder="Sujet de prière..." class="flex-1 bg-gray-900 border border-white/5 rounded-xl px-4 py-2 text-xs outline-none focus:border-pink-500 transition-colors">
-                            <button onclick="addPrayer()" class="bg-pink-600 hover:bg-pink-700 px-4 rounded-xl text-xs font-bold transition-colors">Prier</button>
-                        </div>
-                        <div id="prayers-list" class="space-y-2 max-h-40 overflow-y-auto scrollbar-hide"></div>
-                    </div>
+                    <div class="bg-gray-800/40 backdrop-blur-xl rounded-2xl p-4 border border-pink-500/20">
+                        <h3 class="text-pink-400 font-bold flex items-center gap-2 text-sm mb-3">🙏 Mur de Prières</h3>
+                        <div class="flex gap-2 mb-4">
+                            <input id="prayer-input" placeholder="Un sujet de prière ?" class="flex-1 bg-gray-900/50 border border-pink-500/20 rounded-xl px-3 py-2 text-xs text-white focus:outline-none">
+                            <button onclick="addPrayer()" class="bg-pink-600 px-4 py-1.5 rounded-xl text-xs font-bold">Publier</button>
+                        </div>
+                        <div id="prayers-list" class="flex flex-col space-y-2 max-h-48 overflow-y-auto scrollbar-hide"></div>
+                    </div>
 
-                    <div id="posts-container" class="space-y-4 pb-10"></div>
-                </div>
+                    <div id="posts-container" class="space-y-4 pb-4"></div>
+                </div>
 
-                <div id="view-reels" class="hidden absolute inset-0 bg-black z-40 flex flex-col animate-fade-in">
-                    <div class="absolute top-6 left-0 right-0 z-50 px-4 flex justify-between items-center pt-safe">
-                        <h2 class="text-xl font-black italic tracking-tighter text-white drop-shadow-lg">REELS</h2>
-                        <button onclick="openAddReelModal()" class="bg-white/10 backdrop-blur-md p-3 rounded-full border border-white/20 active:scale-90 transition-transform">
-                            <i data-lucide="plus" class="w-6 h-6 text-white"></i>
-                        </button>
-                    </div>
-                    <div id="reels-container" class="flex-1 overflow-y-auto snap-y snap-mandatory scrollbar-hide bg-black"></div>
-                </div>
+                <div id="view-reels" class="hidden"> <div id="reels-container" class="space-y-4"></div> </div>
 
-                <div id="view-profile" class="hidden animate-fade-in">
-                    <div class="bg-gray-800/30 rounded-[2.5rem] p-8 border border-white/5 text-center shadow-2xl">
-                        <div id="profile-avatar-big" class="w-28 h-28 mx-auto rounded-full bg-gradient-to-tr from-purple-500 to-pink-500 p-1 mb-4 shadow-xl">
-                            <div class="w-full h-full rounded-full bg-gray-900 flex items-center justify-center text-3xl font-black overflow-hidden object-cover border-4 border-gray-900"></div>
-                        </div>
-                        <h2 id="profile-name" class="text-2xl font-black text-white">UTILISATEUR</h2>
-                        <p id="profile-email" class="text-purple-400 text-sm font-medium mb-6">@utilisateur</p>
-                        
-                        <div class="inline-flex items-center gap-2 bg-gray-900/80 px-5 py-2 rounded-full border border-white/10 mb-8">
-                            <span id="status-emoji-display">👋</span>
-                            <span id="status-text-display" class="text-sm text-gray-300 italic">Mon statut...</span>
-                            <button onclick="updateMyStatus()" class="ml-2 text-[10px] text-purple-400 font-black uppercase tracking-widest hover:text-purple-300">Modifier</button>
-                        </div>
+                <div id="view-profile" class="hidden">
+                    <div class="bg-gray-800/30 rounded-3xl p-6 border border-white/5 text-center">
+                        <div id="profile-avatar-big" class="w-24 h-24 mx-auto rounded-full bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center text-3xl font-bold border-4 border-gray-900 shadow-xl mb-4 overflow-hidden object-cover"></div>
+                        <h2 id="profile-name" class="text-2xl font-bold text-white uppercase">Utilisateur</h2>
+                        <p id="profile-email" class="text-purple-400/80 text-sm mb-6">@utilisateur</p>
+                        
+                        <div class="inline-flex items-center gap-2 bg-gray-900/50 px-4 py-2 rounded-full border border-white/5 mb-6">
+                            <span id="status-emoji-display">👋</span>
+                            <span id="status-text-display" class="text-sm text-gray-300 italic">Mon statut</span>
+                            <button onclick="updateMyStatus()" class="ml-2 text-[10px] text-purple-400 font-bold">MODIFIER</button>
+                        </div>
 
-                        <div class="grid grid-cols-3 gap-4 mb-8">
-                            <div class="bg-gray-900/50 p-4 rounded-3xl border border-white/5"><div class="text-xl font-black" id="stats-friends-count">0</div><div class="text-[9px] text-gray-500 uppercase font-bold tracking-tighter">Frères/Sœurs</div></div>
-                            <div class="bg-gray-900/50 p-4 rounded-3xl border border-white/5"><div class="text-xl font-black">0</div><div class="text-[9px] text-gray-500 uppercase font-bold tracking-tighter">Posts</div></div>
-                            <div class="bg-gray-900/50 p-4 rounded-3xl border border-white/5"><div class="text-xl font-black">0</div><div class="text-[9px] text-gray-500 uppercase font-bold tracking-tighter">Béni</div></div>
-                        </div>
+                        <div class="grid grid-cols-3 gap-4 mb-8">
+                            <div class="bg-gray-900/50 p-3 rounded-2xl border border-white/5"><div class="text-xl font-bold">0</div><div class="text-[10px] text-gray-500 uppercase">Posts</div></div>
+                            <div class="bg-gray-900/50 p-3 rounded-2xl border border-white/5"><div class="text-xl font-bold" id="stats-friends-count">0</div><div class="text-[10px] text-gray-500 uppercase">Amis</div></div>
+                            <div class="bg-gray-900/50 p-3 rounded-2xl border border-white/5"><div class="text-xl font-bold">0</div><div class="text-[10px] text-gray-500 uppercase">Prières</div></div>
+                        </div>
 
-                        <div class="flex justify-center gap-3 mb-10">
-                            <button onclick="openEditModal()" class="flex-1 max-w-[140px] py-3 bg-white text-gray-900 hover:bg-gray-100 rounded-2xl font-bold text-sm transition-colors">Éditer</button>
-                            <button onclick="logout()" class="flex-1 max-w-[140px] py-3 bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20 rounded-2xl font-bold text-sm transition-colors">Quitter</button>
-                        </div>
+                        <div class="flex justify-center gap-3 mb-8">
+                            <button onclick="openEditModal()" class="px-6 py-2.5 bg-white text-gray-900 rounded-xl font-bold text-sm">Éditer</button>
+                            <button onclick="logout()" class="px-6 py-2.5 bg-red-500/10 text-red-400 border border-red-500/20 rounded-xl font-bold text-sm">Déconnexion</button>
+                        </div>
 
-                        <div class="border-t border-white/5 pt-8">
-                            <div class="flex justify-center space-x-12 mb-6">
-                                <button id="tab-friends" onclick="switchProfileTab('friends')" class="pb-2 text-sm font-bold text-purple-400 border-b-2 border-purple-400">Amis</button>
-                                <button id="tab-requests" onclick="switchProfileTab('requests')" class="pb-2 text-sm font-bold text-gray-500 relative">Demandes <span id="profile-req-badge" class="hidden bg-pink-500 text-white text-[9px] px-2 py-0.5 rounded-full absolute -top-2 -right-6 animate-bounce">0</span></button>
-                            </div>
-                            <div id="profile-social-list" class="space-y-3"></div>
-                        </div>
-                    </div>
-                </div>
+                        <div class="border-t border-white/10 pt-6">
+                            <div class="flex items-center justify-center space-x-8 mb-4">
+                                <button id="tab-friends" onclick="switchProfileTab('friends')" class="pb-2 text-sm font-bold text-purple-400 border-b-2 border-purple-400">Mes Amis</button>
+                                <button id="tab-requests" onclick="switchProfileTab('requests')" class="pb-2 text-sm font-bold text-gray-500 relative">
+                                    Demandes <span id="profile-req-badge" class="hidden bg-pink-500 text-white text-[9px] px-1.5 py-0.5 rounded-full absolute -top-1 -right-4">0</span>
+                                </button>
+                            </div>
+                            <div id="profile-social-list" class="space-y-3 px-1"></div>
+                        </div>
+                    </div>
+                </div>
 
-                <div id="view-public-profile" class="hidden animate-fade-in">
-                    <div class="bg-gray-800/30 rounded-[2.5rem] p-8 border border-white/5 text-center relative shadow-2xl">
-                        <button onclick="switchView('home')" class="absolute top-6 left-6 p-2 bg-gray-900 rounded-full border border-white/5 hover:bg-gray-700 transition-colors"><i data-lucide="arrow-left" class="w-5 h-5"></i></button>
-                        <div id="public-avatar" class="w-28 h-28 mx-auto rounded-full bg-gray-700 flex items-center justify-center text-3xl font-black border-4 border-gray-900 mb-6 overflow-hidden object-cover shadow-2xl">?</div>
-                        <h2 id="public-username" class="text-2xl font-black text-white uppercase tracking-tight">NOM</h2>
-                        <p id="public-bio" class="text-gray-400 text-sm italic mb-8">...</p>
-                        <div class="flex justify-center gap-4">
-                            <button id="btn-add-friend" class="px-10 py-3 bg-purple-600 rounded-2xl text-white font-bold text-sm shadow-xl shadow-purple-900/20 hover:bg-purple-700 transition-colors">Suivre</button>
-                            <button id="btn-message" class="px-10 py-3 bg-gray-700 rounded-2xl text-white font-bold text-sm hover:bg-gray-600 transition-colors">Message</button>
-                        </div>
-                    </div>
-                </div>
+                <div id="view-public-profile" class="hidden">
+                    <div class="bg-gray-800/30 rounded-3xl p-6 border border-white/5 text-center relative">
+                        <button onclick="switchView('home')" class="absolute top-4 left-4 p-2 bg-gray-900 rounded-full"><i data-lucide="arrow-left" class="w-5 h-5"></i></button>
+                        <div id="public-avatar" class="w-24 h-24 mx-auto rounded-full bg-gray-700 flex items-center justify-center text-3xl font-bold border-4 border-gray-900 mb-4 mt-8 overflow-hidden object-cover">?</div>
+                        <h2 id="public-username" class="text-2xl font-bold text-white uppercase">Nom</h2>
+                        <p id="public-bio" class="text-gray-400 text-sm mb-6 italic">Description...</p>
+                        <div class="flex justify-center gap-3">
+                            <button id="btn-add-friend" class="px-8 py-3 bg-purple-600 rounded-xl text-white font-bold text-sm">Ajouter</button>
+                            <button id="btn-message" class="px-8 py-3 bg-gray-700 rounded-xl text-white font-bold text-sm">Message</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
 
-                <div id="view-live" class="hidden absolute top-0 bottom-[80px] left-0 right-0 flex flex-col bg-black z-40 animate-fade-in">
-                    <div class="absolute top-4 left-4 z-50">
-                        <button onclick="switchView('home')" class="bg-black/50 p-2 rounded-full backdrop-blur-md"><i data-lucide="arrow-left" class="w-5 h-5"></i></button>
-                    </div>
-                    <div class="flex-none bg-black aspect-video relative border-b border-white/10 mt-16">
-                        <div class="absolute top-4 left-4 bg-red-600 px-3 py-1 rounded-full text-[10px] font-bold flex items-center gap-2 z-20">
-                            <div class="w-2 h-2 bg-white rounded-full animate-pulse"></div> EN DIRECT
-                        </div>
-                        <img src="https://images.unsplash.com/photo-1515162305285-0293e4767cc2?auto=format&fit=crop&q=80&w=1000" class="w-full h-full object-cover opacity-60">
-                        <div class="absolute inset-0 flex items-center justify-center">
-                            <button class="w-16 h-16 bg-white/10 backdrop-blur-md rounded-full flex items-center justify-center border border-white/20 hover:scale-110 transition-transform"><i data-lucide="play" class="w-8 h-8 text-white fill-white ml-1"></i></button>
-                        </div>
-                    </div>
-                    <div class="flex-1 flex flex-col bg-gray-900/80">
-                        <div id="live-chat-messages" class="flex-1 overflow-y-auto p-4 space-y-3 text-sm"></div>
-                        <div class="p-3 bg-gray-900 border-t border-white/5 flex gap-2">
-                            <input id="live-chat-input" type="text" placeholder="Réagissez..." class="flex-1 bg-gray-800 rounded-full px-4 py-2 text-sm text-white focus:outline-none">
-                            <button onclick="sendLiveMessage()" class="w-10 h-10 bg-purple-600 rounded-full flex items-center justify-center hover:bg-purple-700"><i data-lucide="send" class="w-4 h-4"></i></button>
-                        </div>
-                    </div>
-                </div>
+        <div id="view-live" class="hidden absolute top-16 bottom-16 left-0 right-0 h-full flex flex-col bg-black z-40">
+            <div class="flex-none bg-black aspect-video relative border-b border-white/10">
+                <div class="absolute top-4 left-4 bg-red-600 px-3 py-1 rounded-full text-[10px] font-bold flex items-center gap-2 z-20">
+                    <div class="w-2 h-2 bg-white rounded-full animate-pulse"></div> EN DIRECT
+                </div>
+                <img src="https://images.unsplash.com/photo-1515162305285-0293e4767cc2?auto=format&fit=crop&q=80&w=1000" class="w-full h-full object-cover opacity-60">
+                <div class="absolute inset-0 flex items-center justify-center">
+                    <button class="w-16 h-16 bg-white/10 backdrop-blur-md rounded-full flex items-center justify-center border border-white/20"><i data-lucide="play" class="w-8 h-8 text-white fill-white"></i></button>
+                </div>
+            </div>
+            <div class="flex-1 flex flex-col bg-gray-900/80">
+                <div id="live-chat-messages" class="flex-1 overflow-y-auto p-4 space-y-3 text-sm"></div>
+                <div class="p-3 bg-gray-900 border-t border-white/5 flex gap-2">
+                    <input id="live-chat-input" type="text" placeholder="Réagissez..." class="flex-1 bg-gray-800 rounded-full px-4 py-2 text-sm text-white focus:outline-none">
+                    <button onclick="sendLiveMessage()" class="w-10 h-10 bg-purple-600 rounded-full flex items-center justify-center"><i data-lucide="send" class="w-4 h-4"></i></button>
+                </div>
+            </div>
+        </div>
 
-                <div id="view-messages" class="hidden absolute top-0 bottom-[80px] left-0 right-0 bg-gray-900 z-40 flex flex-col md:flex-row animate-fade-in pt-16">
-                    <div id="conversations-sidebar" class="w-full md:w-80 border-r border-white/5 h-full flex flex-col bg-gray-900">
-                        <div class="p-4 border-b border-white/5 flex justify-between items-center">
-                            <h2 class="font-bold text-white text-lg">Discussions</h2>
-                            <button onclick="switchView('home')" class="md:hidden"><i data-lucide="x" class="w-5 h-5"></i></button>
-                        </div>
-                        <div id="messages-list" class="flex-1 overflow-y-auto p-2"></div>
-                    </div>
-                    <div id="chat-detail" class="hidden md:flex flex-1 flex flex-col h-full bg-gray-900 absolute inset-0 md:static z-50">
-                        <div class="h-14 border-b border-white/5 flex items-center px-4 justify-between bg-gray-900/95 backdrop-blur mt-16 md:mt-0">
-                            <div class="flex items-center gap-2">
-                                <button onclick="document.getElementById('chat-detail').classList.add('hidden'); document.getElementById('conversations-sidebar').classList.remove('hidden');" class="md:hidden"><i data-lucide="arrow-left" class="w-5 h-5"></i></button>
-                                <h3 id="chat-with-name" class="font-bold text-white truncate">Chat</h3>
-                            </div>
-                        </div>
-                        <div id="chat-history" class="flex-1 overflow-y-auto p-4 space-y-3"></div>
-                        <div class="p-3 bg-gray-900 border-t border-white/5 flex gap-2 items-center mb-16 md:mb-0">
-                            <input id="chat-input" type="text" placeholder="Message..." disabled class="flex-1 bg-gray-800 rounded-full px-4 py-2 text-sm text-white outline-none focus:ring-1 focus:ring-purple-500">
-                            <button onclick="sendChatMessage()" class="w-10 h-10 bg-purple-600 rounded-full flex items-center justify-center hover:bg-purple-700 transition-colors"><i data-lucide="send" class="w-4 h-4"></i></button>
-                        </div>
-                    </div>
-                </div>
+        <div id="view-messages" class="hidden absolute top-16 bottom-16 left-0 right-0 bg-gray-900 z-40 flex flex-col md:flex-row">
+            <div id="conversations-sidebar" class="w-full md:w-80 border-r border-white/5 h-full flex flex-col">
+                <div class="p-4 border-b border-white/5"><h2 class="font-bold text-white text-lg">Discussions</h2></div>
+                <div id="messages-list" class="flex-1 overflow-y-auto p-2"></div>
+            </div>
+            <div id="chat-detail" class="hidden md:flex flex-1 flex flex-col h-full bg-gray-900">
+                <div class="h-14 border-b border-white/5 flex items-center px-4 justify-between">
+                    <h3 id="chat-with-name" class="font-bold text-white truncate">Chat</h3>
+                </div>
+                <div id="chat-history" class="flex-1 overflow-y-auto p-4 space-y-3"></div>
+                <div class="p-3 bg-gray-900 border-t border-white/5 flex gap-2 items-center">
+                    <input id="chat-input" type="text" placeholder="Message..." disabled class="flex-1 bg-gray-800 rounded-full px-4 py-2 text-sm text-white outline-none">
+                    <button onclick="sendChatMessage()" class="w-10 h-10 bg-purple-600 rounded-full flex items-center justify-center"><i data-lucide="send" class="w-4 h-4"></i></button>
+                </div>
+            </div>
+        </div>
 
-            </div>
-        </div>
+        <nav class="flex-none h-16 bg-gray-900/95 backdrop-blur-md border-t border-white/5 z-50">
+            <div class="flex justify-around items-center h-full max-w-md mx-auto">
+                <button onclick="switchView('home')" id="nav-home" class="flex flex-col items-center justify-center w-14 h-14 rounded-2xl text-purple-400"><i data-lucide="home" class="w-6 h-6"></i><span class="text-[10px] mt-0.5">Accueil</span></button>
+                <button onclick="switchView('reels')" id="nav-reels" class="flex flex-col items-center justify-center w-14 h-14 rounded-2xl text-gray-500"><i data-lucide="video" class="w-6 h-6"></i><span class="text-[10px] mt-0.5">Reels</span></button>
+                <button onclick="switchView('live')" id="nav-live" class="flex flex-col items-center justify-center w-14 h-14 rounded-2xl text-gray-500"><i data-lucide="radio" class="w-6 h-6"></i><span class="text-[10px] mt-0.5">Live</span></button>
+                <button onclick="switchView('messages')" id="nav-messages" class="flex flex-col items-center justify-center w-14 h-14 rounded-2xl text-gray-500 relative"><i data-lucide="message-circle" class="w-6 h-6"></i><span id="msg-badge" class="absolute top-2 right-3 w-2.5 h-2.5 bg-red-500 rounded-full border border-gray-900 hidden"></span></button>
+                <button onclick="switchView('profile')" id="nav-profile" class="flex flex-col items-center justify-center w-14 h-14 rounded-2xl text-gray-500"><i data-lucide="user" class="w-6 h-6"></i><span class="text-[10px] mt-0.5">Profil</span></button>
+            </div>
+        </nav>
+    </div>
 
-        <nav class="flex-none h-20 bg-gray-900/95 backdrop-blur-xl border-t border-white/5 z-50 safe-area-pb">
-            <div class="flex justify-around items-center h-full max-w-lg mx-auto px-4 pb-2">
-                <button onclick="switchView('home')" id="nav-home" class="nav-btn p-3 text-purple-400 transition-all active:scale-90"><i data-lucide="home" class="w-7 h-7"></i></button>
-                <button onclick="switchView('reels')" id="nav-reels" class="nav-btn p-3 text-gray-500 transition-all active:scale-90"><i data-lucide="clapperboard" class="w-7 h-7"></i></button>
-                <button onclick="switchView('live')" id="nav-live" class="nav-btn p-3 text-gray-500 relative transition-all active:scale-90"><i data-lucide="radio" class="w-7 h-7"></i><span class="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-gray-900"></span></button>
-                <button onclick="switchView('messages')" id="nav-messages" class="nav-btn p-3 text-gray-500 relative transition-all active:scale-90"><i data-lucide="message-square" class="w-7 h-7"></i><span id="msg-badge" class="hidden absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full"></span></button>
-                <button onclick="switchView('profile')" id="nav-profile" class="nav-btn p-3 text-gray-500 transition-all active:scale-90"><i data-lucide="circle-user" class="w-7 h-7"></i></button>
-            </div>
-        </nav>
-    </div>
+    <div id="edit-profile-modal" class="hidden fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-gray-800 p-6 rounded-3xl w-full max-w-sm border border-white/10 animate-fade-in">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-lg font-bold">Édition</h2>
+                <button onclick="closeEditModal()" class="p-2 text-gray-400"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+            <div class="space-y-4">
+                <div class="flex flex-col items-center mb-4 cursor-pointer" onclick="document.getElementById('edit-avatar-input').click()">
+                    <img id="edit-avatar-preview" src="" class="w-24 h-24 rounded-full object-cover border-4 border-purple-500/20">
+                    <input type="file" id="edit-avatar-input" accept="image/*" class="hidden" onchange="handleAvatarPreview(this)">
+                    <p class="text-[10px] text-gray-400 mt-2 uppercase font-bold">Changer la photo</p>
+                </div>
+                <div>
+                    <label class="text-[10px] text-gray-500 uppercase font-bold mb-1 block">Pseudo</label>
+                    <input id="edit-username" type="text" class="w-full bg-gray-900 border border-white/10 rounded-xl p-3 text-sm focus:border-purple-500 outline-none">
+                </div>
+                <div>
+                    <label class="text-[10px] text-gray-500 uppercase font-bold mb-1 block">Bio / Statut</label>
+                    <textarea id="edit-bio" class="w-full bg-gray-900 border border-white/10 rounded-xl p-3 text-sm h-24 focus:border-purple-500 outline-none resize-none"></textarea>
+                </div>
+                <button onclick="saveProfile()" class="w-full bg-white text-gray-900 font-bold py-3.5 rounded-xl">Enregistrer</button>
+            </div>
+        </div>
+    </div>
 
-    <div id="add-reel-modal" class="hidden fixed inset-0 z-[110] bg-black/90 backdrop-blur-md flex items-center justify-center p-4">
-        <div class="bg-gray-800 p-8 rounded-[2.5rem] w-full max-w-sm border border-white/10 shadow-2xl animate-fade-in">
-            <h2 class="text-xl font-black mb-2 text-white italic tracking-tighter uppercase">Partager un Reel</h2>
-            <p class="text-xs text-gray-400 mb-6 font-medium">Collez un lien YouTube Shorts pour témoigner.</p>
-            <input id="reel-url" type="text" placeholder="Lien YouTube Shorts..." class="w-full bg-gray-900 border border-white/10 rounded-2xl p-4 text-sm text-white mb-4 outline-none focus:border-purple-500 transition-all">
-            <textarea id="reel-caption" placeholder="Légende de la vidéo..." class="w-full bg-gray-900 border border-white/10 rounded-2xl p-4 text-sm text-white mb-6 h-24 resize-none focus:border-purple-500 outline-none"></textarea>
-            <div class="flex gap-3">
-                <button onclick="closeAddReelModal()" class="flex-1 py-4 text-gray-500 font-bold text-sm uppercase hover:text-white transition-colors">Annuler</button>
-                <button onclick="saveReel()" class="flex-1 bg-purple-600 py-4 rounded-2xl font-black text-sm uppercase shadow-xl shadow-purple-900/30 hover:bg-purple-700 transition-colors">Partager</button>
-            </div>
-        </div>
-    </div>
+    <div id="notification-container" class="fixed top-20 right-4 z-[100] flex flex-col gap-2 pointer-events-none w-72"></div>
+    <audio id="notif-sound" src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3"></audio>
+    <input type="file" id="btn-add-story-input" accept="image/*" class="hidden" onchange="uploadStory(this)">
 
-    <div id="edit-profile-modal" class="hidden fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-        <div class="bg-gray-800 p-8 rounded-[2.5rem] w-full max-w-sm border border-white/10 animate-fade-in shadow-2xl">
-            <div class="flex justify-between items-center mb-8">
-                <h2 class="text-xl font-black italic tracking-tight uppercase">Édition</h2>
-                <button onclick="closeEditModal()" class="p-2 text-gray-500 hover:text-white"><i data-lucide="x" class="w-6 h-6"></i></button>
-            </div>
-            <div class="space-y-5">
-                <div class="flex flex-col items-center mb-6 cursor-pointer group" onclick="document.getElementById('edit-avatar-input').click()">
-                    <div class="relative">
-                        <img id="edit-avatar-preview" src="" class="w-28 h-28 rounded-full object-cover border-4 border-purple-500/20 shadow-2xl group-hover:border-purple-500 transition-colors">
-                        <div class="absolute inset-0 bg-black/50 rounded-full opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity"><i data-lucide="camera" class="text-white"></i></div>
-                    </div>
-                    <input type="file" id="edit-avatar-input" accept="image/*" class="hidden" onchange="handleAvatarPreview(this)">
-                    <p class="text-[10px] text-purple-400 mt-3 font-black uppercase tracking-widest">Changer l'image</p>
-                </div>
-                <input id="edit-username" type="text" placeholder="Pseudo" class="w-full bg-gray-900 border border-white/10 rounded-2xl p-4 text-sm outline-none focus:border-purple-500 transition-colors">
-                <textarea id="edit-bio" placeholder="Ma bio / Mon témoignage" class="w-full bg-gray-900 border border-white/10 rounded-2xl p-4 text-sm h-28 outline-none focus:border-purple-500 resize-none transition-colors"></textarea>
-                <button onclick="saveProfile()" class="w-full bg-white text-gray-900 font-black py-4 rounded-2xl uppercase tracking-tighter shadow-xl shadow-white/10 hover:bg-gray-200 transition-colors">Sauvegarder</button>
-            </div>
-        </div>
-    </div>
+    <div id="story-viewer" class="hidden fixed inset-0 z-[200] bg-black flex flex-col">
+        <div class="absolute top-0 left-0 right-0 p-4 z-20 bg-gradient-to-b from-black/80 to-transparent">
+            <div class="h-1 bg-gray-600 rounded-full mb-3 overflow-hidden"><div id="story-progress" class="h-full bg-white w-0"></div></div>
+            <div class="flex justify-between items-center">
+                <div class="flex items-center gap-3">
+                    <img id="story-viewer-avatar" src="" class="w-8 h-8 rounded-full border border-white">
+                    <span id="story-viewer-name" class="font-bold text-sm">Nom</span>
+                    <span id="story-viewer-time" class="text-[10px] text-gray-400 uppercase">Il y a 2h</span>
+                </div>
+                <button onclick="closeStoryViewer()"><i data-lucide="x" class="w-8 h-8 text-white"></i></button>
+            </div>
+        </div>
+        <div class="flex-1 flex items-center justify-center relative"><img id="story-viewer-image" src="" class="max-h-full max-w-full object-contain"></div>
+        <div id="story-delete-btn-container" class="absolute bottom-10 right-4 z-20"></div>
+    </div>
 
-    <div id="notification-container" class="fixed top-20 right-4 z-[100] flex flex-col gap-2 pointer-events-none w-72"></div>
-    <audio id="notif-sound" src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3" preload="auto"></audio>
-    <input type="file" id="btn-add-story-input" accept="image/*" class="hidden" onchange="uploadStory(this)">
-
-    <div id="story-viewer" class="hidden fixed inset-0 z-[200] bg-black flex flex-col animate-fade-in">
-        <div class="absolute top-0 left-0 right-0 p-6 z-20 bg-gradient-to-b from-black/90 to-transparent pt-12">
-            <div class="h-1 bg-gray-700 rounded-full mb-4 overflow-hidden"><div id="story-progress" class="h-full bg-white w-0"></div></div>
-            <div class="flex justify-between items-center">
-                <div class="flex items-center gap-3">
-                    <img id="story-viewer-avatar" src="" class="w-10 h-10 rounded-full border-2 border-white shadow-lg">
-                    <span id="story-viewer-name" class="font-black text-white text-sm uppercase tracking-tight">Nom</span>
-                </div>
-                <button onclick="closeStoryViewer()" class="p-2 bg-white/10 rounded-full hover:bg-white/20"><i data-lucide="x" class="w-6 h-6"></i></button>
-            </div>
-        </div>
-        <div class="flex-1 flex items-center justify-center"><img id="story-viewer-image" src="" class="max-h-full max-w-full object-contain shadow-2xl"></div>
-        <div id="story-delete-btn-container" class="absolute bottom-10 right-6 z-20"></div>
-    </div>
-
-    <script src="script.js"></script>
+    <script src="script.js"></script>
+    <script>
+        // Initialisation des icônes après le chargement
+        document.addEventListener('DOMContentLoaded', () => {
+            if(typeof lucide !== 'undefined') lucide.createIcons();
+        });
+    </script>
 </body>
-</html>
+</html>                               
