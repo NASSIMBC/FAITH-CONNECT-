@@ -12,8 +12,8 @@ const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 let currentUser = null;
 let userProfile = null;
 let activeChatUser = null; 
-let selectedImageFile = null;     
-let selectedAvatarFile = null;    
+let selectedImageFile = null;      
+let selectedAvatarFile = null;     
 
 document.addEventListener('DOMContentLoaded', checkSession);
 
@@ -324,7 +324,7 @@ async function removeFriend(friendId) {
 // ==========================================
 // 6. CHAT & MESSAGERIE
 // ==========================================
-// (Code chat identique - raccourci pour la lisibilité mais fonctionnel)
+
 function openDirectChat(userId, username) {
     const targetProfile = { id: userId, username: username };
     startChat(targetProfile);
@@ -444,7 +444,7 @@ async function sendLiveMessage() {
 }
 
 // ==========================================
-// 8. GESTION DES POSTS (AMEN UPDATE ❤️)
+// 8. GESTION DES POSTS (CORRECTIF LIKES)
 // ==========================================
 
 function handleImageSelect(input) {
@@ -503,117 +503,95 @@ async function publishPost() {
     }
 }
 
-// --- FETCH POSTS AVEC AMENS ---
+// --- D. Affichage des Posts (FIXED AMEN) ---
 async function fetchPosts() {
     const container = document.getElementById('posts-container');
     if(!container) return;
 
-    const friendIds = await getFriendIds();
+    try {
+        const friendIds = await getFriendIds();
 
-    // On récupère les posts + l'avatar + LES LIKES
-    const { data } = await supabaseClient
-        .from('posts')
-        .select('*, profiles:user_id(avatar_url), likes(user_id)') // <--- ICI on récupère les likes
-        .in('user_id', friendIds)
-        .order('created_at', { ascending: false });
-    
-    container.innerHTML = ''; 
+        // 1. Récupération des posts
+        const { data: posts, error: postError } = await supabaseClient
+            .from('posts')
+            .select('*, profiles:user_id(avatar_url)')
+            .in('user_id', friendIds)
+            .order('created_at', { ascending: false });
 
-    if (!data || data.length === 0) {
-        container.innerHTML = `
-            <div class="text-center py-10 px-4 animate-fade-in">
-                <div class="bg-gray-800/50 rounded-2xl p-6 border border-dashed border-gray-600">
-                    <p class="text-gray-400 mb-2 font-medium">Votre fil d'actualité est calme... 🍃</p>
-                    <p class="text-xs text-gray-500">Ajoutez des amis via la recherche 🔍</p>
-                </div>
-            </div>`;
-        return;
-    }
+        if (postError) throw postError;
 
-    data.forEach(post => {
-        const isMyPost = post.user_id === currentUser.id;
-        const date = new Date(post.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+        // 2. Récupération des likes séparément (évite erreur 400 Bad Request)
+        const { data: allLikes } = await supabaseClient.from('likes').select('post_id, user_id');
         
-        const userAvatarUrl = post.profiles && post.profiles.avatar_url;
-        const avatarHtml = userAvatarUrl 
-            ? `<img src="${userAvatarUrl}" class="w-8 h-8 rounded-full object-cover shadow-lg border border-white/10">`
-            : `<div class="w-8 h-8 bg-gradient-to-tr from-purple-500 to-pink-500 rounded-full flex items-center justify-center font-bold text-white text-[10px] shadow-lg">${post.avatar_initials || "??"}</div>`;
+        container.innerHTML = ''; 
 
-        const postImageHtml = post.image_url 
-            ? `<div class="mt-3 rounded-xl overflow-hidden border border-white/5"><img src="${post.image_url}" class="w-full max-h-96 object-cover"></div>` 
-            : '';
+        if (!posts || posts.length === 0) {
+            container.innerHTML = `<div class="text-center py-10 px-4"><div class="bg-gray-800/50 rounded-2xl p-6 border border-dashed border-gray-600"><p class="text-gray-400 mb-2 font-medium">Votre fil d'actualité est calme... 🍃</p></div></div>`;
+            return;
+        }
 
-        const deleteBtn = isMyPost 
-            ? `<button onclick="deletePost('${post.id}')" class="text-gray-500 hover:text-red-500"><i data-lucide="trash-2" class="w-4 h-4"></i></button>` 
-            : '';
+        posts.forEach(post => {
+            const isMyPost = post.user_id === currentUser.id;
+            const date = new Date(post.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+            
+            const userAvatarUrl = post.profiles && post.profiles.avatar_url;
+            const avatarHtml = userAvatarUrl 
+                ? `<img src="${userAvatarUrl}" class="w-8 h-8 rounded-full object-cover border border-white/10 shadow-lg">`
+                : `<div class="w-8 h-8 bg-gradient-to-tr from-purple-500 to-pink-500 rounded-full flex items-center justify-center font-bold text-white text-[10px] shadow-lg">${post.avatar_initials || "??"}</div>`;
 
-        // --- LOGIQUE AMEN ---
-        const likes = post.likes || [];
-        const amensCount = likes.length;
-        const isAmened = likes.some(like => like.user_id === currentUser.id);
-        const amenColor = isAmened ? 'text-pink-500 font-bold' : 'text-gray-500 hover:text-pink-400';
-        const amenIconClass = isAmened ? 'fill-pink-500 text-pink-500' : 'text-gray-500'; // Fill heart
+            const postImageHtml = post.image_url 
+                ? `<div class="mt-3 rounded-xl overflow-hidden border border-white/5"><img src="${post.image_url}" class="w-full max-h-96 object-cover"></div>` 
+                : '';
 
-        container.insertAdjacentHTML('beforeend', `
-            <div class="bg-gray-800/30 rounded-2xl p-4 border border-white/5 mb-4 animate-fade-in" id="post-${post.id}">
-                <div class="flex justify-between items-start mb-3">
-                    <div class="flex items-center space-x-3">
-                        ${avatarHtml}
-                        <div>
-                            <h3 class="font-bold text-white text-sm">${post.user_name}</h3>
-                            <p class="text-[10px] text-gray-500">${date}</p>
+            // Filtrage manuel des likes pour ce post
+            const postLikes = allLikes ? allLikes.filter(l => l.post_id === post.id) : [];
+            const amensCount = postLikes.length;
+            const isAmened = postLikes.some(l => l.user_id === currentUser.id);
+            
+            const amenColor = isAmened ? 'text-pink-500 font-bold' : 'text-gray-500 hover:text-pink-400';
+            const amenIconClass = isAmened ? 'fill-pink-500 text-pink-500' : 'text-gray-500';
+
+            container.insertAdjacentHTML('beforeend', `
+                <div class="bg-gray-800/30 rounded-2xl p-4 border border-white/5 mb-4 animate-fade-in" id="post-${post.id}">
+                    <div class="flex justify-between items-start mb-3">
+                        <div class="flex items-center space-x-3">
+                            ${avatarHtml}
+                            <div>
+                                <h3 class="font-bold text-white text-sm">${post.user_name}</h3>
+                                <p class="text-[10px] text-gray-500">${date}</p>
+                            </div>
+                        </div>
+                        ${isMyPost ? `<button onclick="deletePost('${post.id}')" class="text-gray-500 hover:text-red-500"><i data-lucide="trash-2" class="w-4 h-4"></i></button>` : ''}
+                    </div>
+                    <p class="text-gray-200 text-sm leading-relaxed whitespace-pre-wrap">${post.content}</p>
+                    ${postImageHtml}
+                    <div class="border-t border-white/5 mt-3 pt-3 flex justify-between text-gray-500">
+                        <div class="flex gap-4">
+                            <button onclick="toggleAmen('${post.id}')" class="${amenColor} transition-colors flex items-center gap-1 text-xs">
+                                <i data-lucide="heart" class="w-4 h-4 ${amenIconClass}"></i> 
+                                ${amensCount > 0 ? amensCount + ' ' : ''}Amen
+                            </button>
+                            <button onclick="toggleComments('${post.id}')" class="hover:text-blue-400 transition-colors flex items-center gap-1 text-xs"><i data-lucide="message-square" class="w-4 h-4"></i> Commenter</button>
                         </div>
                     </div>
-                    ${deleteBtn}
-                </div>
-                
-                <p class="text-gray-200 text-sm leading-relaxed whitespace-pre-wrap">${post.content}</p>
-                ${postImageHtml}
-                
-                <div class="border-t border-white/5 mt-3 pt-3 flex justify-between text-gray-500">
-                    <div class="flex gap-4">
-                        <button onclick="toggleAmen('${post.id}')" class="${amenColor} transition-colors flex items-center gap-1 text-xs">
-                            <i data-lucide="heart" class="w-4 h-4 ${amenIconClass}"></i> 
-                            ${amensCount > 0 ? amensCount + ' ' : ''}Amen
-                        </button>
-                        <button onclick="toggleComments('${post.id}')" class="hover:text-blue-400 transition-colors flex items-center gap-1 text-xs"><i data-lucide="message-square" class="w-4 h-4"></i> Commenter</button>
+                    <div id="comments-section-${post.id}" class="hidden mt-3 pt-3 bg-black/20 rounded-lg p-3">
+                        <div id="comments-list-${post.id}" class="space-y-2 mb-3"></div>
                     </div>
-                    <button onclick="sharePost('${post.content}')" class="hover:text-green-400 transition-colors flex items-center gap-1 text-xs"><i data-lucide="share-2" class="w-4 h-4"></i> Partager</button>
-                </div>
-
-                <div id="comments-section-${post.id}" class="hidden mt-3 pt-3 bg-black/20 rounded-lg p-3">
-                    <div id="comments-list-${post.id}" class="space-y-2 mb-3"></div>
-                    <div class="flex gap-2">
-                        <input type="text" id="input-comment-${post.id}" placeholder="Votre commentaire..." class="flex-1 bg-gray-900 border border-white/10 rounded-lg px-3 py-1 text-xs text-white">
-                        <button onclick="sendComment('${post.id}')" class="text-purple-400 font-bold text-xs">Envoyer</button>
-                    </div>
-                </div>
-            </div>`);
-    });
-    if(typeof lucide !== 'undefined') lucide.createIcons();
+                </div>`);
+        });
+        if(typeof lucide !== 'undefined') lucide.createIcons();
+    } catch (err) {
+        console.error("Erreur d'affichage :", err);
+    }
 }
 
-// --- FONCTION TOGGLE AMEN ---
 async function toggleAmen(postId) {
-    // 1. Vérifier si j'ai déjà liké
-    const { data } = await supabaseClient
-        .from('likes')
-        .select('*')
-        .match({ post_id: postId, user_id: currentUser.id });
-
+    const { data } = await supabaseClient.from('likes').select('*').match({ post_id: postId, user_id: currentUser.id });
     if (data && data.length > 0) {
-        // Déjà liké -> On supprime (Unlike)
-        await supabaseClient
-            .from('likes')
-            .delete()
-            .match({ post_id: postId, user_id: currentUser.id });
+        await supabaseClient.from('likes').delete().match({ post_id: postId, user_id: currentUser.id });
     } else {
-        // Pas liké -> On ajoute (Like)
-        await supabaseClient
-            .from('likes')
-            .insert({ post_id: postId, user_id: currentUser.id });
+        await supabaseClient.from('likes').insert({ post_id: postId, user_id: currentUser.id });
     }
-    // On recharge les posts pour voir le changement
     fetchPosts();
 }
 
@@ -626,7 +604,7 @@ async function deletePost(id) {
 
 function sharePost(text) {
     navigator.clipboard.writeText(text);
-    alert("Texte copié dans le presse-papier !");
+    alert("Texte copié !");
 }
 
 async function toggleComments(postId) {
@@ -705,7 +683,6 @@ function subscribeToRealtime() {
         if (payload.table === 'messages') { fetchMessages(); loadConversations(); }
         if (payload.table === 'posts') { fetchPosts(); }
         if (payload.table === 'friendships') { fetchNotifications(); updateFriendCount(currentUser.id); if(payload.new.receiver_id === currentUser.id && payload.eventType === 'INSERT') showNotification("Système", "Nouvelle demande d'ami !"); }
-        if (payload.table === 'live_messages' && payload.eventType === 'INSERT') { const container = document.getElementById('live-chat-messages'); if(container) { container.insertAdjacentHTML('beforeend', `<div class="animate-fade-in flex gap-2 mb-1.5 items-start"><span class="font-bold text-purple-400 shrink-0 text-xs mt-0.5">${payload.new.user_name}:</span><span class="text-gray-200 text-sm leading-tight">${payload.new.content}</span></div>`); container.scrollTop = container.scrollHeight; } }
     }).subscribe();
 }
 
@@ -749,8 +726,7 @@ async function handleFriendRequest(id, accepted) {
     if (accepted) await supabaseClient.from('friendships').update({ status: 'accepted' }).eq('id', id);
     else await supabaseClient.from('friendships').delete().eq('id', id);
     fetchNotifications(); updateFriendCount(currentUser.id);
-    const profList = document.getElementById('profile-friends-list');
-    if(profList) switchProfileTab('requests');
+    switchProfileTab('requests');
 }
 
 async function addFriend(targetId) {
