@@ -6,7 +6,6 @@ const SUPABASE_URL = 'https://uduajuxobmywmkjnawjn.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVkdWFqdXhvYm15d21ram5hd2puIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc0NjUyMTUsImV4cCI6MjA4MzA0MTIxNX0.Vn1DpT9l9N7sVb3kVUPRqr141hGvM74vkZULJe59YUU';
 
 // Initialisation du client
-// Note: On utilise window.supabase si le CDN est chargé via <script>
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // ==========================================
@@ -15,7 +14,7 @@ const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 let currentUser = null;
 let userProfile = null;
 let activeChatUser = null; 
-let selectedImageFile = null; // NOUVEAU : Pour stocker l'image avant upload
+let selectedImageFile = null; 
 
 document.addEventListener('DOMContentLoaded', checkSession);
 
@@ -397,7 +396,26 @@ async function sendLiveMessage() {
 // 8. GESTION DES POSTS (AVEC IMAGES & COMMENTAIRES)
 // ==========================================
 
-// --- A. Gestion de l'image (Preview) ---
+// --- A. Fonction pour trouver qui sont mes amis ---
+async function getFriendIds() {
+    const { data } = await supabaseClient
+        .from('friendships')
+        .select('requester_id, receiver_id')
+        .eq('status', 'accepted')
+        .or(`requester_id.eq.${currentUser.id},receiver_id.eq.${currentUser.id}`);
+
+    const friendIds = new Set([currentUser.id]); 
+
+    if (data) {
+        data.forEach(f => {
+            friendIds.add(f.requester_id === currentUser.id ? f.receiver_id : f.requester_id);
+        });
+    }
+    
+    return Array.from(friendIds);
+}
+
+// --- B. Gestion de l'image (Preview) ---
 function handleImageSelect(input) {
     if (input.files && input.files[0]) {
         selectedImageFile = input.files[0];
@@ -416,7 +434,7 @@ function removeImage() {
     document.getElementById('image-preview-container').classList.add('hidden');
 }
 
-// --- B. Publication (Texte + Image) ---
+// --- C. Publication (Texte + Image) ---
 async function publishPost() {
     const input = document.getElementById('new-post-input');
     const btn = document.getElementById('btn-publish');
@@ -469,15 +487,37 @@ async function publishPost() {
     }
 }
 
-// --- C. Affichage des Posts (Complet) ---
+// --- D. Affichage des Posts (FILTRÉ PAR AMIS) ---
 async function fetchPosts() {
     const container = document.getElementById('posts-container');
     if(!container) return;
 
-    const { data } = await supabaseClient.from('posts').select('*').order('created_at', { ascending: false });
+    // 1. Récupère liste des amis
+    const friendIds = await getFriendIds();
+
+    // 2. Requête filtrée avec .in()
+    const { data } = await supabaseClient
+        .from('posts')
+        .select('*')
+        .in('user_id', friendIds) // <--- ICI le filtre
+        .order('created_at', { ascending: false });
     
     container.innerHTML = ''; 
-    if (data) data.forEach(post => {
+
+    // 3. Gestion cas vide
+    if (!data || data.length === 0) {
+        container.innerHTML = `
+            <div class="text-center py-10 px-4 animate-fade-in">
+                <div class="bg-gray-800/50 rounded-2xl p-6 border border-dashed border-gray-600">
+                    <p class="text-gray-400 mb-2 font-medium">Votre fil d'actualité est calme... 🍃</p>
+                    <p class="text-xs text-gray-500">Ajoutez des amis via la recherche 🔍 pour voir leurs bénédictions ici !</p>
+                </div>
+            </div>`;
+        return;
+    }
+
+    // 4. Affichage
+    data.forEach(post => {
         const isMyPost = post.user_id === currentUser.id;
         const date = new Date(post.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
         
@@ -527,7 +567,7 @@ async function fetchPosts() {
     if(typeof lucide !== 'undefined') lucide.createIcons();
 }
 
-// --- D. Actions sur les Posts ---
+// --- E. Actions sur les Posts ---
 
 async function deletePost(id) {
     if(!confirm("Supprimer ce post ?")) return;
@@ -549,7 +589,6 @@ async function toggleComments(postId) {
 
     if (!section.classList.contains('hidden')) {
         // Charger commentaires depuis la table 'comments'
-        // Assure-toi d'avoir créé la table 'comments' (id, post_id, user_id, user_name, content)
         const { data: comments } = await supabaseClient
             .from('comments')
             .select('*')
