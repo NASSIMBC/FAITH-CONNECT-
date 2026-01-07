@@ -2,6 +2,7 @@
 // 1. CONFIGURATION SUPABASE
 // ==========================================
 const SUPABASE_URL = 'https://uduajuxobmywmkjnawjn.supabase.co';
+// ATTENTION : Ne partagez jamais cette clé publiquement en production.
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVkdWFqdXhvYm15d21ram5hd2puIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc0NjUyMTUsImV4cCI6MjA4MzA0MTIxNX0.Vn1DpT9l9N7sVb3kVUPRqr141hGvM74vkZULJe59YUU';
 
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -12,21 +13,19 @@ const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 let currentUser = null;
 let userProfile = null;
 let activeChatUser = null; 
-let selectedImageFile = null;      
+let selectedImageFile = null;       
 let selectedAvatarFile = null;     
 let currentStoryTimer = null;
 
 document.addEventListener('DOMContentLoaded', checkSession);
 
-// Gestion de la touche Entrée pour Chat et Commentaires
+// Gestion de la touche Entrée
 document.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
-        // Pour le Chat
         if (document.activeElement.id === 'chat-input') {
             e.preventDefault();
             sendChatMessage();
         }
-        // Pour les Commentaires
         if (document.activeElement.id.startsWith('input-comment-')) {
             e.preventDefault();
             const postId = document.activeElement.id.replace('input-comment-', '');
@@ -99,7 +98,6 @@ async function logout() {
 function updateUIProfile() {
     const initials = userProfile.username ? userProfile.username.substring(0, 2).toUpperCase() : "??";
     
-    // Mettre à jour tous les endroits où le nom apparaît
     document.querySelectorAll('#profile-name, #public-username').forEach(el => el.innerText = userProfile.username);
     
     const emailEl = document.getElementById('profile-email');
@@ -112,7 +110,6 @@ function updateUIProfile() {
         emojiDisplay.innerText = userProfile.status_emoji || "👋";
     }
 
-    // Gestion de l'avatar principal
     const avatarContainer = document.getElementById('profile-avatar-big');
     if(avatarContainer) {
         if (userProfile.avatar_url) {
@@ -122,7 +119,6 @@ function updateUIProfile() {
         }
     }
 
-    // Gestion du petit avatar (input post)
     const smallAvatar = document.getElementById('current-user-avatar-small');
     if(smallAvatar) {
         if(userProfile.avatar_url) {
@@ -213,7 +209,6 @@ async function saveProfile() {
 function switchView(viewName) {
     const views = ['home', 'reels', 'live', 'messages', 'profile', 'public-profile'];
     
-    // Cacher toutes les vues et désactiver les boutons
     views.forEach(v => {
         const el = document.getElementById('view-' + v);
         if(el) el.classList.add('hidden');
@@ -221,14 +216,12 @@ function switchView(viewName) {
         if(btn) btn.classList.replace('text-purple-400', 'text-gray-500');
     });
 
-    // Afficher la vue cible et activer son bouton
     const target = document.getElementById('view-' + viewName);
     if(target) target.classList.remove('hidden');
     
     const activeBtn = document.getElementById('nav-' + viewName);
     if(activeBtn) activeBtn.classList.replace('text-gray-500', 'text-purple-400');
 
-    // Actions spécifiques par vue
     if (viewName === 'live') fetchLiveMessages();
     if (viewName === 'reels') fetchReels();
     if (viewName === 'profile') switchProfileTab('friends'); 
@@ -237,7 +230,6 @@ function switchView(viewName) {
         document.getElementById('msg-badge').classList.add('hidden');
         if(!activeChatUser) resetChat();
     } else {
-        // Si on quitte les messages, on désélectionne l'utilisateur actif sauf si on va sur son profil public
         if(viewName !== 'public-profile') activeChatUser = null;
     }
 }
@@ -255,7 +247,7 @@ async function loadAppData() {
 }
 
 // ==========================================
-// 5. GESTION DES POSTS (CORE FEATURE)
+// 5. GESTION DES POSTS (CORRIGÉE)
 // ==========================================
 
 function handleImageSelect(input) {
@@ -313,6 +305,24 @@ async function publishPost() {
     }
 }
 
+// Fonction utilitaire pour récupérer les IDs des amis (MANQUANTE DANS TON CODE PRÉCÉDENT)
+async function getFriendIds() {
+    const { data } = await supabaseClient
+        .from('friendships')
+        .select('receiver_id, requester_id')
+        .or(`receiver_id.eq.${currentUser.id},requester_id.eq.${currentUser.id}`)
+        .eq('status', 'accepted');
+
+    const ids = new Set([currentUser.id]); // Inclure soi-même
+    if(data) {
+        data.forEach(f => {
+            ids.add(f.receiver_id === currentUser.id ? f.requester_id : f.receiver_id);
+        });
+    }
+    return Array.from(ids);
+}
+
+// FONCTION FETCH POSTS CORRIGÉE POUR LE NOUVEAU DESIGN
 async function fetchPosts() {
     const container = document.getElementById('posts-container');
     if(!container) return;
@@ -320,16 +330,16 @@ async function fetchPosts() {
     try {
         const friendIds = await getFriendIds();
         
-        // On récupère les posts et les profils liés
+        // On récupère les posts
         const { data: posts, error } = await supabaseClient
             .from('posts')
-            .select('*, profiles:user_id(avatar_url)')
+            .select('*, profiles:user_id(username, avatar_url)')
             .in('user_id', friendIds)
             .order('created_at', { ascending: false });
 
         if (error) throw error;
 
-        // On récupère TOUS les likes pour faire le tri côté client (plus robuste)
+        // On récupère les likes
         const { data: allLikes } = await supabaseClient.from('likes').select('post_id, user_id');
         
         container.innerHTML = (posts || []).map(post => {
@@ -337,51 +347,58 @@ async function fetchPosts() {
             const postLikes = (allLikes || []).filter(l => l.post_id === post.id);
             const isAmened = postLikes.some(l => l.user_id === currentUser.id);
             
-            // Gestion Avatar Post
-            const avatarUrl = post.profiles?.avatar_url;
-            const avatarHtml = avatarUrl 
-                ? `<img src="${avatarUrl}" class="w-10 h-10 rounded-full object-cover border border-white/10">`
-                : `<div class="w-10 h-10 rounded-full bg-gradient-to-tr from-purple-500 to-pink-500 flex items-center justify-center font-bold text-white text-xs">${post.user_name.substring(0,2).toUpperCase()}</div>`;
+            // Gestion Avatar
+            const userAvatarUrl = post.profiles?.avatar_url;
+            const userName = post.profiles?.username || post.user_name;
+            const date = new Date(post.created_at).toLocaleDateString();
 
-            // Classe CSS pour le coeur
-            const heartClass = isAmened ? 'fill-pink-500 text-pink-500' : 'text-gray-500';
-            const btnClass = isAmened ? 'text-pink-500 font-bold' : 'text-gray-500';
+            const avatarHtml = userAvatarUrl 
+                ? `<img src="${userAvatarUrl}" class="w-10 h-10 rounded-full object-cover border border-purple-500/20 cursor-pointer" onclick="viewUserProfile('${post.user_id}')">`
+                : `<div class="w-10 h-10 rounded-full bg-purple-600 flex items-center justify-center font-bold text-white text-xs cursor-pointer" onclick="viewUserProfile('${post.user_id}')">${userName.substring(0,2).toUpperCase()}</div>`;
 
+            // Classes CSS
+            const heartClass = isAmened ? 'fill-pink-500 text-pink-500' : 'text-gray-400';
+            const btnTextClass = isAmened ? 'text-pink-500 font-medium' : 'text-gray-400 font-medium';
+
+            // --- NOUVEAU DESIGN HTML ---
             return `
-                <div class="bg-gray-800/30 rounded-[2rem] p-5 border border-white/5 mb-4 animate-fade-in" id="post-${post.id}">
-                    <div class="flex justify-between items-start mb-4">
-                        <div class="flex items-center gap-3">
-                            ${avatarHtml}
-                            <div>
-                                <h3 class="font-bold text-white text-sm uppercase">${post.user_name}</h3>
-                                <p class="text-[10px] text-gray-500 uppercase font-bold">Il y a un instant</p>
-                            </div>
-                        </div>
-                        ${isMyPost ? `<button onclick="deletePost('${post.id}')" class="p-2 text-gray-600 hover:text-red-500 transition-colors"><i data-lucide="trash-2" class="w-4 h-4"></i></button>` : ''}
+            <div class="bg-gray-800 rounded-2xl p-4 border border-white/5 shadow-lg mb-4 relative overflow-hidden animate-fade-in" id="post-${post.id}">
+                <div class="flex justify-between items-start mb-3">
+                    <div class="flex items-center gap-3">
+                         ${avatarHtml}
+                         <div class="flex flex-col">
+                             <h4 class="font-bold text-sm text-white leading-tight">${userName}</h4>
+                             <span class="text-[10px] text-gray-400">${date}</span>
+                         </div>
                     </div>
-                    
-                    <p class="text-gray-200 text-sm leading-relaxed mb-4 whitespace-pre-wrap">${post.content}</p>
-                    
-                    ${post.image_url ? `<img src="${post.image_url}" class="w-full rounded-2xl border border-white/5 mb-4 object-cover max-h-96">` : ''}
-                    
-                    <div class="flex gap-6 border-t border-white/5 pt-4">
-                        <button onclick="toggleAmen('${post.id}')" class="${btnClass} flex items-center gap-2 text-xs transition-all">
-                            <i data-lucide="heart" class="w-4 h-4 ${heartClass}"></i> 
-                            ${postLikes.length > 0 ? postLikes.length + ' ' : ''}AMEN
-                        </button>
-                        <button onclick="toggleComments('${post.id}')" class="text-gray-500 hover:text-purple-400 flex items-center gap-2 text-xs transition-all">
-                            <i data-lucide="message-circle" class="w-4 h-4"></i> COMMENTER
-                        </button>
+                    ${isMyPost ? `<button onclick="deletePost('${post.id}')" class="text-gray-600 hover:text-red-500 transition-colors"><i data-lucide="trash-2" class="w-4 h-4"></i></button>` : ''}
+                </div>
+
+                <div class="mb-4 text-gray-200 text-sm leading-relaxed pl-1 whitespace-pre-wrap">
+                    ${post.content || ''}
+                </div>
+                
+                ${post.image_url ? `<div class="mb-4 rounded-xl overflow-hidden"><img src="${post.image_url}" class="w-full object-cover max-h-96"></div>` : ''}
+
+                <div class="flex items-center gap-6 border-t border-white/5 pt-3 mt-2">
+                    <button onclick="toggleAmen('${post.id}')" class="flex items-center gap-2 group transition-colors ${btnTextClass}">
+                        <i data-lucide="heart" class="w-5 h-5 group-hover:fill-pink-500 transition-all ${heartClass}"></i>
+                        <span class="text-xs">${postLikes.length > 0 ? postLikes.length + ' ' : ''}Amen</span>
+                    </button>
+                    <button onclick="toggleComments('${post.id}')" class="flex items-center gap-2 text-gray-400 hover:text-purple-400 transition-colors">
+                        <i data-lucide="message-circle" class="w-5 h-5"></i>
+                        <span class="text-xs font-medium">Commenter</span>
+                    </button>
+                </div>
+
+                <div id="comments-section-${post.id}" class="hidden mt-4 pt-4 border-t border-white/5 bg-black/20 rounded-xl p-3">
+                    <div id="comments-list-${post.id}" class="space-y-3 mb-4 max-h-40 overflow-y-auto scrollbar-hide"></div>
+                    <div class="flex gap-2">
+                        <input type="text" id="input-comment-${post.id}" placeholder="Votre message..." class="flex-1 bg-gray-900 border border-white/10 rounded-xl px-4 py-2 text-xs outline-none focus:border-purple-500">
+                        <button onclick="sendComment('${post.id}')" class="text-purple-400 font-bold text-xs uppercase hover:text-white transition-colors">Envoyer</button>
                     </div>
-                    
-                    <div id="comments-section-${post.id}" class="hidden mt-4 pt-4 border-t border-white/5 bg-black/10 rounded-2xl p-4">
-                        <div id="comments-list-${post.id}" class="space-y-3 mb-4 max-h-40 overflow-y-auto scrollbar-hide"></div>
-                        <div class="flex gap-2">
-                            <input type="text" id="input-comment-${post.id}" placeholder="Votre message..." class="flex-1 bg-gray-900 border border-white/10 rounded-xl px-4 py-2 text-xs outline-none focus:border-purple-500">
-                            <button onclick="sendComment('${post.id}')" class="text-purple-400 font-black text-xs uppercase hover:text-white transition-colors">Envoyer</button>
-                        </div>
-                    </div>
-                </div>`;
+                </div>
+            </div>`;
         }).join('');
         
         if(typeof lucide !== 'undefined') lucide.createIcons();
@@ -394,14 +411,12 @@ async function deletePost(id) {
     if(!confirm("Voulez-vous vraiment supprimer ce post ?")) return;
 
     try {
-        // 1. Nettoyage Storage (Si image)
         const { data: post } = await supabaseClient.from('posts').select('image_url').eq('id', id).single();
         if (post && post.image_url) {
             const fileName = post.image_url.split('/').pop();
             await supabaseClient.storage.from('post-images').remove([`${currentUser.id}/${fileName}`]);
         }
 
-        // 2. Suppression BDD
         const { error } = await supabaseClient.from('posts').delete().eq('id', id).eq('user_id', currentUser.id);
         
         if(!error) { 
@@ -416,17 +431,14 @@ async function deletePost(id) {
 }
 
 async function toggleAmen(postId) {
-    // Vérif si déjà liké
     const { data } = await supabaseClient.from('likes').select('*').match({ post_id: postId, user_id: currentUser.id });
     
     if (data && data.length > 0) {
-        // Unlike
         await supabaseClient.from('likes').delete().match({ post_id: postId, user_id: currentUser.id });
     } else {
-        // Like
         await supabaseClient.from('likes').insert({ post_id: postId, user_id: currentUser.id });
     }
-    fetchPosts(); // Rafraîchir pour voir le coeur changer
+    fetchPosts(); 
 }
 
 async function toggleComments(postId) {
@@ -447,7 +459,7 @@ async function toggleComments(postId) {
         if(comments && comments.length > 0) {
             list.innerHTML = comments.map(c => `
                 <div class="text-xs text-gray-300 animate-fade-in">
-                    <span class="font-bold text-purple-400 uppercase mr-1">${c.user_name}:</span>
+                    <span class="font-bold text-purple-400 mr-1">${c.user_name}:</span>
                     ${c.content}
                 </div>
             `).join('');
@@ -462,8 +474,6 @@ async function sendComment(postId) {
     const content = input.value.trim();
     
     if(!content) return;
-    
-    // Optimistic UI : On vide l'input tout de suite
     input.value = '';
     
     const { error } = await supabaseClient.from('comments').insert([{ 
@@ -474,23 +484,20 @@ async function sendComment(postId) {
     }]);
     
     if(!error) { 
-        // On force le rechargement de la section commentaire
         const section = document.getElementById(`comments-section-${postId}`);
-        section.classList.add('hidden'); // Ferme
-        toggleComments(postId); // Rouvre (ce qui recharge)
+        section.classList.add('hidden'); 
+        toggleComments(postId); 
     } else { 
         alert("Erreur commentaire : " + error.message); 
     }
 }
 
 // ==========================================
-// 6. CHAT & MESSAGERIE (CORRIGÉ)
+// 6. CHAT & MESSAGERIE
 // ==========================================
 
 function openDirectChat(userId, username) {
     startChat({ id: userId, username: username });
-    
-    // Sur mobile, on change de vue
     if(window.innerWidth < 768) {
         document.getElementById('conversations-sidebar').classList.add('hidden');
         document.getElementById('chat-detail').classList.remove('hidden');
@@ -524,15 +531,12 @@ async function loadConversations() {
         }
     });
 
-    // Récupérer les infos des profils
     const profilesIds = conversationArray.map(c => c.id);
     const { data: profiles } = await supabaseClient.from('profiles').select('id, username, avatar_url').in('id', profilesIds);
 
     container.innerHTML = conversationArray.map(conv => {
         const p = profiles.find(x => x.id === conv.id) || { username: "Utilisateur inconnu" };
         const avatar = p.avatar_url || `https://ui-avatars.com/api/?name=${p.username}`;
-        
-        // Echapper les apostrophes pour le onclick
         const safeUsername = p.username.replace(/'/g, "\\'");
         
         return `
@@ -599,7 +603,6 @@ async function fetchMessages() {
         </div>`;
     }).join('');
     
-    // Auto-scroll en bas
     requestAnimationFrame(() => {
         container.scrollTop = container.scrollHeight;
     });
@@ -610,7 +613,7 @@ async function sendChatMessage() {
     if (!activeChatUser || !input.value.trim()) return;
     
     const content = input.value;
-    input.value = ''; // Reset immédiat
+    input.value = '';
     
     const { error } = await supabaseClient.from('messages').insert([{ 
         content, 
@@ -639,7 +642,6 @@ async function saveReel() {
     
     if(!url.includes('youtube.com') && !url.includes('youtu.be')) return alert("Lien YouTube requis");
 
-    // Extraction ID Youtube
     let videoId = "";
     if (url.includes('shorts/')) videoId = url.split('shorts/')[1].split('?')[0];
     else if (url.includes('v=')) videoId = url.split('v=')[1].split('&')[0];
