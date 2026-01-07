@@ -1,11 +1,9 @@
 // ==========================================
 // 1. CONFIGURATION SUPABASE
 // ==========================================
-// Assure-toi que ces clés sont les bonnes
 const SUPABASE_URL = 'https://uduajuxobmywmkjnawjn.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVkdWFqdXhvYm15d21ram5hd2puIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc0NjUyMTUsImV4cCI6MjA4MzA0MTIxNX0.Vn1DpT9l9N7sVb3kVUPRqr141hGvM74vkZULJe59YUU';
 
-// Initialisation du client
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // ==========================================
@@ -14,7 +12,8 @@ const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 let currentUser = null;
 let userProfile = null;
 let activeChatUser = null; 
-let selectedImageFile = null; 
+let selectedImageFile = null;     // Pour les posts
+let selectedAvatarFile = null;    // NOUVEAU : Pour la photo de profil
 
 document.addEventListener('DOMContentLoaded', checkSession);
 
@@ -85,7 +84,6 @@ function switchView(viewName) {
     const activeBtn = document.getElementById('nav-' + viewName);
     if(activeBtn) { activeBtn.classList.remove('text-gray-500'); activeBtn.classList.add('text-purple-400'); }
 
-    // Logique spécifique par vue
     if (viewName === 'live') fetchLiveMessages();
     if (viewName === 'messages') {
         document.getElementById('msg-badge').classList.add('hidden');
@@ -109,7 +107,7 @@ async function loadAppData() {
 }
 
 // ==========================================
-// 4. PROFIL (STATUT)
+// 4. PROFIL (Affichage & Modification)
 // ==========================================
 
 async function updateMyStatus() {
@@ -121,10 +119,12 @@ async function updateMyStatus() {
     else { userProfile.status_text = text; userProfile.status_emoji = emoji || "👋"; updateUIProfile(); }
 }
 
+// --- Mise à jour visuelle du profil (Image ou Initiales) ---
 function updateUIProfile() {
     const initials = userProfile.username ? userProfile.username.substring(0, 2).toUpperCase() : "??";
+    
+    // 1. Textes
     document.querySelectorAll('#user-display, #profile-name').forEach(el => el.innerText = userProfile.username);
-    document.querySelectorAll('#user-initials, #current-user-avatar-small, #profile-avatar-big').forEach(el => el.innerText = initials);
     if(document.getElementById('profile-email')) document.getElementById('profile-email').innerText = "@" + userProfile.username;
     
     const textDisplay = document.getElementById('status-text-display');
@@ -133,11 +133,122 @@ function updateUIProfile() {
         textDisplay.innerText = userProfile.status_text || "Ajouter un statut...";
         emojiDisplay.innerText = userProfile.status_emoji || "👋";
     }
+
+    // 2. Avatars (Le gros changement est ici)
+    const avatarElements = ['current-user-avatar-small', 'profile-avatar-big'];
+    
+    avatarElements.forEach(id => {
+        const el = document.getElementById(id);
+        if(!el) return;
+
+        // Si l'utilisateur a une URL d'avatar enregistrée
+        if (userProfile.avatar_url) {
+            el.innerHTML = `<img src="${userProfile.avatar_url}" class="w-full h-full object-cover rounded-full">`;
+            el.innerText = ""; // On enlève les initiales
+            // Optionnel : on peut enlever le fond de couleur par défaut s'il gêne
+            // el.classList.remove('bg-gradient-to-tr', 'from-purple-500', 'to-blue-500'); 
+        } else {
+            // Sinon on garde les initiales
+            el.innerHTML = ""; // On vide l'image
+            el.innerText = initials;
+        }
+    });
+}
+
+function openEditModal() { 
+    document.getElementById('edit-profile-modal').classList.remove('hidden'); 
+    document.getElementById('edit-username').value = userProfile.username; 
+    document.getElementById('edit-bio').value = userProfile.bio; 
+    
+    // Reset de la preview
+    const preview = document.getElementById('edit-avatar-preview');
+    if (userProfile.avatar_url) {
+        preview.src = userProfile.avatar_url;
+    } else {
+        // Une image par défaut si pas d'avatar
+        preview.src = "https://ui-avatars.com/api/?name=" + userProfile.username + "&background=random";
+    }
+    selectedAvatarFile = null;
+}
+
+function closeEditModal() { 
+    document.getElementById('edit-profile-modal').classList.add('hidden'); 
+}
+
+// --- NOUVEAU : Prévisualisation de l'avatar ---
+function handleAvatarPreview(input) {
+    if (input.files && input.files[0]) {
+        selectedAvatarFile = input.files[0];
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            document.getElementById('edit-avatar-preview').src = e.target.result;
+        }
+        reader.readAsDataURL(input.files[0]);
+    }
+}
+
+// --- MODIFIÉ : Sauvegarde avec Upload Image ---
+async function saveProfile() {
+    const newUsername = document.getElementById('edit-username').value;
+    const newBio = document.getElementById('edit-bio').value;
+    const btn = document.querySelector('#edit-profile-modal button:last-child'); // Bouton enregistrer
+
+    if (!newUsername.trim()) return alert("Pseudo requis");
+
+    btn.innerText = "Sauvegarde...";
+    btn.disabled = true;
+
+    try {
+        let finalAvatarUrl = userProfile.avatar_url; // Par défaut, on garde l'ancienne
+
+        // 1. Si une nouvelle image est sélectionnée, on l'upload
+        if (selectedAvatarFile) {
+            const fileExt = selectedAvatarFile.name.split('.').pop();
+            const fileName = `${currentUser.id}/${Date.now()}.${fileExt}`;
+
+            // Upload vers le bucket 'avatars'
+            const { error: uploadError } = await supabaseClient.storage
+                .from('avatars')
+                .upload(fileName, selectedAvatarFile);
+
+            if (uploadError) throw uploadError;
+
+            // Récupérer l'URL publique
+            const { data } = supabaseClient.storage.from('avatars').getPublicUrl(fileName);
+            finalAvatarUrl = data.publicUrl;
+        }
+
+        // 2. Mise à jour de la table profiles
+        const { error } = await supabaseClient.from('profiles').update({ 
+            username: newUsername, 
+            bio: newBio,
+            avatar_url: finalAvatarUrl // On ajoute l'URL
+        }).eq('id', currentUser.id);
+
+        if (error) throw error;
+
+        // 3. Mise à jour locale pour affichage immédiat
+        userProfile.username = newUsername;
+        userProfile.bio = newBio;
+        userProfile.avatar_url = finalAvatarUrl;
+        
+        updateUIProfile();
+        closeEditModal();
+        alert("Profil mis à jour !");
+
+    } catch (error) {
+        console.error(error);
+        alert("Erreur : " + error.message);
+    } finally {
+        btn.innerText = "Enregistrer";
+        btn.disabled = false;
+    }
 }
 
 // ==========================================
 // 5. GESTION DES AMIS
 // ==========================================
+// (Pas de changement ici, mais je garde le code pour la cohérence)
 
 async function switchProfileTab(tabName) {
     const btnFriends = document.getElementById('tab-friends');
@@ -175,11 +286,15 @@ async function fetchMyFriendsList(container) {
 
     container.innerHTML = '';
     profiles.forEach(p => {
-        const initials = p.username.substring(0,2).toUpperCase();
+        // Affichage avatar ami (si dispo) ou initiales
+        const avatarHtml = p.avatar_url 
+            ? `<img src="${p.avatar_url}" class="w-10 h-10 rounded-full object-cover">`
+            : `<div class="w-10 h-10 rounded-full bg-purple-600 flex items-center justify-center font-bold text-xs text-white">${p.username.substring(0,2).toUpperCase()}</div>`;
+
         container.insertAdjacentHTML('beforeend', `
             <div class="flex items-center justify-between bg-gray-900/50 p-3 rounded-2xl border border-white/5 animate-fade-in mb-2">
                 <div class="flex items-center gap-3">
-                    <div class="w-10 h-10 rounded-full bg-purple-600 flex items-center justify-center font-bold text-xs text-white">${initials}</div>
+                    ${avatarHtml}
                     <div class="text-left">
                         <p class="text-sm font-bold text-white">${p.username}</p>
                         <p class="text-[10px] text-gray-500 truncate w-24">${p.status_text || 'En ligne'}</p>
@@ -222,10 +337,14 @@ async function fetchMyRequestsList(container) {
     requests.forEach(req => {
         const p = profiles.find(prof => prof.id === req.requester_id);
         if(!p) return;
+        const avatarHtml = p.avatar_url 
+            ? `<img src="${p.avatar_url}" class="w-10 h-10 rounded-full object-cover">`
+            : `<div class="w-10 h-10 rounded-full bg-gray-700 flex items-center justify-center font-bold text-xs">${p.username.substring(0,2).toUpperCase()}</div>`;
+
         container.insertAdjacentHTML('beforeend', `
             <div class="flex items-center justify-between bg-gray-900/50 p-3 rounded-xl border border-white/5 animate-fade-in mb-2">
                 <div class="flex items-center gap-3">
-                    <div class="w-10 h-10 rounded-full bg-gray-700 flex items-center justify-center font-bold text-xs">${p.username.substring(0,2).toUpperCase()}</div>
+                    ${avatarHtml}
                     <p class="text-sm font-bold text-white">${p.username}</p>
                 </div>
                 <div class="flex gap-2">
@@ -241,33 +360,6 @@ async function removeFriend(friendId) {
     await supabaseClient.from('friendships').delete().or(`and(requester_id.eq.${currentUser.id},receiver_id.eq.${friendId}),and(requester_id.eq.${friendId},receiver_id.eq.${currentUser.id})`);
     switchProfileTab('friends');
     updateFriendCount(currentUser.id);
-}
-
-function openEditModal() { 
-    document.getElementById('edit-profile-modal').classList.remove('hidden'); 
-    document.getElementById('edit-username').value = userProfile.username; 
-    document.getElementById('edit-bio').value = userProfile.bio; 
-}
-
-function closeEditModal() { 
-    document.getElementById('edit-profile-modal').classList.add('hidden'); 
-}
-
-async function saveProfile() {
-    const newUsername = document.getElementById('edit-username').value;
-    const newBio = document.getElementById('edit-bio').value;
-    if (!newUsername.trim()) return alert("Pseudo requis");
-
-    const { error } = await supabaseClient.from('profiles').update({ username: newUsername, bio: newBio }).eq('id', currentUser.id);
-    if (!error) {
-        userProfile.username = newUsername;
-        userProfile.bio = newBio;
-        updateUIProfile();
-        closeEditModal();
-        alert("Profil mis à jour !");
-    } else {
-        alert(error.message);
-    }
 }
 
 // ==========================================
@@ -315,14 +407,28 @@ async function loadConversations() {
     const conversationArray = Object.values(uniqueConversations);
     const ids = conversationArray.map(c => c.userId);
     if(ids.length > 0) {
-        const { data: profiles } = await supabaseClient.from('profiles').select('id, username').in('id', ids);
-        if(profiles) profiles.forEach(p => { const c = conversationArray.find(x => x.userId === p.id); if(c) { c.name = p.username; c.initials = p.username.substring(0,2).toUpperCase(); }});
+        const { data: profiles } = await supabaseClient.from('profiles').select('id, username, avatar_url').in('id', ids);
+        if(profiles) profiles.forEach(p => { 
+            const c = conversationArray.find(x => x.userId === p.id); 
+            if(c) { 
+                c.name = p.username; 
+                c.initials = p.username.substring(0,2).toUpperCase();
+                c.avatar_url = p.avatar_url; // On récupère l'avatar
+            }
+        });
     }
-    container.innerHTML = conversationArray.map(conv => `
+    container.innerHTML = conversationArray.map(conv => {
+        // Avatar chat
+        const avatarDisplay = conv.avatar_url 
+            ? `<img src="${conv.avatar_url}" class="w-10 h-10 rounded-full object-cover">`
+            : `<div class="w-10 h-10 bg-purple-600 rounded-full flex items-center justify-center font-bold text-xs text-white">${conv.initials}</div>`;
+
+        return `
         <div onclick="openDirectChat('${conv.userId}', '${conv.name.replace(/'/g, "\\'")}')" class="p-3 hover:bg-white/5 rounded-xl cursor-pointer flex items-center space-x-3 transition-colors border-b border-white/5">
-            <div class="w-10 h-10 bg-purple-600 rounded-full flex items-center justify-center font-bold text-xs text-white">${conv.initials}</div>
+            ${avatarDisplay}
             <div class="flex-1 min-w-0"><div class="flex justify-between items-baseline mb-0.5"><h4 class="font-bold text-sm text-white truncate">${conv.name}</h4><span class="text-[10px] text-gray-500">${conv.time}</span></div><p class="text-xs text-gray-400 truncate">${conv.lastMessage}</p></div>
-        </div>`).join('');
+        </div>`;
+    }).join('');
 }
 
 function startChat(targetProfile) {
@@ -415,7 +521,7 @@ async function getFriendIds() {
     return Array.from(friendIds);
 }
 
-// --- B. Gestion de l'image (Preview) ---
+// --- B. Gestion de l'image POST (Preview) ---
 function handleImageSelect(input) {
     if (input.files && input.files[0]) {
         selectedImageFile = input.files[0];
@@ -454,7 +560,7 @@ async function publishPost() {
             const fileName = `${currentUser.id}/${Date.now()}.${fileExt}`;
             
             const { error: uploadError } = await supabaseClient.storage
-                .from('post-images') // Assure-toi d'avoir créé ce bucket "Public" dans Supabase
+                .from('post-images') 
                 .upload(fileName, selectedImageFile);
 
             if (uploadError) throw uploadError;
@@ -463,13 +569,15 @@ async function publishPost() {
             imageUrl = data.publicUrl;
         }
 
-        // 2. Insert Post
+        // 2. Insert Post (On ajoute aussi l'avatar de l'user pour l'afficher plus tard si besoin)
         await supabaseClient.from('posts').insert([{ 
             user_id: currentUser.id, 
             content: input.value, 
             user_name: userProfile.username, 
             image_url: imageUrl,
             avatar_initials: userProfile.username.substring(0,2).toUpperCase() 
+            // Note: Si tu veux que l'avatar du post se mette à jour quand l'user change de photo,
+            // il faudra faire un "join" avec la table profiles. Pour l'instant on reste simple.
         }]);
 
         // Reset
@@ -495,11 +603,11 @@ async function fetchPosts() {
     // 1. Récupère liste des amis
     const friendIds = await getFriendIds();
 
-    // 2. Requête filtrée avec .in()
+    // 2. Requête filtrée avec .in() + On récupère les infos du PROFIL pour avoir l'avatar à jour
     const { data } = await supabaseClient
         .from('posts')
-        .select('*')
-        .in('user_id', friendIds) // <--- ICI le filtre
+        .select('*, profiles:user_id(avatar_url)') // Join avec profiles pour l'avatar
+        .in('user_id', friendIds)
         .order('created_at', { ascending: false });
     
     container.innerHTML = ''; 
@@ -521,12 +629,17 @@ async function fetchPosts() {
         const isMyPost = post.user_id === currentUser.id;
         const date = new Date(post.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
         
-        // HTML Image
-        const imageHtml = post.image_url 
+        // Avatar du post (priorité à l'image du profil, sinon initiales)
+        const userAvatarUrl = post.profiles && post.profiles.avatar_url;
+        const avatarHtml = userAvatarUrl 
+            ? `<img src="${userAvatarUrl}" class="w-8 h-8 rounded-full object-cover shadow-lg border border-white/10">`
+            : `<div class="w-8 h-8 bg-gradient-to-tr from-purple-500 to-pink-500 rounded-full flex items-center justify-center font-bold text-white text-[10px] shadow-lg">${post.avatar_initials || "??"}</div>`;
+
+        // Image du post
+        const postImageHtml = post.image_url 
             ? `<div class="mt-3 rounded-xl overflow-hidden border border-white/5"><img src="${post.image_url}" class="w-full max-h-96 object-cover"></div>` 
             : '';
 
-        // Bouton Supprimer
         const deleteBtn = isMyPost 
             ? `<button onclick="deletePost('${post.id}')" class="text-gray-500 hover:text-red-500"><i data-lucide="trash-2" class="w-4 h-4"></i></button>` 
             : '';
@@ -535,7 +648,7 @@ async function fetchPosts() {
             <div class="bg-gray-800/30 rounded-2xl p-4 border border-white/5 mb-4 animate-fade-in" id="post-${post.id}">
                 <div class="flex justify-between items-start mb-3">
                     <div class="flex items-center space-x-3">
-                        <div class="w-8 h-8 bg-gradient-to-tr from-purple-500 to-pink-500 rounded-full flex items-center justify-center font-bold text-white text-[10px] shadow-lg">${post.avatar_initials || "??"}</div>
+                        ${avatarHtml}
                         <div>
                             <h3 class="font-bold text-white text-sm">${post.user_name}</h3>
                             <p class="text-[10px] text-gray-500">${date}</p>
@@ -545,7 +658,7 @@ async function fetchPosts() {
                 </div>
                 
                 <p class="text-gray-200 text-sm leading-relaxed whitespace-pre-wrap">${post.content}</p>
-                ${imageHtml}
+                ${postImageHtml}
                 
                 <div class="border-t border-white/5 mt-3 pt-3 flex justify-between text-gray-500">
                     <div class="flex gap-4">
@@ -635,10 +748,19 @@ async function searchUsers(query) {
     if (!query || query.length < 2) { resultBox.classList.add('hidden'); return; }
     const { data } = await supabaseClient.from('profiles').select('*').ilike('username', `%${query}%`).neq('id', currentUser.id).limit(5);
     resultBox.classList.remove('hidden');
-    resultBox.innerHTML = (data && data.length > 0) ? data.map(u => `
-        <div onclick="openUserProfile('${u.id}')" class="p-3 border-b border-white/5 flex justify-between items-center hover:bg-white/5 cursor-pointer">
-            <div class="flex items-center gap-3"><div class="w-8 h-8 bg-purple-600 rounded-full flex items-center justify-center font-bold text-[10px] text-white">${u.username.substring(0,2).toUpperCase()}</div><span class="text-sm font-bold text-white">${u.username}</span></div><i data-lucide="chevron-right" class="w-4 h-4 text-gray-500"></i>
-        </div>`).join('') : '<div class="p-3 text-gray-500 text-xs text-center italic">Aucun utilisateur trouvé</div>';
+    resultBox.innerHTML = (data && data.length > 0) ? data.map(u => {
+        const avatarHtml = u.avatar_url 
+            ? `<img src="${u.avatar_url}" class="w-8 h-8 rounded-full object-cover border border-white/10">`
+            : `<div class="w-8 h-8 bg-purple-600 rounded-full flex items-center justify-center font-bold text-[10px] text-white">${u.username.substring(0,2).toUpperCase()}</div>`;
+        
+        return `<div onclick="openUserProfile('${u.id}')" class="p-3 border-b border-white/5 flex justify-between items-center hover:bg-white/5 cursor-pointer">
+            <div class="flex items-center gap-3">
+                ${avatarHtml}
+                <span class="text-sm font-bold text-white">${u.username}</span>
+            </div>
+            <i data-lucide="chevron-right" class="w-4 h-4 text-gray-500"></i>
+        </div>`
+    }).join('') : '<div class="p-3 text-gray-500 text-xs text-center italic">Aucun utilisateur trouvé</div>';
     if(typeof lucide !== 'undefined') lucide.createIcons();
 }
 
@@ -648,7 +770,16 @@ async function openUserProfile(userId) {
     if(profile) {
         document.getElementById('public-username').innerText = profile.username;
         document.getElementById('public-bio').innerText = profile.bio || "Pas de bio.";
-        document.getElementById('public-avatar').innerText = profile.username.substring(0,2).toUpperCase();
+        
+        const avatarEl = document.getElementById('public-avatar');
+        if(profile.avatar_url) {
+            avatarEl.innerHTML = `<img src="${profile.avatar_url}" class="w-full h-full object-cover">`;
+            avatarEl.innerText = "";
+        } else {
+            avatarEl.innerHTML = "";
+            avatarEl.innerText = profile.username.substring(0,2).toUpperCase();
+        }
+
         document.getElementById('btn-message').onclick = () => startChat(profile);
         document.getElementById('btn-add-friend').onclick = () => addFriend(profile.id);
         switchView('public-profile');
