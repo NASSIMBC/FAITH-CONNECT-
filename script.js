@@ -17,6 +17,21 @@ let selectedAvatarFile = null;
 
 document.addEventListener('DOMContentLoaded', checkSession);
 
+// --- AMÉLIORATION : GESTION TOUCHE ENTRÉE ---
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+        if (document.activeElement.id === 'chat-input') {
+            e.preventDefault();
+            sendChatMessage();
+        }
+        if (document.activeElement.id.startsWith('input-comment-')) {
+            e.preventDefault();
+            const postId = document.activeElement.id.replace('input-comment-', '');
+            sendComment(postId);
+        }
+    }
+});
+
 async function checkSession() {
     const { data: { session } } = await supabaseClient.auth.getSession();
     if (session) {
@@ -302,6 +317,7 @@ function resetChat() {
     if(input) { input.value = ""; input.disabled = true; input.placeholder = "Sélectionnez un ami d'abord"; }
 }
 
+// --- AMÉLIORATION : AUTO-SCROLL FLUIDE ---
 async function fetchMessages() {
     const container = document.getElementById('chat-history');
     if(!container || !activeChatUser) return;
@@ -312,7 +328,8 @@ async function fetchMessages() {
             const isMe = msg.sender_id === currentUser.id;
             container.insertAdjacentHTML('beforeend', `<div class="flex ${isMe ? 'justify-end' : 'justify-start'} mb-2"><div class="${isMe ? 'bg-purple-600 text-white' : 'bg-gray-800 text-gray-200'} px-4 py-2 rounded-2xl max-w-[85%] text-sm border border-white/5 shadow-sm">${msg.content}</div></div>`);
         });
-        setTimeout(() => container.scrollTop = container.scrollHeight, 100);
+        // Scroll vers le bas
+        container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
     } else { container.innerHTML = '<div class="text-center text-gray-600 text-xs mt-10 italic">Dites bonjour ! 👋</div>'; }
 }
 
@@ -339,7 +356,7 @@ async function sendLiveMessage() {
 }
 
 // ==========================================
-// 8. GESTION DES POSTS (STABLE & CORRIGÉE)
+// 8. GESTION DES POSTS (STABLE & NETTOYAGE STORAGE)
 // ==========================================
 
 function handleImageSelect(input) {
@@ -398,7 +415,7 @@ async function fetchPosts() {
             const amenIconClass = isAmened ? 'fill-pink-500 text-pink-500' : 'text-gray-500';
 
             container.insertAdjacentHTML('beforeend', `
-                <div class="bg-gray-800/30 rounded-2xl p-4 border border-white/5 mb-4" id="post-${post.id}">
+                <div class="bg-gray-800/30 rounded-2xl p-4 border border-white/5 mb-4 animate-fade-in" id="post-${post.id}">
                     <div class="flex justify-between items-start mb-3">
                         <div class="flex items-center space-x-3">${avatarHtml}<div><h3 class="font-bold text-white text-sm">${post.user_name}</h3><p class="text-[10px] text-gray-500">${date}</p></div></div>
                         ${isMyPost ? `<button onclick="deletePost('${post.id}')" class="text-gray-500 hover:text-red-500 transition-colors"><i data-lucide="trash-2" class="w-4 h-4"></i></button>` : ''}
@@ -412,7 +429,7 @@ async function fetchPosts() {
                         </div>
                     </div>
                     <div id="comments-section-${post.id}" class="hidden mt-3 pt-3 bg-black/20 rounded-lg p-3">
-                        <div id="comments-list-${post.id}" class="space-y-2 mb-3 max-h-40 overflow-y-auto"></div>
+                        <div id="comments-list-${post.id}" class="space-y-2 mb-3 max-h-40 overflow-y-auto scrollbar-hide"></div>
                         <div class="flex gap-2">
                             <input type="text" id="input-comment-${post.id}" placeholder="Votre commentaire..." class="flex-1 bg-gray-900 border border-white/10 rounded-lg px-3 py-1 text-xs text-white outline-none">
                             <button onclick="sendComment('${post.id}')" class="text-purple-400 font-bold text-xs hover:text-purple-300">Envoyer</button>
@@ -424,10 +441,26 @@ async function fetchPosts() {
     } catch (err) { console.error("Erreur fetchPosts:", err); }
 }
 
+// --- AMÉLIORATION : SUPPRESSION AVEC NETTOYAGE STORAGE ---
 async function deletePost(id) {
     if(!confirm("Supprimer ce post ?")) return;
-    const { error } = await supabaseClient.from('posts').delete().eq('id', id).eq('user_id', currentUser.id);
-    if(!error) { document.getElementById(`post-${id}`).remove(); } else { alert("Erreur: " + error.message); }
+
+    try {
+        // 1. Chercher si le post a une image pour la supprimer du Storage
+        const { data: post } = await supabaseClient.from('posts').select('image_url').eq('id', id).single();
+        if (post && post.image_url) {
+            const fileName = post.image_url.split('/').pop();
+            await supabaseClient.storage.from('post-images').remove([`${currentUser.id}/${fileName}`]);
+        }
+
+        // 2. Supprimer le post de la table
+        const { error } = await supabaseClient.from('posts').delete().eq('id', id).eq('user_id', currentUser.id);
+        if(!error) { 
+            document.getElementById(`post-${id}`).remove(); 
+        } else { throw error; }
+    } catch (e) {
+        alert("Erreur suppression : " + e.message);
+    }
 }
 
 async function toggleAmen(postId) {
@@ -498,11 +531,21 @@ async function addPrayer() {
 
 async function prayFor(id, current) { await supabaseClient.from('prayers').update({ count: (current || 0) + 1 }).eq('id', id); fetchPrayers(); }
 
+// --- AMÉLIORATION : TEMPS RÉEL ÉTENDU (LIKES) ---
 function subscribeToRealtime() {
-    supabaseClient.channel('global-updates').on('postgres_changes', { event: '*', schema: 'public' }, (payload) => {
+    supabaseClient.channel('global-updates').on('postgres_changes', { event: '*', schema: 'public' }, async (payload) => {
         if (payload.table === 'messages') { fetchMessages(); loadConversations(); }
         if (payload.table === 'posts') fetchPosts();
         if (payload.table === 'friendships') { fetchNotifications(); updateFriendCount(currentUser.id); }
+        
+        // Notifications pour les Amens
+        if (payload.table === 'likes' && payload.eventType === 'INSERT') {
+            const { data: post } = await supabaseClient.from('posts').select('user_id').eq('id', payload.new.post_id).single();
+            if (post && post.user_id === currentUser.id && payload.new.user_id !== currentUser.id) {
+                showNotification("Bénédiction", "Quelqu'un a dit Amen à votre publication ! ✨");
+            }
+            fetchPosts(); 
+        }
     }).subscribe();
 }
 
@@ -514,10 +557,14 @@ async function updateFriendCount(userId) {
 
 function showNotification(senderName, message) {
     const container = document.getElementById('notification-container');
+    const audio = document.getElementById('notif-sound');
+    if(audio) audio.play().catch(() => {});
+    
     const notif = document.createElement('div');
     notif.className = "bg-gray-800 border-l-4 border-purple-500 text-white p-3 rounded-xl shadow-2xl mb-2 animate-fade-in";
     notif.innerHTML = `<h4 class="font-bold text-xs text-purple-400">${senderName}</h4><p class="text-xs text-gray-300 truncate">${message}</p>`;
-    container.appendChild(notif); setTimeout(() => notif.remove(), 4000);
+    container.appendChild(notif); 
+    setTimeout(() => notif.remove(), 4000);
 }
 
 async function fetchNotifications() {
