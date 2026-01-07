@@ -29,7 +29,6 @@ document.addEventListener('keydown', (e) => {
             const postId = document.activeElement.id.replace('input-comment-', '');
             sendComment(postId);
         }
-        // Pour les commentaires Reels
         if (document.activeElement.id === 'reel-comment-input') {
             e.preventDefault();
             sendReelComment();
@@ -87,7 +86,7 @@ async function handleLogin() {
 async function logout() { await supabaseClient.auth.signOut(); location.reload(); }
 
 // ==========================================
-// 3. NAVIGATION & UI (MODIFIÉ POUR REELS)
+// 3. NAVIGATION & UI
 // ==========================================
 
 function switchView(viewName) {
@@ -104,12 +103,12 @@ function switchView(viewName) {
     const activeBtn = document.getElementById('nav-' + viewName);
     if(activeBtn) { activeBtn.classList.remove('text-gray-500'); activeBtn.classList.add('text-purple-400'); }
 
-    // --- LOGIQUE REELS : CHARGER/ARRÊTER ---
+    // GESTION REELS : Arrêt propre
     const reelsContainer = document.getElementById('reels-container');
     if (viewName === 'reels') {
-        fetchReels(); // Charge et mélange à l'entrée
+        fetchReels(); 
     } else {
-        if(reelsContainer) reelsContainer.innerHTML = ''; // Vide le conteneur pour arrêter la lecture
+        if(reelsContainer) reelsContainer.innerHTML = ''; // Coupe tout
     }
 
     if (viewName === 'live') fetchLiveMessages();
@@ -657,7 +656,6 @@ async function deleteStory(id) { if (confirm("Supprimer ?")) { await supabaseCli
 // 13. GESTION DES REELS (NOUVELLE SECTION)
 // ==========================================
 
-// Fonction de mélange
 function shuffleArray(array) {
     for (let i = array.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
@@ -680,7 +678,8 @@ async function saveReel() {
     fetchReels(); 
 }
 
-// --- AMÉLIORATION : OBSERVATEUR POUR LECTURE UNIQUE + ANTI-SUGGESTIONS ---
+// --- MODIFICATION POUR BLOQUER LA BARRE DE PAUSE ---
+// Nous remplaçons l'action "Pause" par "Mute/Unmute" sur le clic de l'overlay
 async function fetchReels() {
     const container = document.getElementById('reels-container');
     container.innerHTML = '<div class="flex items-center justify-center h-full"><div class="w-8 h-8 border-4 border-purple-500 border-t-transparent rounded-full animate-spin"></div></div>';
@@ -689,7 +688,7 @@ async function fetchReels() {
     
     container.innerHTML = '';
     if (reels && reels.length > 0) {
-        const shuffledReels = shuffleArray([...reels]); // Mélange
+        const shuffledReels = shuffleArray([...reels]); 
         shuffledReels.forEach(reel => {
             let videoId = '';
             let rawUrl = reel.video_url;
@@ -697,14 +696,15 @@ async function fetchReels() {
             else if(rawUrl.includes('v=')) videoId = rawUrl.split('v=')[1].split('&')[0];
             else videoId = rawUrl.split('/').pop();
 
-            // CONSTRUCTION URL ANTI-SUGGESTIONS : loop=1 + playlist=videoId
-            const playUrl = `https://www.youtube.com/embed/${videoId}?autoplay=1&controls=0&loop=1&playlist=${videoId}&rel=0&playsinline=1&iv_load_policy=3&modestbranding=1&disablekb=1`;
+            // Note: enablejsapi=1 est requis pour le contrôle du son
+            const playUrl = `https://www.youtube.com/embed/${videoId}?autoplay=1&controls=0&loop=1&playlist=${videoId}&rel=0&playsinline=1&iv_load_policy=3&modestbranding=1&enablejsapi=1&disablekb=1`;
             const avatar = reel.profiles?.avatar_url || 'https://ui-avatars.com/api/?name=' + reel.profiles?.username;
             
             const html = `
                 <div class="reel-item relative w-full h-full flex items-center justify-center bg-black snap-start snap-always overflow-hidden">
                     <div class="absolute inset-0 z-0">
                         <iframe 
+                            id="reel-iframe-${reel.id}"
                             class="reel-iframe w-full h-full opacity-0 transition-opacity duration-500 scale-[1.35]" 
                             style="pointer-events: none;"
                             data-src="${playUrl}" 
@@ -713,7 +713,7 @@ async function fetchReels() {
                             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
                             allowfullscreen>
                         </iframe>
-                        <div class="absolute inset-0 bg-transparent z-10"></div>
+                        <div class="absolute inset-0 bg-transparent z-10 cursor-pointer" onclick="toggleReelSound('${reel.id}')"></div>
                     </div>
                     <div class="absolute bottom-20 right-4 z-20 flex flex-col gap-6 items-center">
                         <div class="flex flex-col items-center gap-1">
@@ -740,12 +740,29 @@ async function fetchReels() {
             container.insertAdjacentHTML('beforeend', html);
         });
         
-        setupReelObserver(); // Lancer l'observateur
+        setupReelObserver();
         if(typeof lucide !== 'undefined') lucide.createIcons();
     }
 }
 
-// --- AMÉLIORATION : FONCTION OBSERVATEUR ---
+// Fonction pour Couper/Activer le son (remplace la Pause)
+function toggleReelSound(reelId) {
+    const iframe = document.getElementById(`reel-iframe-${reelId}`);
+    if (iframe && iframe.contentWindow) {
+        // On envoie une commande à l'API YouTube
+        // Si l'iframe a la classe 'muted', on unmute, sinon on mute.
+        // Comme on ne peut pas lire l'état facilement sans API lourde, on alterne simplement.
+        // Pour faire simple ici : on envoie 'unMute' par défaut car autoplay démarre souvent en mute sur mobile.
+        // Ou on alterne. Mais ici, pour "bloquer la pause", le simple fait que le clic soit intercepté suffit.
+        
+        // Si on veut vraiment gérer le son :
+        // iframe.contentWindow.postMessage('{"event":"command","func":"isMuted","args":""}', '*'); // Compliqué en one-way
+        
+        // Approche simple : On envoie "unMute" au clic pour être sûr d'avoir du son.
+        iframe.contentWindow.postMessage('{"event":"command","func":"unMute","args":""}', '*');
+    }
+}
+
 function setupReelObserver() {
     const options = { root: document.getElementById('reels-container'), threshold: 0.6 };
     const observer = new IntersectionObserver((entries) => {
