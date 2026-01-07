@@ -680,6 +680,7 @@ async function saveReel() {
     fetchReels(); 
 }
 
+// --- AMÉLIORATION : OBSERVATEUR POUR LECTURE UNIQUE ---
 async function fetchReels() {
     const container = document.getElementById('reels-container');
     container.innerHTML = '<div class="flex items-center justify-center h-full"><div class="w-8 h-8 border-4 border-purple-500 border-t-transparent rounded-full animate-spin"></div></div>';
@@ -690,20 +691,27 @@ async function fetchReels() {
     if (reels && reels.length > 0) {
         const shuffledReels = shuffleArray([...reels]); // Mélange
         shuffledReels.forEach(reel => {
-            let embedUrl = reel.video_url;
-            if (embedUrl.includes('youtube.com') || embedUrl.includes('youtu.be')) {
-                let videoId = '';
-                if(embedUrl.includes('shorts/')) videoId = embedUrl.split('shorts/')[1].split('?')[0];
-                else if(embedUrl.includes('v=')) videoId = embedUrl.split('v=')[1].split('&')[0];
-                else videoId = embedUrl.split('/').pop();
-                embedUrl = `https://www.youtube.com/embed/${videoId}?autoplay=1&controls=0&loop=1&playlist=${videoId}&rel=0&playsinline=1&iv_load_policy=3`;
-            }
+            let videoId = '';
+            let rawUrl = reel.video_url;
+            if(rawUrl.includes('shorts/')) videoId = rawUrl.split('shorts/')[1].split('?')[0];
+            else if(rawUrl.includes('v=')) videoId = rawUrl.split('v=')[1].split('&')[0];
+            else videoId = rawUrl.split('/').pop();
+
+            // Note: On ne met PAS le src tout de suite dans l'iframe, mais dans data-src
+            const playUrl = `https://www.youtube.com/embed/${videoId}?autoplay=1&controls=0&loop=1&playlist=${videoId}&rel=0&playsinline=1&iv_load_policy=3`;
             const avatar = reel.profiles?.avatar_url || 'https://ui-avatars.com/api/?name=' + reel.profiles?.username;
             
             const html = `
                 <div class="reel-item relative w-full h-full flex items-center justify-center bg-black snap-start snap-always">
                     <div class="absolute inset-0 z-0 pointer-events-auto">
-                        <iframe src="${embedUrl}" class="w-full h-full" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+                        <iframe 
+                            class="reel-iframe w-full h-full opacity-0 transition-opacity duration-500" 
+                            data-src="${playUrl}" 
+                            src="" 
+                            frameborder="0" 
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
+                            allowfullscreen>
+                        </iframe>
                         <div class="absolute inset-0 bg-transparent pointer-events-none"></div>
                     </div>
                     <div class="absolute bottom-20 right-4 z-20 flex flex-col gap-6 items-center">
@@ -730,8 +738,30 @@ async function fetchReels() {
                 </div>`;
             container.insertAdjacentHTML('beforeend', html);
         });
+        
+        setupReelObserver(); // Lancer l'observateur
         if(typeof lucide !== 'undefined') lucide.createIcons();
     }
+}
+
+// --- AMÉLIORATION : FONCTION OBSERVATEUR ---
+function setupReelObserver() {
+    const options = { root: document.getElementById('reels-container'), threshold: 0.6 };
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            const iframe = entry.target.querySelector('iframe');
+            if (entry.isIntersecting) {
+                if (iframe.src !== iframe.dataset.src) {
+                    iframe.src = iframe.dataset.src;
+                    iframe.classList.remove('opacity-0');
+                }
+            } else {
+                iframe.src = "";
+                iframe.classList.add('opacity-0');
+            }
+        });
+    }, options);
+    document.querySelectorAll('.reel-item').forEach(item => { observer.observe(item); });
 }
 
 async function toggleReelAmen(reelId) {
