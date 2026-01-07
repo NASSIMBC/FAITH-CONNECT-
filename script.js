@@ -680,7 +680,7 @@ async function saveReel() {
     fetchReels(); 
 }
 
-// --- AMÉLIORATION : OBSERVATEUR POUR LECTURE UNIQUE ---
+// --- AMÉLIORATION : OBSERVATEUR POUR LECTURE UNIQUE + ANTI-SUGGESTIONS ---
 async function fetchReels() {
     const container = document.getElementById('reels-container');
     container.innerHTML = '<div class="flex items-center justify-center h-full"><div class="w-8 h-8 border-4 border-purple-500 border-t-transparent rounded-full animate-spin"></div></div>';
@@ -697,22 +697,23 @@ async function fetchReels() {
             else if(rawUrl.includes('v=')) videoId = rawUrl.split('v=')[1].split('&')[0];
             else videoId = rawUrl.split('/').pop();
 
-            // Note: On ne met PAS le src tout de suite dans l'iframe, mais dans data-src
-            const playUrl = `https://www.youtube.com/embed/${videoId}?autoplay=1&controls=0&loop=1&playlist=${videoId}&rel=0&playsinline=1&iv_load_policy=3`;
+            // CONSTRUCTION URL ANTI-SUGGESTIONS : loop=1 + playlist=videoId
+            const playUrl = `https://www.youtube.com/embed/${videoId}?autoplay=1&controls=0&loop=1&playlist=${videoId}&rel=0&playsinline=1&iv_load_policy=3&modestbranding=1&disablekb=1`;
             const avatar = reel.profiles?.avatar_url || 'https://ui-avatars.com/api/?name=' + reel.profiles?.username;
             
             const html = `
-                <div class="reel-item relative w-full h-full flex items-center justify-center bg-black snap-start snap-always">
-                    <div class="absolute inset-0 z-0 pointer-events-auto">
+                <div class="reel-item relative w-full h-full flex items-center justify-center bg-black snap-start snap-always overflow-hidden">
+                    <div class="absolute inset-0 z-0">
                         <iframe 
-                            class="reel-iframe w-full h-full opacity-0 transition-opacity duration-500" 
+                            class="reel-iframe w-full h-full opacity-0 transition-opacity duration-500 scale-[1.35]" 
+                            style="pointer-events: none;"
                             data-src="${playUrl}" 
                             src="" 
                             frameborder="0" 
                             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
                             allowfullscreen>
                         </iframe>
-                        <div class="absolute inset-0 bg-transparent pointer-events-none"></div>
+                        <div class="absolute inset-0 bg-transparent z-10"></div>
                     </div>
                     <div class="absolute bottom-20 right-4 z-20 flex flex-col gap-6 items-center">
                         <div class="flex flex-col items-center gap-1">
@@ -728,8 +729,8 @@ async function fetchReels() {
                             <span class="text-white text-xs font-bold drop-shadow-md">Coms</span>
                         </div>
                     </div>
-                    <div class="absolute bottom-4 left-4 right-16 z-20">
-                        <div class="flex items-center gap-3 mb-3">
+                    <div class="absolute bottom-4 left-4 right-16 z-20 pointer-events-none">
+                        <div class="flex items-center gap-3 mb-3 pointer-events-auto">
                             <img src="${avatar}" class="w-10 h-10 rounded-full border-2 border-white shadow-md object-cover">
                             <span class="text-white font-bold text-sm shadow-black drop-shadow-md">@${reel.profiles?.username}</span>
                         </div>
