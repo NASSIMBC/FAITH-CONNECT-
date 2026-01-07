@@ -323,6 +323,29 @@
     <div id="notification-container" class="fixed top-20 right-4 z-[100] flex flex-col gap-2 pointer-events-none w-72"></div>
     <audio id="notif-sound" src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3" preload="auto"></audio>
 
+    <input type="file" id="btn-add-story-input" accept="image/*" class="hidden" onchange="uploadStory(this)">
+
+    <div id="story-viewer" class="hidden fixed inset-0 z-[200] bg-black flex flex-col">
+        <div class="absolute top-0 left-0 right-0 p-4 z-20 bg-gradient-to-b from-black/80 to-transparent">
+            <div class="h-1 bg-gray-600 rounded-full mb-3 overflow-hidden">
+                <div id="story-progress" class="h-full bg-white w-0"></div>
+            </div>
+            <div class="flex justify-between items-center">
+                <div class="flex items-center gap-3">
+                    <img id="story-viewer-avatar" src="" class="w-8 h-8 rounded-full border border-white">
+                    <span id="story-viewer-name" class="font-bold text-sm text-white">Nom</span>
+                    <span id="story-viewer-time" class="text-xs text-gray-300">Il y a 2h</span>
+                </div>
+                <button onclick="closeStoryViewer()" class="text-white"><i data-lucide="x" class="w-8 h-8"></i></button>
+            </div>
+        </div>
+
+        <div class="flex-1 flex items-center justify-center relative">
+            <img id="story-viewer-image" src="" class="max-h-full max-w-full object-contain">
+        </div>
+        
+        <div id="story-delete-btn-container" class="absolute bottom-10 right-4 z-20"></div>
+    </div>
     <script src="script.js"></script>
 </body>
 </html>
