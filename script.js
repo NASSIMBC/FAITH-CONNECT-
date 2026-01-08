@@ -146,7 +146,7 @@ async function loadAppData() {
 }
 
 // ==========================================
-// 4. BIBLE & FAITH AI (VRAIE IA CONNECTÉE)
+// 4. BIBLE & FAITH AI (GOOGLE GEMINI)
 // ==========================================
 
 const bibleBooks = {
@@ -154,7 +154,6 @@ const bibleBooks = {
     NT: ["Matthieu", "Marc", "Luc", "Jean", "Actes", "Romains", "1 Corinthiens", "2 Corinthiens", "Galates", "Éphésiens", "Philippiens", "Colossiens", "1 Thessaloniciens", "2 Thessaloniciens", "1 Timothée", "2 Timothée", "Tite", "Philémon", "Hébreux", "Jacques", "1 Pierre", "2 Pierre", "1 Jean", "2 Jean", "3 Jean", "Jude", "Apocalypse"]
 };
 
-// Variables pour la navigation Bible
 let currentBook = "Jean";
 let currentChapter = 1;
 
@@ -182,7 +181,7 @@ function showTestament(type) {
     }
 }
 
-// Chargement de la Bible depuis une API réelle (bible-api.com)
+// Chargement de la Bible depuis API
 async function loadBibleChapter(book, chapter) {
     const reader = document.getElementById('bible-reader');
     const contentDiv = document.getElementById('reader-content');
@@ -197,11 +196,6 @@ async function loadBibleChapter(book, chapter) {
     currentChapter = chapter;
 
     try {
-        // API Gratuite Bible Louis Segond
-        // On enlève les accents pour l'API si nécessaire, mais bible-api gère souvent bien.
-        // Mappage simple pour éviter les erreurs d'URL
-        let urlBook = book.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/ /g, ""); 
-        
         const response = await fetch(`https://bible-api.com/${book}+${chapter}?translation=louis_segond`);
         const data = await response.json();
 
@@ -229,48 +223,36 @@ function closeBibleReader() {
     document.getElementById('bible-reader').classList.add('hidden');
 }
 
-// ==========================================
-// INTELLIGENCE ARTIFICIELLE (GOOGLE GEMINI - VASTE & GRATUIT)
-// ==========================================
-
+// --- FAITH AI (GOOGLE GEMINI) ---
 async function askFaithAI() {
     const input = document.getElementById('ai-bible-input');
     const area = document.getElementById('ai-response-area');
     const question = input.value.trim();
     
-    // 👇 COLLE TA CLÉ GOOGLE ICI (Commence par AIza...)
+    // 👇 TA CLÉ GOOGLE INTÉGRÉE 👇
     const API_KEY = 'AIzaSyBjbQeVvpGOoSsGsGL8JHWzExczCwHbSnk'; 
-    // 👆
 
     if(!question) return;
     
-    // 1. Animation de chargement
     area.classList.remove('hidden');
-    area.innerHTML = `
-        <div class="flex items-center gap-2 text-purple-300 text-xs animate-pulse">
-            <div class="w-2 h-2 bg-purple-400 rounded-full animate-bounce"></div> 
-            Faith AI réfléchit...
-        </div>`;
+    area.innerHTML = '<div class="flex items-center gap-2 text-purple-300 text-xs"><div class="w-1.5 h-1.5 bg-purple-400 rounded-full animate-bounce"></div> Faith AI réfléchit...</div>';
     input.value = '';
 
     try {
-        // 2. Appel à l'IA Vaste de Google (Gemini 1.5 Flash)
         const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}`, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 contents: [{
                     parts: [{
-                        text: `Tu es Faith AI, un assistant spirituel chrétien bienveillant pour l'application Faith Connect. 
-                        Tes règles :
-                        1. Tes réponses doivent être basées sur la Bible.
-                        2. Sois encourageant, sage et pastoral.
-                        3. Fais des réponses courtes et claires (max 4 phrases).
-                        4. Cite les références bibliques (Livre Chapitre:Verset).
+                        text: `Tu es Faith AI, un assistant spirituel chrétien. 
+                        Règles :
+                        1. Tes réponses doivent être basées sur la Bible (Louis Segond).
+                        2. Sois court (max 3-4 phrases).
+                        3. Cite le livre et le verset.
+                        4. Sois bienveillant et pastoral.
                         
-                        Question de l'utilisateur : "${question}"`
+                        Question : "${question}"`
                     }]
                 }]
             })
@@ -278,29 +260,27 @@ async function askFaithAI() {
 
         const data = await response.json();
 
-        // Vérification des erreurs
+        // Gestion des erreurs Google
         if (data.error) {
             throw new Error(data.error.message);
         }
 
-        // Récupération du texte de l'IA
-        const aiReply = data.candidates[0].content.parts[0].text;
+        // Récupérer le texte
+        let aiReply = "Désolé, je n'ai pas trouvé de réponse.";
+        if(data.candidates && data.candidates[0].content.parts[0].text) {
+            aiReply = data.candidates[0].content.parts[0].text;
+        }
 
-        // 3. Affichage du résultat (Formatage Markdown simple vers HTML)
-        // On nettoie un peu le texte (enlever les étoiles ** que l'IA met parfois)
+        // Nettoyage Markdown
         const cleanReply = aiReply.replace(/\*\*/g, "").replace(/\*/g, "-");
 
         area.innerHTML = `
-            <div class="bg-gray-800/50 border-l-4 border-purple-500 pl-3 py-2 rounded-r-lg animate-fade-in shadow-lg">
-                <p class="text-[10px] text-gray-500 mb-1 uppercase tracking-wider">Question : "${question}"</p>
-                <p class="text-white text-sm font-medium leading-relaxed font-serif text-justify">${cleanReply}</p>
-                
-                <div class="mt-3 flex gap-3 border-t border-white/5 pt-2 opacity-70">
-                    <button class="text-[10px] text-gray-400 hover:text-white transition-colors flex items-center gap-1" onclick="navigator.clipboard.writeText(\`${cleanReply.replace(/`/g, "")}\`)">
+            <div class="border-l-2 border-purple-500 pl-2 animate-fade-in">
+                <p class="text-[10px] text-gray-500 mb-1">Question : "${question}"</p>
+                <p class="text-white font-medium text-xs leading-relaxed text-justify font-serif">${cleanReply}</p>
+                <div class="mt-2 flex gap-3 opacity-70">
+                    <button class="text-[10px] text-gray-400 hover:text-white transition-colors flex items-center gap-1" onclick="navigator.clipboard.writeText(\`${cleanReply}\`)">
                         <i data-lucide="copy" class="w-3 h-3"></i> Copier
-                    </button>
-                    <button class="text-[10px] text-gray-400 hover:text-white transition-colors flex items-center gap-1">
-                        <i data-lucide="share-2" class="w-3 h-3"></i> Partager
                     </button>
                 </div>
             </div>
@@ -310,8 +290,8 @@ async function askFaithAI() {
     } catch (error) {
         console.error("Erreur Gemini:", error);
         area.innerHTML = `
-            <div class="text-red-400 text-xs p-2 border border-red-500/20 rounded bg-red-500/10">
-                L'IA n'a pas pu répondre. Vérifiez que vous avez bien collé votre clé API Google.
+            <div class="text-red-400 text-xs border-l-2 border-red-500 pl-2">
+                Erreur de connexion à Faith AI. Réessayez plus tard.
             </div>
         `;
     }
