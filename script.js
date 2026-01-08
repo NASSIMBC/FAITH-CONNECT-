@@ -1,10 +1,21 @@
 // ==========================================
-// 1. CONFIGURATION SUPABASE
+// 1. CONFIGURATION SUPABASE (Base de données & Auth)
 // ==========================================
 const SUPABASE_URL = 'https://uduajuxobmywmkjnawjn.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVkdWFqdXhvYm15d21ram5hd2puIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc0NjUyMTUsImV4cCI6MjA4MzA0MTIxNX0.Vn1DpT9l9N7sVb3kVUPRqr141hGvM74vkZULJe59YUU';
 
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// ==========================================
+// 1.1 CONFIGURATION APPWRITE (Stockage Vidéo)
+// ==========================================
+const client = new Appwrite.Client();
+client
+    .setEndpoint('https://cloud.appwrite.io/v1')
+    .setProject('695fc25c0015900d7334'); // Ton ID Projet
+
+const storage = new Appwrite.Storage(client);
+const APPWRITE_BUCKET_ID = 'reels-videos'; // ⚠️ Crée ce bucket sur Appwrite !
 
 // ==========================================
 // 2. GESTION UTILISATEUR & AUTH
@@ -33,7 +44,6 @@ document.addEventListener('keydown', (e) => {
             e.preventDefault();
             sendReelComment();
         }
-        // NOUVEAU : Touche Entrée pour l'IA
         if (document.activeElement.id === 'ai-bible-input') {
             e.preventDefault();
             askFaithAI();
@@ -91,40 +101,36 @@ async function handleLogin() {
 async function logout() { await supabaseClient.auth.signOut(); location.reload(); }
 
 // ==========================================
-// 3. NAVIGATION & UI (DESIGN PREMIUM + ANIMATIONS)
+// 3. NAVIGATION & UI
 // ==========================================
 
 function switchView(viewName) {
-    // 1. Cacher toutes les vues et reset les styles
     ['home', 'reels', 'bible', 'messages', 'profile', 'public-profile'].forEach(v => {
         const el = document.getElementById('view-' + v);
         if(el) {
             el.classList.add('hidden');
-            el.classList.remove('animate-view'); // Reset l'animation
+            el.classList.remove('animate-view');
         }
         const btn = document.getElementById('nav-' + v);
         if(btn) { 
-            btn.classList.remove('text-purple-400', 'scale-110'); // Reset l'effet de zoom
+            btn.classList.remove('text-purple-400', 'scale-110');
             btn.classList.add('text-gray-500'); 
         }
     });
 
-    // 2. Afficher la nouvelle vue avec Animation
     const target = document.getElementById('view-' + viewName);
     if(target) {
         target.classList.remove('hidden');
-        void target.offsetWidth; // Force le navigateur à relancer l'animation
+        void target.offsetWidth; 
         target.classList.add('animate-view');
     }
     
-    // 3. Activer le bouton du menu
     const activeBtn = document.getElementById('nav-' + viewName);
     if(activeBtn) { 
         activeBtn.classList.remove('text-gray-500'); 
         activeBtn.classList.add('text-purple-400', 'scale-110', 'transition-transform', 'duration-200'); 
     }
 
-    // Logiques spécifiques inchangées
     const reelsContainer = document.getElementById('reels-container');
     if (viewName === 'reels') {
         fetchReels(); 
@@ -161,7 +167,7 @@ async function loadAppData() {
 }
 
 // ==========================================
-// 4. BIBLE (VERSION FINALE : GETBIBLE.NET)
+// 4. BIBLE
 // ==========================================
 
 const bibleStructure = {
@@ -289,7 +295,7 @@ function closeBibleReader() {
 }
 
 // ==========================================
-// 5. FAITH AI (HYBRIDE & ROBUSTE)
+// 5. FAITH AI
 // ==========================================
 
 async function askFaithAI() {
@@ -337,6 +343,7 @@ function getFallbackResponse(text) {
     if (t.includes("amour")) return "L'amour est patient, il est plein de bonté. (1 Corinthiens 13)";
     return "Confie-toi en l'Éternel de tout ton cœur. (Proverbes 3:5)";
 }
+
 // ==========================================
 // 5. PROFIL
 // ==========================================
@@ -613,7 +620,7 @@ async function sendChatMessage() {
 }
 
 // ==========================================
-// 8. GESTION DES POSTS (DESIGN PREMIUM)
+// 8. GESTION DES POSTS
 // ==========================================
 
 function handleImageSelect(input) {
@@ -671,7 +678,6 @@ async function fetchPosts() {
             const amenColor = isAmened ? 'text-pink-500 font-bold' : 'text-gray-400 hover:text-pink-400';
             const amenIconClass = isAmened ? 'fill-pink-500 text-pink-500' : 'text-gray-400';
 
-            // DESIGN PREMIUM (NEON & GLOW)
             container.insertAdjacentHTML('beforeend', `
                 <div class="premium-card rounded-2xl p-4 mb-5 animate-view" id="post-${post.id}">
                     <div class="flex justify-between items-start mb-3">
@@ -742,187 +748,7 @@ async function sendComment(postId) {
 }
 
 // ==========================================
-// 9. ENTRAIDE & ÉVÉNEMENTS & NOTIFS
-// ==========================================
-
-async function fetchHelpRequests() {
-    const container = document.getElementById('help-list');
-    if(!container) return;
-    const { data: requests } = await supabaseClient.from('help_requests').select('*').order('created_at', { ascending: false }).limit(3);
-    if(requests && requests.length > 0) {
-        container.innerHTML = requests.map(req => `
-            <div class="bg-gray-900/50 p-3 rounded-xl border border-white/5 flex gap-3 items-center">
-                <div class="bg-blue-900/30 p-2.5 rounded-full h-fit flex-shrink-0"><i data-lucide="hand-heart" class="w-4 h-4 text-blue-400"></i></div>
-                <div class="flex-1">
-                    <h4 class="text-xs font-bold text-white">${req.title}</h4>
-                    <p class="text-[10px] text-gray-400 mt-0.5">${req.description} - <span class="text-blue-300">@${req.user_name}</span></p>
-                </div>
-                ${req.user_id !== currentUser.id ? `<button onclick="openDirectChat('${req.user_id}', '${req.user_name}')" class="p-2 bg-blue-600/20 rounded-lg text-blue-400 hover:bg-blue-600/30"><i data-lucide="message-circle" class="w-4 h-4"></i></button>` : ''}
-            </div>
-        `).join('');
-    } else { container.innerHTML = '<div class="text-center text-[10px] text-gray-500 py-2">Aucune demande.</div>'; }
-    if(typeof lucide !== 'undefined') lucide.createIcons();
-}
-
-async function askForHelp() {
-    const title = prompt("Titre de votre demande (ex: Déménagement)");
-    if(!title) return;
-    const desc = prompt("Description courte");
-    await supabaseClient.from('help_requests').insert([{ user_id: currentUser.id, user_name: userProfile.username, title: title, description: desc || "" }]);
-    fetchHelpRequests();
-}
-
-async function fetchEvents() {
-    const events = [
-        { id: 1, title: "Soirée Louange", date: "12 FÉV", location: "Église Centrale", icon: "music", color: "purple" },
-        { id: 2, title: "Maraude", date: "15 FÉV", location: "Gare du Nord", icon: "heart", color: "pink" },
-        { id: 3, title: "Étude Biblique", date: "20 FÉV", location: "En ligne", icon: "video", color: "blue" }
-    ];
-    const container = document.getElementById('events-list');
-    if(!container) return;
-    
-    container.innerHTML = events.map(evt => `
-        <div class="min-w-[150px] bg-gray-800 rounded-2xl p-3 border border-white/5 relative overflow-hidden group shrink-0">
-            <div class="absolute top-0 right-0 p-2 bg-${evt.color}-600 rounded-bl-xl text-[10px] font-bold text-white shadow-lg">${evt.date}</div>
-            <div class="mt-7">
-                <h4 class="font-bold text-white text-sm leading-tight">${evt.title}</h4>
-                <p class="text-[10px] text-gray-400 mt-1 flex items-center gap-1"><i data-lucide="${evt.icon}" class="w-3 h-3"></i> ${evt.location}</p>
-                <button onclick="alert('Inscrit !')" class="mt-3 w-full py-1.5 bg-white/5 hover:bg-${evt.color}-600/20 rounded-lg text-[10px] text-${evt.color}-300 font-bold transition-colors border border-white/5">Participer</button>
-            </div>
-        </div>
-    `).join('');
-    if(typeof lucide !== 'undefined') lucide.createIcons();
-}
-
-async function fetchPrayers() {
-    const container = document.getElementById('prayers-list'); if(!container) return;
-    const { data: prayers } = await supabaseClient.from('prayers').select('*').order('created_at', { ascending: false });
-    container.innerHTML = (prayers && prayers.length > 0) ? prayers.map(p => `<div class="bg-gray-900/60 p-3 rounded-xl border border-pink-500/10 flex justify-between items-center mb-2"><div class="flex-1"><p class="text-[10px] font-bold text-pink-400 mb-0.5">${p.user_name}</p><p class="text-xs italic">"${p.content}"</p></div><button onclick="prayFor('${p.id}', ${p.count})" class="ml-3 flex flex-col items-center"><div class="bg-gray-800 p-2 rounded-full border border-gray-600 hover:border-pink-500 transition-all text-sm">🙏</div><span class="text-[9px] font-bold mt-1">${p.count}</span></button></div>`).join('') : '<div class="text-center text-[10px] text-gray-500 py-4 italic">Soyez le premier ! 🙏</div>';
-}
-
-async function addPrayer() {
-    const input = document.getElementById('prayer-input'); if (!input || !input.value.trim()) return;
-    await supabaseClient.from('prayers').insert([{ user_id: currentUser.id, user_name: userProfile.username, content: input.value, count: 0 }]);
-    input.value = ''; fetchPrayers();
-}
-
-async function prayFor(id, current) { await supabaseClient.from('prayers').update({ count: (current || 0) + 1 }).eq('id', id); fetchPrayers(); }
-
-function subscribeToRealtime() {
-    supabaseClient.channel('global-updates').on('postgres_changes', { event: '*', schema: 'public' }, async (payload) => {
-        if (payload.table === 'messages') { fetchMessages(); loadConversations(); }
-        if (payload.table === 'posts') fetchPosts();
-        if (payload.table === 'friendships') { fetchNotifications(); updateFriendCount(currentUser.id); }
-        if (payload.table === 'likes' && payload.eventType === 'INSERT') {
-            const { data: post } = await supabaseClient.from('posts').select('user_id').eq('id', payload.new.post_id).single();
-            if (post && post.user_id === currentUser.id && payload.new.user_id !== currentUser.id) {
-                showNotification("Bénédiction", "Quelqu'un a dit Amen à votre publication ! ✨");
-            }
-            fetchPosts(); 
-        }
-    }).subscribe();
-}
-
-async function updateFriendCount(userId) {
-    const { count: c1 } = await supabaseClient.from('friendships').select('*', { count: 'exact', head: true }).eq('requester_id', userId).eq('status', 'accepted');
-    const { count: c2 } = await supabaseClient.from('friendships').select('*', { count: 'exact', head: true }).eq('receiver_id', userId).eq('status', 'accepted');
-    const el = document.getElementById('stats-friends-count'); if(el) el.innerText = (c1 || 0) + (c2 || 0);
-}
-
-function showNotification(senderName, message) {
-    const container = document.getElementById('notification-container');
-    const audio = document.getElementById('notif-sound');
-    if(audio) audio.play().catch(() => {});
-    const notif = document.createElement('div');
-    notif.className = "bg-gray-800 border-l-4 border-purple-500 text-white p-3 rounded-xl shadow-2xl mb-2 animate-fade-in";
-    notif.innerHTML = `<h4 class="font-bold text-xs text-purple-400">${senderName}</h4><p class="text-xs text-gray-300 truncate">${message}</p>`;
-    container.appendChild(notif); 
-    setTimeout(() => notif.remove(), 4000);
-}
-
-async function fetchNotifications() {
-    const badge = document.getElementById('notif-badge');
-    const list = document.getElementById('notif-list');
-    const { data: requests } = await supabaseClient.from('friendships').select('*').eq('receiver_id', currentUser.id).eq('status', 'pending');
-    if (requests && requests.length > 0) {
-        badge.classList.remove('hidden');
-        const ids = requests.map(r => r.requester_id);
-        const { data: profiles } = await supabaseClient.from('profiles').select('id, username').in('id', ids);
-        if(list) list.innerHTML = requests.map(req => {
-            const p = profiles.find(x => x.id === req.requester_id);
-            return `<div class="p-3 border-b border-white/5 flex items-center justify-between"><span class="text-xs font-bold text-white">${p ? p.username : 'Ami'}</span><div class="flex gap-2"><button onclick="handleFriendRequest('${req.id}', true)" class="text-green-400"><i data-lucide="check" class="w-4 h-4"></i></button></div></div>`;
-        }).join('');
-        if(typeof lucide !== 'undefined') lucide.createIcons();
-    } else { badge.classList.add('hidden'); if(list) list.innerHTML = '<div class="p-4 text-center text-xs text-gray-500">🍃</div>'; }
-}
-
-async function handleFriendRequest(id, accepted) {
-    if (accepted) await supabaseClient.from('friendships').update({ status: 'accepted' }).eq('id', id);
-    else await supabaseClient.from('friendships').delete().eq('id', id);
-    fetchNotifications(); updateFriendCount(currentUser.id); switchProfileTab('requests');
-}
-
-async function addFriend(targetId) {
-    const { error } = await supabaseClient.from('friendships').insert([{ requester_id: currentUser.id, receiver_id: targetId, status: 'pending' }]);
-    if (!error) alert("Demande envoyée !");
-}
-
-function toggleNotifDropdown() { document.getElementById('notif-dropdown').classList.toggle('hidden'); }
-
-// ==========================================
-// 12. GESTION DES STORIES
-// ==========================================
-
-function triggerAddStory() { document.getElementById('btn-add-story-input').click(); }
-
-async function uploadStory(input) {
-    if (!input.files || !input.files[0]) return;
-    try {
-        const file = input.files[0]; const fileName = `${currentUser.id}/${Date.now()}`;
-        const { error: uploadError } = await supabaseClient.storage.from('story-images').upload(fileName, file);
-        if (uploadError) throw uploadError;
-        const { data } = supabaseClient.storage.from('story-images').getPublicUrl(fileName);
-        await supabaseClient.from('stories').insert([{ user_id: currentUser.id, image_url: data.publicUrl }]);
-        renderStoriesList();
-    } catch (error) { alert("Erreur : " + error.message); }
-}
-
-async function renderStoriesList() {
-    const container = document.getElementById('stories-container'); if (!container) return;
-    const yesterday = new Date(); yesterday.setHours(yesterday.getHours() - 24);
-    const { data: stories } = await supabaseClient.from('stories').select('*, profiles(username, avatar_url)').gt('created_at', yesterday.toISOString()).order('created_at', { ascending: false });
-    let html = `<div onclick="triggerAddStory()" class="flex flex-col items-center space-y-1 cursor-pointer shrink-0"><div class="w-14 h-14 rounded-full bg-gray-800 border-2 border-dashed border-gray-600 flex items-center justify-center relative"><i data-lucide="plus" class="w-5 h-5 text-gray-400"></i></div><span class="text-[9px] text-gray-300">Ma Story</span></div>`;
-    if (stories) stories.forEach(s => {
-        if (!s.profiles) return;
-        const storyData = encodeURIComponent(JSON.stringify(s));
-        const avatarContent = s.profiles.avatar_url ? `<img src="${s.profiles.avatar_url}" class="w-full h-full object-cover rounded-full">` : `<div class="w-full h-full rounded-full bg-gray-700 flex items-center justify-center font-bold text-white text-[10px]">${s.profiles.username[0].toUpperCase()}</div>`;
-        html += `<div onclick="openStoryViewer('${storyData}')" class="flex flex-col items-center space-y-1 cursor-pointer shrink-0"><div class="w-14 h-14 rounded-full bg-gradient-to-tr from-pink-500 to-purple-600 p-[2px]"><div class="w-full h-full rounded-full bg-gray-900 border-2 border-gray-900 overflow-hidden">${avatarContent}</div></div><span class="text-[9px] text-gray-300 truncate w-14 text-center">${s.profiles.username}</span></div>`;
-    });
-    container.innerHTML = html; if (typeof lucide !== 'undefined') lucide.createIcons();
-}
-
-let currentStoryTimer = null;
-function openStoryViewer(storyDataEncoded) {
-    const story = JSON.parse(decodeURIComponent(storyDataEncoded));
-    const viewer = document.getElementById('story-viewer');
-    document.getElementById('story-viewer-image').src = story.image_url;
-    document.getElementById('story-viewer-name').innerText = story.profiles.username;
-    const avatarEl = document.getElementById('story-viewer-avatar');
-    if (story.profiles.avatar_url) avatarEl.src = story.profiles.avatar_url; else avatarEl.src = "https://ui-avatars.com/api/?name=" + story.profiles.username;
-    document.getElementById('story-delete-btn-container').innerHTML = (story.user_id === currentUser.id) ? `<button onclick="deleteStory('${story.id}')" class="bg-red-500/20 text-red-400 px-4 py-2 rounded-full text-xs font-bold border border-red-500/50">Supprimer</button>` : "";
-    viewer.classList.remove('hidden');
-    const progress = document.getElementById('story-progress');
-    progress.style.transition = 'none'; progress.style.width = '0%';
-    setTimeout(() => { progress.style.transition = 'width 5s linear'; progress.style.width = '100%'; }, 10);
-    if (currentStoryTimer) clearTimeout(currentStoryTimer);
-    currentStoryTimer = setTimeout(() => closeStoryViewer(), 5000);
-}
-
-function closeStoryViewer() { document.getElementById('story-viewer').classList.add('hidden'); if (currentStoryTimer) clearTimeout(currentStoryTimer); }
-async function deleteStory(id) { if (confirm("Supprimer ?")) { await supabaseClient.from('stories').delete().eq('id', id); closeStoryViewer(); renderStoriesList(); } }
-
-// ==========================================
-// 13. GESTION DES REELS (VRAIES VIDÉOS - UPLOAD)
+// 13. GESTION DES REELS (HYBRIDE : APPWRITE + SUPABASE)
 // ==========================================
 
 function shuffleArray(array) {
@@ -933,15 +759,15 @@ function shuffleArray(array) {
     return array;
 }
 
-// 1. FONCTION D'UPLOAD DE VIDÉO
+// Upload vers Appwrite (Stockage)
 async function uploadReelFile(input) {
     if (!input.files || !input.files[0]) return;
     
     const file = input.files[0];
-    const maxSize = 50 * 1024 * 1024; // Limite 50MB (ajuste selon ton besoin)
+    const maxSize = 500 * 1024 * 1024; // 500MB (Grace à Appwrite)
 
     if (file.size > maxSize) {
-        alert("Vidéo trop lourde ! Max 50MB.");
+        alert("Fichier trop lourd.");
         return;
     }
 
@@ -951,24 +777,28 @@ async function uploadReelFile(input) {
     btn.disabled = true;
 
     try {
-        const fileExt = file.name.split('.').pop();
-        const fileName = `reel_${currentUser.id}_${Date.now()}.${fileExt}`;
-
-        // Upload dans le bucket 'reels-videos'
-        const { error: uploadError } = await supabaseClient.storage
-            .from('reels-videos') // Assure-toi de créer ce bucket sur Supabase !
-            .upload(fileName, file);
-
-        if (uploadError) throw uploadError;
-
-        const { data } = supabaseClient.storage.from('reels-videos').getPublicUrl(fileName);
+        console.log("Upload vers Appwrite...");
         
-        // Création de l'entrée en base
-        await supabaseClient.from('reels').insert([{ 
+        // 1. Upload vers Appwrite
+        const promise = storage.createFile(
+            APPWRITE_BUCKET_ID,
+            Appwrite.ID.unique(),
+            file
+        );
+
+        const response = await promise;
+        
+        // 2. Génération du lien de lecture
+        const fileUrl = `https://cloud.appwrite.io/v1/storage/buckets/${APPWRITE_BUCKET_ID}/files/${response.$id}/view?project=${client.config.project}`;
+
+        // 3. Sauvegarde dans Supabase (Base de données)
+        const { error: dbError } = await supabaseClient.from('reels').insert([{ 
             user_id: currentUser.id, 
-            video_url: data.publicUrl, 
-            caption: "Nouveau Reel ✨" // Tu pourras améliorer ça plus tard avec une boite de dialogue
+            video_url: fileUrl, 
+            caption: "Nouveau Reel ✨" 
         }]);
+
+        if (dbError) throw dbError;
 
         alert("Reel publié !");
         fetchReels();
@@ -979,11 +809,11 @@ async function uploadReelFile(input) {
     } finally {
         btn.innerHTML = originalIcon;
         btn.disabled = false;
-        input.value = ""; // Reset input
+        input.value = "";
     }
 }
 
-// 2. AFFICHAGE DES REELS (Mode Natif)
+// Affichage (identique, mais charge les URLs Appwrite)
 async function fetchReels() {
     const container = document.getElementById('reels-container');
     container.innerHTML = '<div class="flex items-center justify-center h-full text-white"><div class="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div></div>';
@@ -1001,7 +831,6 @@ async function fetchReels() {
 
             const html = `
                 <div class="reel-item relative w-full h-full bg-black snap-start snap-always flex justify-center items-center overflow-hidden">
-                    
                     <video 
                         src="${reel.video_url}" 
                         class="reel-video absolute w-full h-full object-cover"
@@ -1055,18 +884,16 @@ async function fetchReels() {
     }
 }
 
-// 3. GESTION PLAY/PAUSE AU CLIC
 function toggleVideoPlay(video) {
     if (video.paused) {
         video.play();
-        video.nextElementSibling.classList.add('opacity-0'); // Cache icone play
+        video.nextElementSibling.classList.add('opacity-0');
     } else {
         video.pause();
-        video.nextElementSibling.classList.remove('opacity-0'); // Affiche icone play
+        video.nextElementSibling.classList.remove('opacity-0');
     }
 }
 
-// 4. OBSERVER (AUTO-PLAY / AUTO-PAUSE)
 function setupReelObserver() {
     const options = { root: document.getElementById('reels-container'), threshold: 0.7 };
     const observer = new IntersectionObserver((entries) => {
@@ -1075,11 +902,9 @@ function setupReelObserver() {
             if (!video) return;
 
             if (entry.isIntersecting) {
-                // Video arrive à l'écran : Reset et Play
                 video.currentTime = 0;
-                video.play().catch(e => console.log("Autoplay bloqué (attente interaction)", e));
+                video.play().catch(e => console.log("Autoplay bloqué", e));
             } else {
-                // Video quitte l'écran : Pause
                 video.pause();
             }
         });
@@ -1088,4 +913,40 @@ function setupReelObserver() {
     document.querySelectorAll('.reel-item').forEach(item => { observer.observe(item); });
 }
 
-// (Le reste : toggleReelAmen, openReelComments... reste identique, pas besoin de toucher)
+// Amen & Commentaires (Identiques, liés à Supabase)
+async function toggleReelAmen(reelId) {
+    const icon = document.getElementById(`reel-heart-${reelId}`);
+    if(icon.classList.contains('text-pink-500')) {
+        icon.classList.remove('text-pink-500', 'fill-pink-500'); icon.classList.add('text-white');
+    } else {
+        icon.classList.add('text-pink-500', 'fill-pink-500'); icon.classList.remove('text-white');
+    }
+    await supabaseClient.from('reel_likes').insert([{ reel_id: reelId, user_id: currentUser.id }]);
+}
+
+let currentReelIdForComments = null;
+async function openReelComments(reelId) {
+    currentReelIdForComments = reelId;
+    document.getElementById('reel-comments-modal').classList.remove('hidden');
+    const list = document.getElementById('reel-comments-list');
+    list.innerHTML = '<div class="text-center text-gray-500 mt-4">Chargement...</div>';
+    const { data: comments } = await supabaseClient.from('reel_comments').select('*, profiles(username)').eq('reel_id', reelId).order('created_at', { ascending: true });
+    list.innerHTML = '';
+    if(comments && comments.length > 0) {
+        comments.forEach(c => {
+            list.insertAdjacentHTML('beforeend', `<div class="flex gap-2 mb-2"><span class="font-bold text-purple-400 text-sm">${c.profiles.username}</span><span class="text-gray-300 text-sm">${c.content}</span></div>`);
+        });
+    } else { list.innerHTML = '<div class="text-center text-gray-600 mt-10">Aucun commentaire.</div>'; }
+}
+
+async function sendReelComment() {
+    const input = document.getElementById('reel-comment-input');
+    const text = input.value;
+    if(!text || !currentReelIdForComments) return;
+    input.value = ''; 
+    const list = document.getElementById('reel-comments-list');
+    if(list.innerText.includes('Aucun commentaire')) list.innerHTML = '';
+    list.insertAdjacentHTML('beforeend', `<div class="flex gap-2 mb-2 opacity-50"><span class="font-bold text-purple-400 text-sm">Moi</span><span class="text-gray-300 text-sm">${text}</span></div>`);
+    await supabaseClient.from('reel_comments').insert([{ reel_id: currentReelIdForComments, user_id: currentUser.id, content: text }]);
+    openReelComments(currentReelIdForComments);
+}
