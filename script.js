@@ -230,7 +230,7 @@ async function askFaithAI() {
     const question = input.value.trim();
     
     // 👇 TA CLÉ GOOGLE INTÉGRÉE 👇
-    const API_KEY = 'AIzaSyBjbQeVvpGOoSsGsGL8JHWzExczCwHbSnk'; 
+    const API_KEY = 'AIzaSyCnXxaMLb5EYPnL2ErE_uMQOnpxMlRovss'; 
 
     if(!question) return;
     
