@@ -146,41 +146,37 @@ async function loadAppData() {
 }
 
 // ==========================================
-// 4. BIBLE (VERSION CORRIGÉE : NOMS ANGLAIS -> TEXTE FRANÇAIS)
+// 4. BIBLE (SOURCE FIABLE : GETBIBLE.NET)
 // ==========================================
 
+// Liste des livres avec les ID officiels de GetBible (Louis Segond 1910)
 const bibleStructure = {
     AT: [
-        { name: "Genèse", api: "Genesis" }, { name: "Exode", api: "Exodus" }, { name: "Lévitique", api: "Leviticus" }, 
-        { name: "Nombres", api: "Numbers" }, { name: "Deutéronome", api: "Deuteronomy" }, { name: "Josué", api: "Joshua" }, 
-        { name: "Juges", api: "Judges" }, { name: "Ruth", api: "Ruth" }, { name: "1 Samuel", api: "1Samuel" }, 
-        { name: "2 Samuel", api: "2Samuel" }, { name: "1 Rois", api: "1Kings" }, { name: "2 Rois", api: "2Kings" }, 
-        { name: "1 Chroniques", api: "1Chronicles" }, { name: "2 Chroniques", api: "2Chronicles" }, { name: "Esdras", api: "Ezra" }, 
-        { name: "Néhémie", api: "Nehemiah" }, { name: "Esther", api: "Esther" }, { name: "Job", api: "Job" }, 
-        { name: "Psaumes", api: "Psalms" }, { name: "Proverbes", api: "Proverbs" }, { name: "Ecclésiaste", api: "Ecclesiastes" }, 
-        { name: "Cantique", api: "SongofSongs" }, { name: "Ésaïe", api: "Isaiah" }, { name: "Jérémie", api: "Jeremiah" }, 
-        { name: "Lamentations", api: "Lamentations" }, { name: "Ézéchiel", api: "Ezekiel" }, { name: "Daniel", api: "Daniel" }, 
-        { name: "Osée", api: "Hosea" }, { name: "Joël", api: "Joel" }, { name: "Amos", api: "Amos" }, 
-        { name: "Abdias", api: "Obadiah" }, { name: "Jonas", api: "Jonah" }, { name: "Michée", api: "Micah" }, 
-        { name: "Nahum", api: "Nahum" }, { name: "Habacuc", api: "Habakkuk" }, { name: "Sophonie", api: "Zephaniah" }, 
-        { name: "Aggée", api: "Haggai" }, { name: "Zacharie", api: "Zechariah" }, { name: "Malachie", api: "Malachi" }
+        { name: "Genèse", id: 1 }, { name: "Exode", id: 2 }, { name: "Lévitique", id: 3 }, { name: "Nombres", id: 4 }, 
+        { name: "Deutéronome", id: 5 }, { name: "Josué", id: 6 }, { name: "Juges", id: 7 }, { name: "Ruth", id: 8 }, 
+        { name: "1 Samuel", id: 9 }, { name: "2 Samuel", id: 10 }, { name: "1 Rois", id: 11 }, { name: "2 Rois", id: 12 }, 
+        { name: "1 Chroniques", id: 13 }, { name: "2 Chroniques", id: 14 }, { name: "Esdras", id: 15 }, { name: "Néhémie", id: 16 }, 
+        { name: "Esther", id: 17 }, { name: "Job", id: 18 }, { name: "Psaumes", id: 19 }, { name: "Proverbes", id: 20 }, 
+        { name: "Ecclésiaste", id: 21 }, { name: "Cantique", id: 22 }, { name: "Ésaïe", id: 23 }, { name: "Jérémie", id: 24 }, 
+        { name: "Lamentations", id: 25 }, { name: "Ézéchiel", id: 26 }, { name: "Daniel", id: 27 }, { name: "Osée", id: 28 }, 
+        { name: "Joël", id: 29 }, { name: "Amos", id: 30 }, { name: "Abdias", id: 31 }, { name: "Jonas", id: 32 }, 
+        { name: "Michée", id: 33 }, { name: "Nahum", id: 34 }, { name: "Habacuc", id: 35 }, { name: "Sophonie", id: 36 }, 
+        { name: "Aggée", id: 37 }, { name: "Zacharie", id: 38 }, { name: "Malachie", id: 39 }
     ],
     NT: [
-        { name: "Matthieu", api: "Matthew" }, { name: "Marc", api: "Mark" }, { name: "Luc", api: "Luke" }, 
-        { name: "Jean", api: "John" }, { name: "Actes", api: "Acts" }, { name: "Romains", api: "Romans" }, 
-        { name: "1 Corinthiens", api: "1Corinthians" }, { name: "2 Corinthiens", api: "2Corinthians" }, { name: "Galates", api: "Galatians" }, 
-        { name: "Éphésiens", api: "Ephesians" }, { name: "Philippiens", api: "Philippians" }, { name: "Colossiens", api: "Colossians" }, 
-        { name: "1 Thessal.", api: "1Thessalonians" }, { name: "2 Thessal.", api: "2Thessalonians" }, { name: "1 Timothée", api: "1Timothy" }, 
-        { name: "2 Timothée", api: "2Timothy" }, { name: "Tite", api: "Titus" }, { name: "Philémon", api: "Philemon" }, 
-        { name: "Hébreux", api: "Hebrews" }, { name: "Jacques", api: "James" }, { name: "1 Pierre", api: "1Peter" }, 
-        { name: "2 Pierre", api: "2Peter" }, { name: "1 Jean", api: "1John" }, { name: "2 Jean", api: "2John" }, 
-        { name: "3 Jean", api: "3John" }, { name: "Jude", api: "Jude" }, { name: "Apocalypse", api: "Revelation" }
+        { name: "Matthieu", id: 40 }, { name: "Marc", id: 41 }, { name: "Luc", id: 42 }, { name: "Jean", id: 43 }, 
+        { name: "Actes", id: 44 }, { name: "Romains", id: 45 }, { name: "1 Corinthiens", id: 46 }, { name: "2 Corinthiens", id: 47 }, 
+        { name: "Galates", id: 48 }, { name: "Éphésiens", id: 49 }, { name: "Philippiens", id: 50 }, { name: "Colossiens", id: 51 }, 
+        { name: "1 Thessal.", id: 52 }, { name: "2 Thessal.", id: 53 }, { name: "1 Timothée", id: 54 }, { name: "2 Timothée", id: 55 }, 
+        { name: "Tite", id: 56 }, { name: "Philémon", id: 57 }, { name: "Hébreux", id: 58 }, { name: "Jacques", id: 59 }, 
+        { name: "1 Pierre", id: 60 }, { name: "2 Pierre", id: 61 }, { name: "1 Jean", id: 62 }, { name: "2 Jean", id: 63 }, 
+        { name: "3 Jean", id: 64 }, { name: "Jude", id: 65 }, { name: "Apocalypse", id: 66 }
     ]
 };
 
-// Variables globales pour la navigation
-let currentApiName = "John"; 
-let currentDisplayName = "Jean";
+// Variables globales de navigation
+let currentBookId = 43; // Jean par défaut
+let currentBookName = "Jean";
 let currentChapter = 1;
 
 function showTestament(type) {
@@ -188,27 +184,27 @@ function showTestament(type) {
     const ntBtn = document.getElementById('btn-nt');
     if(!atBtn || !ntBtn) return;
 
-    // Styles boutons
+    // Gestion visuelle des boutons (Actif/Inactif)
     if(type === 'AT') {
-        atBtn.className = "flex-1 py-2 bg-purple-600 text-white rounded-xl text-xs font-bold transition-colors";
+        atBtn.className = "flex-1 py-2 bg-purple-600 text-white rounded-xl text-xs font-bold transition-colors shadow-lg";
         ntBtn.className = "flex-1 py-2 bg-gray-800 text-gray-400 rounded-xl text-xs font-bold hover:bg-gray-700 transition-colors";
     } else {
-        ntBtn.className = "flex-1 py-2 bg-purple-600 text-white rounded-xl text-xs font-bold transition-colors";
+        ntBtn.className = "flex-1 py-2 bg-purple-600 text-white rounded-xl text-xs font-bold transition-colors shadow-lg";
         atBtn.className = "flex-1 py-2 bg-gray-800 text-gray-400 rounded-xl text-xs font-bold hover:bg-gray-700 transition-colors";
     }
 
     const container = document.getElementById('bible-books-list');
     if(container) {
-        // ON UTILISE api ET name ICI
+        // Génération de la liste des livres
         container.innerHTML = bibleStructure[type].map(book => `
-            <button onclick="loadBibleChapter('${book.api}', '${book.name}', 1)" class="p-4 bg-gray-800 border border-white/5 rounded-xl hover:bg-gray-700 transition-colors text-left group">
-                <span class="font-bold text-white text-sm group-hover:text-purple-400">${book.name}</span>
+            <button onclick="loadBibleChapter(${book.id}, '${book.name}', 1)" class="p-3 bg-gray-800 border border-white/5 rounded-xl hover:bg-gray-700 transition-all text-left group active:scale-95">
+                <span class="font-bold text-white group-hover:text-purple-400 text-sm transition-colors">${book.name}</span>
             </button>
         `).join('');
     }
 }
 
-async function loadBibleChapter(apiName, displayName, chapter) {
+async function loadBibleChapter(id, name, chapter) {
     const reader = document.getElementById('bible-reader');
     const content = document.getElementById('reader-content');
     const title = document.getElementById('reader-title');
@@ -216,22 +212,28 @@ async function loadBibleChapter(apiName, displayName, chapter) {
     if(!reader) return;
     reader.classList.remove('hidden');
     
-    // Mise à jour des variables actuelles
-    currentApiName = apiName;
-    currentDisplayName = displayName;
+    // Mise à jour de l'état
+    currentBookId = id;
+    currentBookName = name;
     currentChapter = chapter;
 
-    title.innerText = `${displayName} ${chapter}`;
-    content.innerHTML = '<div class="flex h-full items-center justify-center"><div class="w-8 h-8 border-4 border-purple-500 rounded-full animate-spin border-t-transparent"></div></div>';
+    title.innerText = `${name} ${chapter}`;
+    // Animation de chargement
+    content.innerHTML = `
+        <div class="flex flex-col h-full items-center justify-center space-y-4">
+            <div class="w-8 h-8 border-4 border-purple-500 rounded-full animate-spin border-t-transparent"></div>
+            <p class="text-xs text-gray-500 animate-pulse">Chargement de la Parole...</p>
+        </div>`;
 
     try {
-        // ON APPELLE L'API AVEC LE NOM ANGLAIS (apiName) MAIS ON DEMANDE LA TRADUCTION FRANÇAISE
-        const response = await fetch(`https://bible-api.com/${apiName}+${chapter}?translation=louis_segond`);
+        // Appel à GetBible.net (API Statique = Très fiable)
+        const response = await fetch(`https://api.getbible.net/v2/ls1910/${id}/${chapter}.json`);
         
         if (!response.ok) throw new Error("Chapitre introuvable");
 
         const data = await response.json();
 
+        // Vérification et affichage
         if (data.verses && data.verses.length > 0) {
             let formattedText = data.verses.map(v => 
                 `<p class="mb-3 leading-relaxed text-gray-200 text-justify">
@@ -239,11 +241,13 @@ async function loadBibleChapter(apiName, displayName, chapter) {
                 </p>`
             ).join('');
 
+            // Bouton Précédent (caché si chapitre 1)
             const prevBtn = chapter > 1 
-                ? `<button onclick="loadBibleChapter('${apiName}', '${displayName}', ${chapter - 1})" class="flex-1 bg-gray-800 py-3 rounded-xl text-xs font-bold text-gray-300 hover:bg-gray-700">← Précédent</button>` 
+                ? `<button onclick="loadBibleChapter(${id}, '${name}', ${chapter - 1})" class="flex-1 bg-gray-800 py-3 rounded-xl text-xs font-bold text-gray-300 hover:bg-gray-700 transition-colors">← Précédent</button>` 
                 : `<div class="flex-1"></div>`;
             
-            const nextBtn = `<button onclick="loadBibleChapter('${apiName}', '${displayName}', ${chapter + 1})" class="flex-1 bg-purple-600 py-3 rounded-xl text-xs font-bold text-white shadow-lg hover:bg-purple-500">Suivant →</button>`;
+            // Bouton Suivant
+            const nextBtn = `<button onclick="loadBibleChapter(${id}, '${name}', ${chapter + 1})" class="flex-1 bg-purple-600 py-3 rounded-xl text-xs font-bold text-white shadow-lg hover:bg-purple-500 transition-colors">Suivant →</button>`;
 
             content.innerHTML = `
                 <div class="font-serif text-sm px-2 pt-2 pb-20 animate-fade-in">
@@ -254,12 +258,16 @@ async function loadBibleChapter(apiName, displayName, chapter) {
                     </div>
                 </div>
             `;
+            
+            // Remonter en haut de la page
             content.scrollTop = 0;
+
         } else {
+            // Fin du livre
             content.innerHTML = `
                 <div class="text-center text-gray-400 mt-20">
-                    <p class="mb-4">Fin du livre de ${displayName}.</p>
-                    <button onclick="closeBibleReader()" class="bg-gray-800 px-6 py-2 rounded-full text-xs text-white border border-white/10">Fermer la lecture</button>
+                    <p class="mb-4">Fin du livre de ${name}.</p>
+                    <button onclick="closeBibleReader()" class="bg-gray-800 px-6 py-2 rounded-full text-xs text-white border border-white/10 hover:bg-gray-700">Fermer la lecture</button>
                 </div>`;
         }
     } catch (error) {
@@ -267,8 +275,8 @@ async function loadBibleChapter(apiName, displayName, chapter) {
         content.innerHTML = `
             <div class="text-center text-red-400 mt-20 px-6">
                 <p class="text-xs mb-2">Impossible de charger le texte.</p>
-                <p class="text-[10px] text-gray-600 mb-4">${error.message}</p>
-                <button onclick="loadBibleChapter('${apiName}', '${displayName}', ${chapter})" class="bg-red-500/10 text-red-400 px-4 py-2 rounded text-xs">Réessayer</button>
+                <p class="text-[10px] text-gray-600 mb-4 opacity-50">${error.message}</p>
+                <button onclick="loadBibleChapter(${id}, '${name}', ${chapter})" class="bg-red-500/10 text-red-400 px-4 py-2 rounded text-xs hover:bg-red-500/20">Réessayer</button>
             </div>`;
     }
 }
