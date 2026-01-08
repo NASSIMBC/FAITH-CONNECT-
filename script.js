@@ -146,96 +146,21 @@ async function loadAppData() {
 }
 
 // ==========================================
-// 4. BIBLE & FAITH AI (GOOGLE GEMINI)
+// CODE INTELLIGENCE ARTIFICIELLE (GEMINI)
 // ==========================================
-
-const bibleBooks = {
-    AT: ["Genèse", "Exode", "Lévitique", "Nombres", "Deutéronome", "Josué", "Juges", "Ruth", "1 Samuel", "2 Samuel", "1 Rois", "2 Rois", "1 Chroniques", "2 Chroniques", "Esdras", "Néhémie", "Esther", "Job", "Psaumes", "Proverbes", "Ecclésiaste", "Cantique", "Ésaïe", "Jérémie", "Lamentations", "Ézéchiel", "Daniel", "Osée", "Joël", "Amos", "Abdias", "Jonas", "Michée", "Nahum", "Habacuc", "Sophonie", "Aggée", "Zacharie", "Malachie"],
-    NT: ["Matthieu", "Marc", "Luc", "Jean", "Actes", "Romains", "1 Corinthiens", "2 Corinthiens", "Galates", "Éphésiens", "Philippiens", "Colossiens", "1 Thessaloniciens", "2 Thessaloniciens", "1 Timothée", "2 Timothée", "Tite", "Philémon", "Hébreux", "Jacques", "1 Pierre", "2 Pierre", "1 Jean", "2 Jean", "3 Jean", "Jude", "Apocalypse"]
-};
-
-let currentBook = "Jean";
-let currentChapter = 1;
-
-function showTestament(type) {
-    const atBtn = document.getElementById('btn-at');
-    const ntBtn = document.getElementById('btn-nt');
-    if(!atBtn || !ntBtn) return;
-
-    if(type === 'AT') {
-        atBtn.className = "flex-1 py-2 bg-purple-600 text-white rounded-xl text-xs font-bold transition-colors";
-        ntBtn.className = "flex-1 py-2 bg-gray-800 text-gray-400 rounded-xl text-xs font-bold hover:bg-gray-700 transition-colors";
-    } else {
-        ntBtn.className = "flex-1 py-2 bg-purple-600 text-white rounded-xl text-xs font-bold transition-colors";
-        atBtn.className = "flex-1 py-2 bg-gray-800 text-gray-400 rounded-xl text-xs font-bold hover:bg-gray-700 transition-colors";
-    }
-
-    const container = document.getElementById('bible-books-list');
-    if(container) {
-        container.innerHTML = bibleBooks[type].map(book => `
-            <button onclick="loadBibleChapter('${book}', 1)" class="p-4 bg-gray-800 border border-white/5 rounded-xl hover:bg-gray-700 transition-colors text-left group">
-                <span class="font-bold text-white group-hover:text-purple-400 text-sm">${book}</span>
-                <div class="text-[10px] text-gray-500 mt-1">Lire le livre →</div>
-            </button>
-        `).join('');
-    }
-}
-
-// Chargement de la Bible depuis API
-async function loadBibleChapter(book, chapter) {
-    const reader = document.getElementById('bible-reader');
-    const contentDiv = document.getElementById('reader-content');
-    const title = document.getElementById('reader-title');
-    
-    if(!reader) return;
-    reader.classList.remove('hidden');
-    title.innerText = `${book} ${chapter}`;
-    contentDiv.innerHTML = '<div class="flex h-full items-center justify-center"><div class="w-8 h-8 border-4 border-purple-500 rounded-full animate-spin border-t-transparent"></div></div>';
-    
-    currentBook = book;
-    currentChapter = chapter;
-
-    try {
-        const response = await fetch(`https://bible-api.com/${book}+${chapter}?translation=louis_segond`);
-        const data = await response.json();
-
-        if (data.text) {
-            let formattedText = data.verses.map(v => 
-                `<p class="mb-2"><sup class="text-purple-400 text-xs font-bold mr-1">${v.verse}</sup> ${v.text}</p>`
-            ).join('');
-
-            const navButtons = `
-                <div class="flex justify-between mt-8 pt-4 border-t border-white/10">
-                    <button onclick="loadBibleChapter('${currentBook}', ${Math.max(1, currentChapter - 1)})" class="bg-gray-700 px-4 py-2 rounded-lg text-xs ${currentChapter <= 1 ? 'opacity-50 pointer-events-none' : ''}">← Précédent</button>
-                    <button onclick="loadBibleChapter('${currentBook}', ${currentChapter + 1})" class="bg-purple-600 px-4 py-2 rounded-lg text-xs font-bold text-white">Suivant →</button>
-                </div>
-            `;
-            contentDiv.innerHTML = `<div class="font-serif leading-relaxed text-gray-200 text-sm">${formattedText}</div>${navButtons}`;
-        } else {
-            contentDiv.innerHTML = '<div class="text-center text-red-400 mt-10 text-xs">Chapitre non disponible ou fin du livre.</div>';
-        }
-    } catch (error) {
-        contentDiv.innerHTML = '<div class="text-center text-red-400 mt-10 text-xs">Erreur de chargement. Vérifiez votre connexion.</div>';
-    }
-}
-
-function closeBibleReader() {
-    document.getElementById('bible-reader').classList.add('hidden');
-}
-
-// --- FAITH AI (GOOGLE GEMINI) ---
 async function askFaithAI() {
     const input = document.getElementById('ai-bible-input');
     const area = document.getElementById('ai-response-area');
     const question = input.value.trim();
     
-    // 👇 TA CLÉ GOOGLE INTÉGRÉE 👇
+    // TA CLÉ GOOGLE (Ne pas toucher)
     const API_KEY = 'AIzaSyCnXxaMLb5EYPnL2ErE_uMQOnpxMlRovss'; 
 
     if(!question) return;
     
+    // Animation
     area.classList.remove('hidden');
-    area.innerHTML = '<div class="flex items-center gap-2 text-purple-300 text-xs"><div class="w-1.5 h-1.5 bg-purple-400 rounded-full animate-bounce"></div> Faith AI réfléchit...</div>';
+    area.innerHTML = '<div class="flex items-center gap-2 text-purple-300 text-xs animate-pulse">Faith AI réfléchit...</div>';
     input.value = '';
 
     try {
@@ -245,57 +170,74 @@ async function askFaithAI() {
             body: JSON.stringify({
                 contents: [{
                     parts: [{
-                        text: `Tu es Faith AI, un assistant spirituel chrétien. 
-                        Règles :
-                        1. Tes réponses doivent être basées sur la Bible (Louis Segond).
-                        2. Sois court (max 3-4 phrases).
-                        3. Cite le livre et le verset.
-                        4. Sois bienveillant et pastoral.
-                        
-                        Question : "${question}"`
+                        text: `Tu es Faith AI, un guide chrétien. Réponds courtement (3 phrases max) avec un verset biblique (Louis Segond). Question: "${question}"`
                     }]
                 }]
             })
         });
 
         const data = await response.json();
-
-        // Gestion des erreurs Google
-        if (data.error) {
-            throw new Error(data.error.message);
-        }
-
-        // Récupérer le texte
-        let aiReply = "Désolé, je n'ai pas trouvé de réponse.";
-        if(data.candidates && data.candidates[0].content.parts[0].text) {
-            aiReply = data.candidates[0].content.parts[0].text;
-        }
-
-        // Nettoyage Markdown
-        const cleanReply = aiReply.replace(/\*\*/g, "").replace(/\*/g, "-");
+        
+        if (data.error) throw new Error(data.error.message);
+        
+        const aiReply = data.candidates[0].content.parts[0].text.replace(/\*/g, "");
 
         area.innerHTML = `
-            <div class="border-l-2 border-purple-500 pl-2 animate-fade-in">
-                <p class="text-[10px] text-gray-500 mb-1">Question : "${question}"</p>
-                <p class="text-white font-medium text-xs leading-relaxed text-justify font-serif">${cleanReply}</p>
-                <div class="mt-2 flex gap-3 opacity-70">
-                    <button class="text-[10px] text-gray-400 hover:text-white transition-colors flex items-center gap-1" onclick="navigator.clipboard.writeText(\`${cleanReply}\`)">
-                        <i data-lucide="copy" class="w-3 h-3"></i> Copier
-                    </button>
-                </div>
-            </div>
-        `;
-        if(typeof lucide !== 'undefined') lucide.createIcons();
+            <div class="bg-gray-800/50 border-l-4 border-purple-500 pl-3 py-2 rounded-r-lg shadow-lg">
+                <p class="text-[10px] text-gray-500 mb-1 uppercase">Question : "${question}"</p>
+                <p class="text-white text-sm font-serif leading-relaxed">${aiReply}</p>
+            </div>`;
 
     } catch (error) {
-        console.error("Erreur Gemini:", error);
-        area.innerHTML = `
-            <div class="text-red-400 text-xs border-l-2 border-red-500 pl-2">
-                Erreur de connexion à Faith AI. Réessayez plus tard.
-            </div>
-        `;
+        console.error("Erreur:", error);
+        area.innerHTML = `<div class="text-red-400 text-xs">Erreur de connexion. Vérifiez que vous utilisez bien 'Live Server'.</div>`;
     }
 }
+
+// ==========================================
+// CODE BIBLE (LECTURE)
+// ==========================================
+const bibleBooks = {
+    AT: ["Genèse", "Exode", "Lévitique", "Nombres", "Deutéronome", "Josué", "Juges", "Ruth", "1 Samuel", "2 Samuel", "1 Rois", "2 Rois", "1 Chroniques", "2 Chroniques", "Esdras", "Néhémie", "Esther", "Job", "Psaumes", "Proverbes", "Ecclésiaste", "Cantique", "Ésaïe", "Jérémie", "Lamentations", "Ézéchiel", "Daniel", "Osée", "Joël", "Amos", "Abdias", "Jonas", "Michée", "Nahum", "Habacuc", "Sophonie", "Aggée", "Zacharie", "Malachie"],
+    NT: ["Matthieu", "Marc", "Luc", "Jean", "Actes", "Romains", "1 Corinthiens", "2 Corinthiens", "Galates", "Éphésiens", "Philippiens", "Colossiens", "1 Thessaloniciens", "2 Thessaloniciens", "1 Timothée", "2 Timothée", "Tite", "Philémon", "Hébreux", "Jacques", "1 Pierre", "2 Pierre", "1 Jean", "2 Jean", "3 Jean", "Jude", "Apocalypse"]
+};
+
+function showTestament(type) {
+    const container = document.getElementById('bible-books-list');
+    if(!container) return;
+    
+    // Style des boutons
+    document.getElementById('btn-at').className = type==='AT'?"flex-1 py-2 bg-purple-600 text-white rounded-xl text-xs font-bold":"flex-1 py-2 bg-gray-800 text-gray-400 rounded-xl text-xs font-bold";
+    document.getElementById('btn-nt').className = type==='NT'?"flex-1 py-2 bg-purple-600 text-white rounded-xl text-xs font-bold":"flex-1 py-2 bg-gray-800 text-gray-400 rounded-xl text-xs font-bold";
+
+    container.innerHTML = bibleBooks[type].map(book => `
+        <button onclick="loadBibleChapter('${book}', 1)" class="p-4 bg-gray-800 border border-white/5 rounded-xl text-left">
+            <span class="font-bold text-white text-sm">${book}</span>
+        </button>`).join('');
+}
+
+async function loadBibleChapter(book, chapter) {
+    const reader = document.getElementById('bible-reader');
+    const content = document.getElementById('reader-content');
+    reader.classList.remove('hidden');
+    document.getElementById('reader-title').innerText = `${book} ${chapter}`;
+    content.innerHTML = '<div class="text-center mt-10">Chargement...</div>';
+
+    try {
+        const res = await fetch(`https://bible-api.com/${book}+${chapter}?translation=louis_segond`);
+        const data = await res.json();
+        if(data.text) {
+            content.innerHTML = `<div class="font-serif leading-relaxed text-gray-200 text-sm">
+                ${data.verses.map(v => `<p class="mb-2"><sup class="text-purple-400 mr-1">${v.verse}</sup>${v.text}</p>`).join('')}
+                <div class="flex justify-between mt-6">
+                    <button onclick="loadBibleChapter('${book}', ${chapter-1})" class="bg-gray-700 px-4 py-2 rounded text-xs">Précédent</button>
+                    <button onclick="loadBibleChapter('${book}', ${chapter+1})" class="bg-purple-600 px-4 py-2 rounded text-xs font-bold">Suivant</button>
+                </div>
+            </div>`;
+        }
+    } catch(e) { content.innerHTML = "Erreur de chargement."; }
+}
+function closeBibleReader() { document.getElementById('bible-reader').classList.add('hidden'); }
 // ==========================================
 // 5. PROFIL
 // ==========================================
