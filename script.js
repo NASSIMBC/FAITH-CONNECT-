@@ -1178,27 +1178,47 @@ async function fetchReels() {
 }
 
 // Petit bonus : fonction de partage native
+// ==========================================
+// NOUVELLE FONCTION DE PARTAGE (Intelligente)
+// ==========================================
 async function shareImage(url) {
-    if (navigator.share) {
-        try {
-            // On essaie de transformer l'URL en fichier pour un vrai partage d'image
-            const response = await fetch(url);
-            const blob = await response.blob();
-            const file = new File([blob], "verset-faithconnect.png", { type: "image/png" });
-            
+    // On change l'icône pour montrer que ça charge
+    const btn = document.activeElement; // Le bouton cliqué
+    const originalIcon = btn.innerHTML;
+    btn.innerHTML = '<div class="w-5 h-5 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>';
+    btn.disabled = true;
+
+    try {
+        // 1. On récupère l'image sous forme de fichier (Blob)
+        const response = await fetch(url);
+        const blob = await response.blob();
+        const file = new File([blob], "verset-faithconnect.png", { type: "image/png" });
+
+        // 2. On teste si le navigateur supporte le partage de fichiers (surtout sur mobile)
+        if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
             await navigator.share({
                 files: [file],
-                title: 'Verset Faith Connect',
-                text: 'Regarde ce verset !'
+                title: 'Mon Verset Créatif',
+                text: 'Regarde ce verset créé sur Faith Connect ! ✨'
             });
-        } catch (err) {
-            console.error("Erreur partage:", err);
-            // Fallback : partage du lien
-             navigator.clipboard.writeText(url).then(() => alert("Lien de l'image copié !"));
+        } else {
+            // 3. Si le partage natif n'est pas supporté, on force le téléchargement
+            throw new Error('Partage natif non supporté, passage au téléchargement.');
         }
-    } else {
-        navigator.clipboard.writeText(url).then(() => alert("Lien de l'image copié !"));
+
+    } catch (error) {
+        // PLAN B : Téléchargement direct de l'image
+        console.warn("Fallback partage :", error);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = "verset-faithconnect.png"; // Nom du fichier téléchargé
+        document.body.appendChild(a); // Nécessaire pour Firefox
+        a.click();
+        document.body.removeChild(a);
+        alert("Image téléchargée ! 📥\nVous pouvez maintenant la publier.");
+    } finally {
+        // On remet le bouton normal
+        btn.innerHTML = originalIcon;
+        btn.disabled = false;
     }
 }
-
-// Note : Les fonctions toggleReelAmen et openReelComments existantes devraient toujours fonctionner sans modification.
