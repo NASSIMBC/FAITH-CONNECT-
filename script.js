@@ -146,10 +146,10 @@ async function loadAppData() {
 }
 
 // ==========================================
-// 4. BIBLE (NOUVELLE API : BOLLS.LIFE)
+// 4. BIBLE (SOURCE FINALE : GETBIBLE.NET)
 // ==========================================
 
-// Liste mappée avec les ID corrects pour l'API Bolls (Louis Segond)
+// Liste mappée avec les ID corrects pour l'API GetBible (Louis Segond 1910)
 const bibleStructure = {
     AT: [
         { name: "Genèse", id: 1 }, { name: "Exode", id: 2 }, { name: "Lévitique", id: 3 }, { name: "Nombres", id: 4 }, 
@@ -218,27 +218,29 @@ async function loadBibleChapter(id, name, chapter) {
     content.innerHTML = '<div class="flex h-full items-center justify-center"><div class="w-8 h-8 border-4 border-purple-500 rounded-full animate-spin border-t-transparent"></div></div>';
 
     try {
-        // NOUVELLE API : BOLLS.LIFE (Version Louis Segond 'LSG')
-        const response = await fetch(`https://bolls.life/get-chapter/LSG/${id}/${chapter}/`);
+        // NOUVELLE SOURCE : GetBible.net (Fichiers JSON statiques = 100% fiable sur GitHub/Netlify)
+        const response = await fetch(`https://api.getbible.net/v2/ls1910/${id}/${chapter}.json`);
         
-        if(!response.ok) throw new Error("Chapitre introuvable");
-        
+        if (!response.ok) throw new Error("Chapitre introuvable");
+
         const data = await response.json();
 
-        if (data && data.length > 0) {
-            // L'API Bolls renvoie un tableau de versets
-            let formattedText = data.map(v => 
-                `<p class="mb-3 leading-relaxed text-gray-200"><sup class="text-purple-400 text-xs font-bold mr-2">${v.verse}</sup>${v.text}</p>`
+        // Correction : GetBible stocke les versets dans data.verses
+        if (data.verses && data.verses.length > 0) {
+            let formattedText = data.verses.map(v => 
+                `<p class="mb-3 leading-relaxed text-gray-200 text-justify">
+                    <sup class="text-purple-400 text-[10px] font-bold mr-2 select-none">${v.verse}</sup>${v.text}
+                </p>`
             ).join('');
 
             const prevBtn = chapter > 1 
-                ? `<button onclick="loadBibleChapter(${id}, '${name}', ${chapter - 1})" class="flex-1 bg-gray-800 py-3 rounded-xl text-xs font-bold text-gray-300">← Précédent</button>` 
+                ? `<button onclick="loadBibleChapter(${id}, '${name}', ${chapter - 1})" class="flex-1 bg-gray-800 py-3 rounded-xl text-xs font-bold text-gray-300 hover:bg-gray-700">← Précédent</button>` 
                 : `<div class="flex-1"></div>`;
             
-            const nextBtn = `<button onclick="loadBibleChapter(${id}, '${name}', ${chapter + 1})" class="flex-1 bg-purple-600 py-3 rounded-xl text-xs font-bold text-white shadow-lg">Suivant →</button>`;
+            const nextBtn = `<button onclick="loadBibleChapter(${id}, '${name}', ${chapter + 1})" class="flex-1 bg-purple-600 py-3 rounded-xl text-xs font-bold text-white shadow-lg hover:bg-purple-500">Suivant →</button>`;
 
             content.innerHTML = `
-                <div class="font-serif text-sm px-2 pt-2 pb-20">
+                <div class="font-serif text-sm px-2 pt-2 pb-20 animate-fade-in">
                     ${formattedText}
                     <div class="flex justify-between gap-4 mt-8 border-t border-white/10 pt-6">
                         ${prevBtn}
@@ -248,11 +250,19 @@ async function loadBibleChapter(id, name, chapter) {
             `;
             content.scrollTop = 0;
         } else {
-            content.innerHTML = '<div class="text-center text-gray-400 mt-20">Fin du livre. <br><button onclick="closeBibleReader()" class="mt-4 text-purple-400 underline text-xs">Retour</button></div>';
+            content.innerHTML = `
+                <div class="text-center text-gray-400 mt-20">
+                    <p class="mb-4">Fin du livre de ${name}.</p>
+                    <button onclick="closeBibleReader()" class="bg-gray-800 px-6 py-2 rounded-full text-xs text-white border border-white/10">Fermer la lecture</button>
+                </div>`;
         }
     } catch (error) {
-        console.error(error);
-        content.innerHTML = '<div class="text-center text-red-400 mt-20 text-xs">Erreur de chargement. Vérifiez votre connexion.</div>';
+        console.error("Erreur Bible:", error);
+        content.innerHTML = `
+            <div class="text-center text-red-400 mt-20 px-6">
+                <p class="text-xs mb-2">Impossible de charger le texte.</p>
+                <button onclick="loadBibleChapter(${id}, '${name}', ${chapter})" class="bg-red-500/10 text-red-400 px-4 py-2 rounded text-xs">Réessayer</button>
+            </div>`;
     }
 }
 
