@@ -146,24 +146,23 @@ async function loadAppData() {
 }
 
 // ==========================================
-// 4. BIBLE (VRAIE API) & FAITH AI (INTELLIGENTE)
+// 4. BIBLE & FAITH AI (VRAIE IA CONNECTÉE)
 // ==========================================
-
-// Variables pour savoir où on est dans la lecture
-let currentBook = "Jean";
-let currentChapter = 1;
 
 const bibleBooks = {
     AT: ["Genèse", "Exode", "Lévitique", "Nombres", "Deutéronome", "Josué", "Juges", "Ruth", "1 Samuel", "2 Samuel", "1 Rois", "2 Rois", "1 Chroniques", "2 Chroniques", "Esdras", "Néhémie", "Esther", "Job", "Psaumes", "Proverbes", "Ecclésiaste", "Cantique", "Ésaïe", "Jérémie", "Lamentations", "Ézéchiel", "Daniel", "Osée", "Joël", "Amos", "Abdias", "Jonas", "Michée", "Nahum", "Habacuc", "Sophonie", "Aggée", "Zacharie", "Malachie"],
     NT: ["Matthieu", "Marc", "Luc", "Jean", "Actes", "Romains", "1 Corinthiens", "2 Corinthiens", "Galates", "Éphésiens", "Philippiens", "Colossiens", "1 Thessaloniciens", "2 Thessaloniciens", "1 Timothée", "2 Timothée", "Tite", "Philémon", "Hébreux", "Jacques", "1 Pierre", "2 Pierre", "1 Jean", "2 Jean", "3 Jean", "Jude", "Apocalypse"]
 };
 
+// Variables pour la navigation Bible
+let currentBook = "Jean";
+let currentChapter = 1;
+
 function showTestament(type) {
     const atBtn = document.getElementById('btn-at');
     const ntBtn = document.getElementById('btn-nt');
     if(!atBtn || !ntBtn) return;
 
-    // Gestion des couleurs des boutons
     if(type === 'AT') {
         atBtn.className = "flex-1 py-2 bg-purple-600 text-white rounded-xl text-xs font-bold transition-colors";
         ntBtn.className = "flex-1 py-2 bg-gray-800 text-gray-400 rounded-xl text-xs font-bold hover:bg-gray-700 transition-colors";
@@ -173,20 +172,23 @@ function showTestament(type) {
     }
 
     const container = document.getElementById('bible-books-list');
-    container.innerHTML = bibleBooks[type].map(book => `
-        <button onclick="loadBibleChapter('${book}', 1)" class="p-4 bg-gray-800 border border-white/5 rounded-xl hover:bg-gray-700 transition-colors text-left group">
-            <span class="font-bold text-white group-hover:text-purple-400 text-sm">${book}</span>
-            <div class="text-[10px] text-gray-500 mt-1">Lire le livre →</div>
-        </button>
-    `).join('');
+    if(container) {
+        container.innerHTML = bibleBooks[type].map(book => `
+            <button onclick="loadBibleChapter('${book}', 1)" class="p-4 bg-gray-800 border border-white/5 rounded-xl hover:bg-gray-700 transition-colors text-left group">
+                <span class="font-bold text-white group-hover:text-purple-400 text-sm">${book}</span>
+                <div class="text-[10px] text-gray-500 mt-1">Lire le livre →</div>
+            </button>
+        `).join('');
+    }
 }
 
-// Fonction pour charger la VRAIE Bible depuis l'API
+// Chargement de la Bible depuis une API réelle (bible-api.com)
 async function loadBibleChapter(book, chapter) {
     const reader = document.getElementById('bible-reader');
     const contentDiv = document.getElementById('reader-content');
     const title = document.getElementById('reader-title');
     
+    if(!reader) return;
     reader.classList.remove('hidden');
     title.innerText = `${book} ${chapter}`;
     contentDiv.innerHTML = '<div class="flex h-full items-center justify-center"><div class="w-8 h-8 border-4 border-purple-500 rounded-full animate-spin border-t-transparent"></div></div>';
@@ -195,30 +197,31 @@ async function loadBibleChapter(book, chapter) {
     currentChapter = chapter;
 
     try {
-        // Appel à l'API Bible (Louis Segond)
+        // API Gratuite Bible Louis Segond
+        // On enlève les accents pour l'API si nécessaire, mais bible-api gère souvent bien.
+        // Mappage simple pour éviter les erreurs d'URL
+        let urlBook = book.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/ /g, ""); 
+        
         const response = await fetch(`https://bible-api.com/${book}+${chapter}?translation=louis_segond`);
         const data = await response.json();
 
         if (data.text) {
-            // Formater le texte pour qu'il soit joli (ajouter les numéros de versets)
             let formattedText = data.verses.map(v => 
                 `<p class="mb-2"><sup class="text-purple-400 text-xs font-bold mr-1">${v.verse}</sup> ${v.text}</p>`
             ).join('');
 
-            // Ajouter les boutons de navigation
             const navButtons = `
                 <div class="flex justify-between mt-8 pt-4 border-t border-white/10">
-                    <button onclick="loadBibleChapter('${currentBook}', ${currentChapter - 1})" class="bg-gray-700 px-4 py-2 rounded-lg text-xs ${currentChapter <= 1 ? 'invisible' : ''}">← Précédent</button>
+                    <button onclick="loadBibleChapter('${currentBook}', ${Math.max(1, currentChapter - 1)})" class="bg-gray-700 px-4 py-2 rounded-lg text-xs ${currentChapter <= 1 ? 'opacity-50 pointer-events-none' : ''}">← Précédent</button>
                     <button onclick="loadBibleChapter('${currentBook}', ${currentChapter + 1})" class="bg-purple-600 px-4 py-2 rounded-lg text-xs font-bold text-white">Suivant →</button>
                 </div>
             `;
-
-            contentDiv.innerHTML = `<div class="font-serif leading-relaxed text-gray-200 text-lg">${formattedText}</div>${navButtons}`;
+            contentDiv.innerHTML = `<div class="font-serif leading-relaxed text-gray-200 text-sm">${formattedText}</div>${navButtons}`;
         } else {
-            contentDiv.innerHTML = '<div class="text-center text-red-400 mt-10">Chapitre non trouvé ou fin du livre.</div>';
+            contentDiv.innerHTML = '<div class="text-center text-red-400 mt-10 text-xs">Chapitre non disponible ou fin du livre.</div>';
         }
     } catch (error) {
-        contentDiv.innerHTML = '<div class="text-center text-red-400 mt-10">Erreur de connexion internet.</div>';
+        contentDiv.innerHTML = '<div class="text-center text-red-400 mt-10 text-xs">Erreur de chargement. Vérifiez votre connexion.</div>';
     }
 }
 
@@ -226,56 +229,69 @@ function closeBibleReader() {
     document.getElementById('bible-reader').classList.add('hidden');
 }
 
-// --- INTELLIGENCE ARTIFICIELLE FAITH AI (Mode "Bible Match") ---
+// --- FAITH AI (CONNECTÉE À OPENAI) ---
 async function askFaithAI() {
     const input = document.getElementById('ai-bible-input');
     const area = document.getElementById('ai-response-area');
-    const question = input.value.toLowerCase().trim();
+    const question = input.value.trim();
     
+    // TA CLÉ API
+    const API_KEY = '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';
+
     if(!question) return;
     
+    // UI Loading
     area.classList.remove('hidden');
-    area.innerHTML = '<div class="flex items-center gap-2 text-purple-300 text-xs"><div class="w-1.5 h-1.5 bg-purple-400 rounded-full animate-bounce"></div> Recherche dans les écritures...</div>';
+    area.innerHTML = '<div class="flex items-center gap-2 text-purple-300 text-xs"><div class="w-1.5 h-1.5 bg-purple-400 rounded-full animate-bounce"></div> Faith AI prie et réfléchit...</div>';
     input.value = '';
 
-    // Logique de réponse intelligente par mots-clés
-    setTimeout(() => {
-        let response = "";
-        
-        // Base de connaissance simple (Tu peux en rajouter autant que tu veux ici)
-        if (question.includes("peur") || question.includes("crainte") || question.includes("angoisse")) {
-            response = "« Ne crains rien, car je suis avec toi; Ne promène pas des regards inquiets, car je suis ton Dieu; Je te fortifie, je viens à ton secours. » (Ésaïe 41:10)";
-        } else if (question.includes("triste") || question.includes("dépression") || question.includes("pleure")) {
-            response = "« L'Éternel est près de ceux qui ont le cœur brisé, et il sauve ceux qui ont l'esprit dans l'abattement. » (Psaumes 34:18)";
-        } else if (question.includes("amour") || question.includes("aimer")) {
-            response = "« L'amour est patient, il est plein de bonté; l'amour n'est point envieux... Il excuse tout, il croit tout, il espère tout, il supporte tout. » (1 Corinthiens 13)";
-        } else if (question.includes("argent") || question.includes("richesse") || question.includes("travail")) {
-            response = "« Car l'amour de l'argent est une racine de tous les maux. » (1 Timothée 6:10). Cherchez premièrement le royaume de Dieu.";
-        } else if (question.includes("pardon") || question.includes("faute")) {
-            response = "« Si nous confessons nos péchés, il est fidèle et juste pour nous les pardonner. » (1 Jean 1:9)";
-        } else if (question.includes("salut") || question.includes("sauvé")) {
-            response = "« Car Dieu a tant aimé le monde qu'il a donné son Fils unique, afin que quiconque croit en lui ne périsse point, mais qu'il ait la vie éternelle. » (Jean 3:16)";
-        } else if (question.includes("fatigue") || question.includes("repos")) {
-            response = "« Venez à moi, vous tous qui êtes fatigués et chargés, et je vous donnerai du repos. » (Matthieu 11:28)";
-        } else if (question.includes("jésus") || question.includes("christ")) {
-            response = "Jésus a dit : « Je suis le chemin, la vérité, et la vie. Nul ne vient au Père que par moi. » (Jean 14:6)";
-        } else {
-            // Réponse par défaut si le mot clé n'est pas trouvé
-            const defaults = [
-                "C'est une question profonde. La Bible nous invite à prier pour recevoir la sagesse (Jacques 1:5).",
-                "« Tout ce que vous demanderez en priant, croyez que vous l'avez reçu, et vous le verrez s'accomplir. » (Marc 11:24)",
-                "Continuez à chercher la face de Dieu. Psaumes 119 est un excellent guide pour commencer."
-            ];
-            response = defaults[Math.floor(Math.random() * defaults.length)];
+    try {
+        const response = await fetch('https://api.openai.com/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${API_KEY}`
+            },
+            body: JSON.stringify({
+                model: "gpt-4o-mini", // Modèle rapide et intelligent
+                messages: [
+                    {
+                        role: "system", 
+                        content: "Tu es Faith AI, un assistant spirituel chrétien sage, bienveillant et profondément ancré dans la Bible. Tes réponses sont courtes (max 3 phrases), encourageantes et incluent toujours une référence biblique pertinente (Louis Segond)."
+                    },
+                    {
+                        role: "user", 
+                        content: question
+                    }
+                ],
+                max_tokens: 150,
+                temperature: 0.7
+            })
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error?.message || "Erreur API");
         }
+
+        const data = await response.json();
+        const aiReply = data.choices[0].message.content;
 
         area.innerHTML = `
             <div class="border-l-2 border-purple-500 pl-2 animate-fade-in">
                 <p class="text-[10px] text-gray-500 mb-1">Question : "${question}"</p>
-                <p class="text-white font-medium text-xs leading-relaxed">${response}</p>
+                <p class="text-white font-medium text-xs leading-relaxed">${aiReply}</p>
             </div>
         `;
-    }, 800); // Petit délai pour faire "réfléchir" l'IA
+
+    } catch (error) {
+        console.error("Erreur Faith AI:", error);
+        area.innerHTML = `
+            <div class="text-red-400 text-xs border-l-2 border-red-500 pl-2">
+                Une erreur est survenue avec l'IA. Vérifiez que votre clé est valide et que vous avez des crédits.
+            </div>
+        `;
+    }
 }
 
 // ==========================================
