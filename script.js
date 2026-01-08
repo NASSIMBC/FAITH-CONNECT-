@@ -12,7 +12,7 @@ const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 let currentUser = null;
 let userProfile = null;
 let activeChatUser = null; 
-let selectedImageFile = null;       
+let selectedImageFile = null;        
 let selectedAvatarFile = null;      
 
 document.addEventListener('DOMContentLoaded', checkSession);
@@ -91,25 +91,40 @@ async function handleLogin() {
 async function logout() { await supabaseClient.auth.signOut(); location.reload(); }
 
 // ==========================================
-// 3. NAVIGATION & UI
+// 3. NAVIGATION & UI (DESIGN PREMIUM + ANIMATIONS)
 // ==========================================
 
 function switchView(viewName) {
-    // Note: 'live' a été remplacé par 'bible' dans la liste des vues
+    // 1. Cacher toutes les vues et reset les styles
     ['home', 'reels', 'bible', 'messages', 'profile', 'public-profile'].forEach(v => {
         const el = document.getElementById('view-' + v);
-        if(el) el.classList.add('hidden');
+        if(el) {
+            el.classList.add('hidden');
+            el.classList.remove('animate-view'); // Reset l'animation
+        }
         const btn = document.getElementById('nav-' + v);
-        if(btn) { btn.classList.remove('text-purple-400'); btn.classList.add('text-gray-500'); }
+        if(btn) { 
+            btn.classList.remove('text-purple-400', 'scale-110'); // Reset l'effet de zoom
+            btn.classList.add('text-gray-500'); 
+        }
     });
 
+    // 2. Afficher la nouvelle vue avec Animation
     const target = document.getElementById('view-' + viewName);
-    if(target) target.classList.remove('hidden');
+    if(target) {
+        target.classList.remove('hidden');
+        void target.offsetWidth; // Force le navigateur à relancer l'animation
+        target.classList.add('animate-view');
+    }
     
+    // 3. Activer le bouton du menu
     const activeBtn = document.getElementById('nav-' + viewName);
-    if(activeBtn) { activeBtn.classList.remove('text-gray-500'); activeBtn.classList.add('text-purple-400'); }
+    if(activeBtn) { 
+        activeBtn.classList.remove('text-gray-500'); 
+        activeBtn.classList.add('text-purple-400', 'scale-110', 'transition-transform', 'duration-200'); 
+    }
 
-    // GESTION REELS
+    // Logiques spécifiques inchangées
     const reelsContainer = document.getElementById('reels-container');
     if (viewName === 'reels') {
         fetchReels(); 
@@ -117,13 +132,13 @@ function switchView(viewName) {
         if(reelsContainer) reelsContainer.innerHTML = '';
     }
 
-    // GESTION BIBLE (NOUVEAU)
     if (viewName === 'bible') {
-        showTestament('NT'); // Charge le Nouveau Testament par défaut
+        showTestament('NT'); 
     }
 
     if (viewName === 'messages') {
-        document.getElementById('msg-badge').classList.add('hidden');
+        const badge = document.getElementById('msg-badge');
+        if(badge) badge.classList.add('hidden');
         if(!activeChatUser) resetChat();
     }
     if (viewName === 'profile') switchProfileTab('friends'); 
@@ -149,7 +164,6 @@ async function loadAppData() {
 // 4. BIBLE (VERSION FINALE : GETBIBLE.NET)
 // ==========================================
 
-// Liste des livres avec les ID numériques (1 = Genèse, 40 = Matthieu, etc.)
 const bibleStructure = {
     AT: [
         { name: "Genèse", id: 1 }, { name: "Exode", id: 2 }, { name: "Lévitique", id: 3 }, { name: "Nombres", id: 4 }, 
@@ -174,8 +188,7 @@ const bibleStructure = {
     ]
 };
 
-// Variables globales pour la navigation
-let currentBookId = 43; // Jean par défaut
+let currentBookId = 43; 
 let currentBookName = "Jean";
 let currentChapter = 1;
 
@@ -184,7 +197,6 @@ function showTestament(type) {
     const ntBtn = document.getElementById('btn-nt');
     if(!atBtn || !ntBtn) return;
 
-    // Gestion des couleurs des boutons (Actif / Inactif)
     if(type === 'AT') {
         atBtn.className = "flex-1 py-2 bg-purple-600 text-white rounded-xl text-xs font-bold transition-colors shadow-lg";
         ntBtn.className = "flex-1 py-2 bg-gray-800 text-gray-400 rounded-xl text-xs font-bold hover:bg-gray-700 transition-colors";
@@ -195,7 +207,6 @@ function showTestament(type) {
 
     const container = document.getElementById('bible-books-list');
     if(container) {
-        // Création de la liste des livres
         container.innerHTML = bibleStructure[type].map(book => `
             <button onclick="loadBibleChapter(${book.id}, '${book.name}', 1)" class="p-3 bg-gray-800 border border-white/5 rounded-xl hover:bg-gray-700 transition-all text-left group active:scale-95">
                 <span class="font-bold text-white group-hover:text-purple-400 text-sm transition-colors">${book.name}</span>
@@ -212,14 +223,12 @@ async function loadBibleChapter(id, name, chapter) {
     if(!reader) return;
     reader.classList.remove('hidden');
     
-    // Mise à jour des variables actuelles
     currentBookId = id;
     currentBookName = name;
     currentChapter = chapter;
 
     title.innerText = `${name} ${chapter}`;
     
-    // Animation de chargement
     content.innerHTML = `
         <div class="flex flex-col h-full items-center justify-center space-y-4">
             <div class="w-8 h-8 border-4 border-purple-500 rounded-full animate-spin border-t-transparent"></div>
@@ -227,16 +236,12 @@ async function loadBibleChapter(id, name, chapter) {
         </div>`;
 
     try {
-        console.log("Tentative de chargement avec GetBible..."); // Pour vérifier dans la console
-        
-        // Appel API vers GetBible (Fichier JSON statique = Impossible d'échouer)
         const response = await fetch(`https://api.getbible.net/v2/ls1910/${id}/${chapter}.json`);
         
         if (!response.ok) throw new Error("Chapitre introuvable");
 
         const data = await response.json();
 
-        // Vérification et affichage du texte
         if (data.verses && data.verses.length > 0) {
             let formattedText = data.verses.map(v => 
                 `<p class="mb-3 leading-relaxed text-gray-200 text-justify">
@@ -244,12 +249,10 @@ async function loadBibleChapter(id, name, chapter) {
                 </p>`
             ).join('');
 
-            // Bouton Précédent
             const prevBtn = chapter > 1 
                 ? `<button onclick="loadBibleChapter(${id}, '${name}', ${chapter - 1})" class="flex-1 bg-gray-800 py-3 rounded-xl text-xs font-bold text-gray-300 hover:bg-gray-700 transition-colors">← Précédent</button>` 
                 : `<div class="flex-1"></div>`;
             
-            // Bouton Suivant
             const nextBtn = `<button onclick="loadBibleChapter(${id}, '${name}', ${chapter + 1})" class="flex-1 bg-purple-600 py-3 rounded-xl text-xs font-bold text-white shadow-lg hover:bg-purple-500 transition-colors">Suivant →</button>`;
 
             content.innerHTML = `
@@ -261,12 +264,9 @@ async function loadBibleChapter(id, name, chapter) {
                     </div>
                 </div>
             `;
-            
-            // Remonter automatiquement en haut
             content.scrollTop = 0;
 
         } else {
-            // Fin du livre
             content.innerHTML = `
                 <div class="text-center text-gray-400 mt-20">
                     <p class="mb-4">Fin du livre de ${name}.</p>
@@ -296,7 +296,7 @@ async function askFaithAI() {
     const input = document.getElementById('ai-bible-input');
     const area = document.getElementById('ai-response-area');
     const question = input.value.trim();
-    const API_KEY = 'AIzaSyBjbQeVvpGOoSsGsGL8JHWzExczCwHbSnk'; // Ta clé Google
+    const API_KEY = 'AIzaSyBjbQeVvpGOoSsGsGL8JHWzExczCwHbSnk'; 
 
     if(!question) return;
     
@@ -613,7 +613,7 @@ async function sendChatMessage() {
 }
 
 // ==========================================
-// 8. GESTION DES POSTS
+// 8. GESTION DES POSTS (DESIGN PREMIUM)
 // ==========================================
 
 function handleImageSelect(input) {
@@ -658,37 +658,38 @@ async function fetchPosts() {
         
         container.innerHTML = ''; 
         if (!posts || posts.length === 0) {
-            container.innerHTML = `<div class="text-center py-10 px-4"><p class="text-gray-500 italic">Aucune publication... 🍃</p></div>`;
+            container.innerHTML = `<div class="text-center py-10 px-4 animate-view"><p class="text-gray-500 italic">Aucune publication... 🍃</p></div>`;
             return;
         }
         posts.forEach(post => {
             const isMyPost = post.user_id === currentUser.id;
             const date = new Date(post.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
             const userAvatarUrl = post.profiles && post.profiles.avatar_url;
-            const avatarHtml = userAvatarUrl ? `<img src="${userAvatarUrl}" class="w-8 h-8 rounded-full object-cover border border-white/10 shadow-lg">` : `<div class="w-8 h-8 bg-gradient-to-tr from-purple-500 to-pink-500 rounded-full flex items-center justify-center font-bold text-white text-[10px] shadow-lg">${post.avatar_initials || "??"}</div>`;
+            const avatarHtml = userAvatarUrl ? `<img src="${userAvatarUrl}" class="w-9 h-9 rounded-full object-cover border-2 border-purple-500/20 shadow-lg">` : `<div class="w-9 h-9 bg-gradient-to-tr from-purple-600 to-blue-600 rounded-full flex items-center justify-center font-bold text-white text-[10px] shadow-lg">${post.avatar_initials || "??"}</div>`;
             const postLikes = allLikes ? allLikes.filter(l => l.post_id === post.id) : [];
             const isAmened = postLikes.some(l => l.user_id === currentUser.id);
-            const amenColor = isAmened ? 'text-pink-500 font-bold' : 'text-gray-500 hover:text-pink-400';
-            const amenIconClass = isAmened ? 'fill-pink-500 text-pink-500' : 'text-gray-500';
+            const amenColor = isAmened ? 'text-pink-500 font-bold' : 'text-gray-400 hover:text-pink-400';
+            const amenIconClass = isAmened ? 'fill-pink-500 text-pink-500' : 'text-gray-400';
 
+            // DESIGN PREMIUM (NEON & GLOW)
             container.insertAdjacentHTML('beforeend', `
-                <div class="bg-gray-800/30 rounded-2xl p-4 border border-white/5 mb-4 animate-fade-in" id="post-${post.id}">
+                <div class="premium-card rounded-2xl p-4 mb-5 animate-view" id="post-${post.id}">
                     <div class="flex justify-between items-start mb-3">
-                        <div class="flex items-center space-x-3">${avatarHtml}<div><h3 class="font-bold text-white text-sm">${post.user_name}</h3><p class="text-[10px] text-gray-500">${date}</p></div></div>
-                        ${isMyPost ? `<button onclick="deletePost('${post.id}')" class="text-gray-500 hover:text-red-500 transition-colors"><i data-lucide="trash-2" class="w-4 h-4"></i></button>` : ''}
+                        <div class="flex items-center space-x-3">${avatarHtml}<div><h3 class="font-bold text-white text-sm tracking-wide">${post.user_name}</h3><p class="text-[10px] text-gray-500">${date}</p></div></div>
+                        ${isMyPost ? `<button onclick="deletePost('${post.id}')" class="text-gray-600 hover:text-red-500 transition-colors"><i data-lucide="trash-2" class="w-4 h-4"></i></button>` : ''}
                     </div>
-                    <p class="text-gray-200 text-sm leading-relaxed whitespace-pre-wrap">${post.content}</p>
-                    ${post.image_url ? `<div class="mt-3 rounded-xl overflow-hidden border border-white/5"><img src="${post.image_url}" class="w-full max-h-96 object-cover"></div>` : ''}
-                    <div class="border-t border-white/5 mt-3 pt-3 flex justify-between text-gray-500">
-                        <div class="flex gap-4">
-                            <button onclick="toggleAmen('${post.id}')" class="${amenColor} flex items-center gap-1 text-xs"><i data-lucide="heart" class="w-4 h-4 ${amenIconClass}"></i> ${postLikes.length > 0 ? postLikes.length + ' ' : ''}Amen</button>
-                            <button onclick="toggleComments('${post.id}')" class="hover:text-blue-400 flex items-center gap-1 text-xs"><i data-lucide="message-square" class="w-4 h-4"></i> Commenter</button>
+                    <p class="text-gray-200 text-sm leading-relaxed whitespace-pre-wrap font-light">${post.content}</p>
+                    ${post.image_url ? `<div class="mt-3 rounded-xl overflow-hidden border border-white/5 shadow-2xl"><img src="${post.image_url}" class="w-full max-h-96 object-cover"></div>` : ''}
+                    <div class="border-t border-white/5 mt-4 pt-3 flex justify-between text-gray-400">
+                        <div class="flex gap-5">
+                            <button onclick="toggleAmen('${post.id}')" class="${amenColor} flex items-center gap-1.5 text-xs transition-colors"><i data-lucide="heart" class="w-4 h-4 ${amenIconClass}"></i> ${postLikes.length > 0 ? postLikes.length : ''} Amen</button>
+                            <button onclick="toggleComments('${post.id}')" class="hover:text-purple-400 flex items-center gap-1.5 text-xs transition-colors"><i data-lucide="message-square" class="w-4 h-4"></i> Commenter</button>
                         </div>
                     </div>
-                    <div id="comments-section-${post.id}" class="hidden mt-3 pt-3 bg-black/20 rounded-lg p-3">
+                    <div id="comments-section-${post.id}" class="hidden mt-3 pt-3 bg-black/40 rounded-lg p-3 border border-white/5">
                         <div id="comments-list-${post.id}" class="space-y-2 mb-3 max-h-40 overflow-y-auto scrollbar-hide"></div>
                         <div class="flex gap-2">
-                            <input type="text" id="input-comment-${post.id}" placeholder="Votre commentaire..." class="flex-1 bg-gray-900 border border-white/10 rounded-lg px-3 py-1 text-xs text-white outline-none">
+                            <input type="text" id="input-comment-${post.id}" placeholder="Votre commentaire..." class="flex-1 bg-gray-900/50 border border-white/10 rounded-lg px-3 py-2 text-xs text-white outline-none focus:border-purple-500 transition-colors">
                             <button onclick="sendComment('${post.id}')" class="text-purple-400 font-bold text-xs hover:text-purple-300">Envoyer</button>
                         </div>
                     </div>
