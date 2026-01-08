@@ -229,71 +229,93 @@ function closeBibleReader() {
     document.getElementById('bible-reader').classList.add('hidden');
 }
 
-// --- FAITH AI (CONNECTÉE À OPENAI) ---
+// ==========================================
+// INTELLIGENCE ARTIFICIELLE (GOOGLE GEMINI - VASTE & GRATUIT)
+// ==========================================
+
 async function askFaithAI() {
     const input = document.getElementById('ai-bible-input');
     const area = document.getElementById('ai-response-area');
     const question = input.value.trim();
     
-    // TA CLÉ API
-    const API_KEY = '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';
+    // 👇 COLLE TA CLÉ GOOGLE ICI (Commence par AIza...)
+    const API_KEY = 'AIzaSyBjbQeVvpGOoSsGsGL8JHWzExczCwHbSnk'; 
+    // 👆
 
     if(!question) return;
     
-    // UI Loading
+    // 1. Animation de chargement
     area.classList.remove('hidden');
-    area.innerHTML = '<div class="flex items-center gap-2 text-purple-300 text-xs"><div class="w-1.5 h-1.5 bg-purple-400 rounded-full animate-bounce"></div> Faith AI prie et réfléchit...</div>';
+    area.innerHTML = `
+        <div class="flex items-center gap-2 text-purple-300 text-xs animate-pulse">
+            <div class="w-2 h-2 bg-purple-400 rounded-full animate-bounce"></div> 
+            Faith AI réfléchit...
+        </div>`;
     input.value = '';
 
     try {
-        const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        // 2. Appel à l'IA Vaste de Google (Gemini 1.5 Flash)
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}`, {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${API_KEY}`
+                'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                model: "gpt-4o-mini", // Modèle rapide et intelligent
-                messages: [
-                    {
-                        role: "system", 
-                        content: "Tu es Faith AI, un assistant spirituel chrétien sage, bienveillant et profondément ancré dans la Bible. Tes réponses sont courtes (max 3 phrases), encourageantes et incluent toujours une référence biblique pertinente (Louis Segond)."
-                    },
-                    {
-                        role: "user", 
-                        content: question
-                    }
-                ],
-                max_tokens: 150,
-                temperature: 0.7
+                contents: [{
+                    parts: [{
+                        text: `Tu es Faith AI, un assistant spirituel chrétien bienveillant pour l'application Faith Connect. 
+                        Tes règles :
+                        1. Tes réponses doivent être basées sur la Bible.
+                        2. Sois encourageant, sage et pastoral.
+                        3. Fais des réponses courtes et claires (max 4 phrases).
+                        4. Cite les références bibliques (Livre Chapitre:Verset).
+                        
+                        Question de l'utilisateur : "${question}"`
+                    }]
+                }]
             })
         });
 
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.error?.message || "Erreur API");
+        const data = await response.json();
+
+        // Vérification des erreurs
+        if (data.error) {
+            throw new Error(data.error.message);
         }
 
-        const data = await response.json();
-        const aiReply = data.choices[0].message.content;
+        // Récupération du texte de l'IA
+        const aiReply = data.candidates[0].content.parts[0].text;
+
+        // 3. Affichage du résultat (Formatage Markdown simple vers HTML)
+        // On nettoie un peu le texte (enlever les étoiles ** que l'IA met parfois)
+        const cleanReply = aiReply.replace(/\*\*/g, "").replace(/\*/g, "-");
 
         area.innerHTML = `
-            <div class="border-l-2 border-purple-500 pl-2 animate-fade-in">
-                <p class="text-[10px] text-gray-500 mb-1">Question : "${question}"</p>
-                <p class="text-white font-medium text-xs leading-relaxed">${aiReply}</p>
+            <div class="bg-gray-800/50 border-l-4 border-purple-500 pl-3 py-2 rounded-r-lg animate-fade-in shadow-lg">
+                <p class="text-[10px] text-gray-500 mb-1 uppercase tracking-wider">Question : "${question}"</p>
+                <p class="text-white text-sm font-medium leading-relaxed font-serif text-justify">${cleanReply}</p>
+                
+                <div class="mt-3 flex gap-3 border-t border-white/5 pt-2 opacity-70">
+                    <button class="text-[10px] text-gray-400 hover:text-white transition-colors flex items-center gap-1" onclick="navigator.clipboard.writeText(\`${cleanReply.replace(/`/g, "")}\`)">
+                        <i data-lucide="copy" class="w-3 h-3"></i> Copier
+                    </button>
+                    <button class="text-[10px] text-gray-400 hover:text-white transition-colors flex items-center gap-1">
+                        <i data-lucide="share-2" class="w-3 h-3"></i> Partager
+                    </button>
+                </div>
             </div>
         `;
+        if(typeof lucide !== 'undefined') lucide.createIcons();
 
     } catch (error) {
-        console.error("Erreur Faith AI:", error);
+        console.error("Erreur Gemini:", error);
         area.innerHTML = `
-            <div class="text-red-400 text-xs border-l-2 border-red-500 pl-2">
-                Une erreur est survenue avec l'IA. Vérifiez que votre clé est valide et que vous avez des crédits.
+            <div class="text-red-400 text-xs p-2 border border-red-500/20 rounded bg-red-500/10">
+                L'IA n'a pas pu répondre. Vérifiez que vous avez bien collé votre clé API Google.
             </div>
         `;
     }
 }
-
 // ==========================================
 // 5. PROFIL
 // ==========================================
