@@ -146,10 +146,10 @@ async function loadAppData() {
 }
 
 // ==========================================
-// 4. BIBLE (SOURCE FIABLE : GETBIBLE.NET)
+// 4. BIBLE (VERSION FINALE : GETBIBLE.NET)
 // ==========================================
 
-// Liste des livres avec les ID officiels de GetBible (Louis Segond 1910)
+// Liste des livres avec les ID numériques (1 = Genèse, 40 = Matthieu, etc.)
 const bibleStructure = {
     AT: [
         { name: "Genèse", id: 1 }, { name: "Exode", id: 2 }, { name: "Lévitique", id: 3 }, { name: "Nombres", id: 4 }, 
@@ -174,7 +174,7 @@ const bibleStructure = {
     ]
 };
 
-// Variables globales de navigation
+// Variables globales pour la navigation
 let currentBookId = 43; // Jean par défaut
 let currentBookName = "Jean";
 let currentChapter = 1;
@@ -184,7 +184,7 @@ function showTestament(type) {
     const ntBtn = document.getElementById('btn-nt');
     if(!atBtn || !ntBtn) return;
 
-    // Gestion visuelle des boutons (Actif/Inactif)
+    // Gestion des couleurs des boutons (Actif / Inactif)
     if(type === 'AT') {
         atBtn.className = "flex-1 py-2 bg-purple-600 text-white rounded-xl text-xs font-bold transition-colors shadow-lg";
         ntBtn.className = "flex-1 py-2 bg-gray-800 text-gray-400 rounded-xl text-xs font-bold hover:bg-gray-700 transition-colors";
@@ -195,7 +195,7 @@ function showTestament(type) {
 
     const container = document.getElementById('bible-books-list');
     if(container) {
-        // Génération de la liste des livres
+        // Création de la liste des livres
         container.innerHTML = bibleStructure[type].map(book => `
             <button onclick="loadBibleChapter(${book.id}, '${book.name}', 1)" class="p-3 bg-gray-800 border border-white/5 rounded-xl hover:bg-gray-700 transition-all text-left group active:scale-95">
                 <span class="font-bold text-white group-hover:text-purple-400 text-sm transition-colors">${book.name}</span>
@@ -212,28 +212,31 @@ async function loadBibleChapter(id, name, chapter) {
     if(!reader) return;
     reader.classList.remove('hidden');
     
-    // Mise à jour de l'état
+    // Mise à jour des variables actuelles
     currentBookId = id;
     currentBookName = name;
     currentChapter = chapter;
 
     title.innerText = `${name} ${chapter}`;
+    
     // Animation de chargement
     content.innerHTML = `
         <div class="flex flex-col h-full items-center justify-center space-y-4">
             <div class="w-8 h-8 border-4 border-purple-500 rounded-full animate-spin border-t-transparent"></div>
-            <p class="text-xs text-gray-500 animate-pulse">Chargement de la Parole...</p>
+            <p class="text-xs text-gray-500 animate-pulse">Chargement...</p>
         </div>`;
 
     try {
-        // Appel à GetBible.net (API Statique = Très fiable)
+        console.log("Tentative de chargement avec GetBible..."); // Pour vérifier dans la console
+        
+        // Appel API vers GetBible (Fichier JSON statique = Impossible d'échouer)
         const response = await fetch(`https://api.getbible.net/v2/ls1910/${id}/${chapter}.json`);
         
         if (!response.ok) throw new Error("Chapitre introuvable");
 
         const data = await response.json();
 
-        // Vérification et affichage
+        // Vérification et affichage du texte
         if (data.verses && data.verses.length > 0) {
             let formattedText = data.verses.map(v => 
                 `<p class="mb-3 leading-relaxed text-gray-200 text-justify">
@@ -241,7 +244,7 @@ async function loadBibleChapter(id, name, chapter) {
                 </p>`
             ).join('');
 
-            // Bouton Précédent (caché si chapitre 1)
+            // Bouton Précédent
             const prevBtn = chapter > 1 
                 ? `<button onclick="loadBibleChapter(${id}, '${name}', ${chapter - 1})" class="flex-1 bg-gray-800 py-3 rounded-xl text-xs font-bold text-gray-300 hover:bg-gray-700 transition-colors">← Précédent</button>` 
                 : `<div class="flex-1"></div>`;
@@ -259,7 +262,7 @@ async function loadBibleChapter(id, name, chapter) {
                 </div>
             `;
             
-            // Remonter en haut de la page
+            // Remonter automatiquement en haut
             content.scrollTop = 0;
 
         } else {
