@@ -7,15 +7,21 @@
     
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#9333ea">
+    
+    <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
+    
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/3004/3004458.png">
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="https://cdn.jsdelivr.net/npm/appwrite@13.0.0"></script> <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/appwrite@13.0.0"></script> 
+
+    <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     
     <style>
+        /* ... (Garde ton CSS tel quel, je ne le répète pas pour ne pas encombrer) ... */
         /* --- 1. ANIMATIONS & UTILITAIRES --- */
         .animate-fade-in { animation: fadeIn 0.3s ease-out; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
@@ -57,7 +63,7 @@
         #reels-container {
             scroll-snap-type: y mandatory;
             overflow-y: scroll;
-            height: 100dvh; /* Utilise dvh pour éviter les soucis de barre mobile */
+            height: 100dvh;
             width: 100%;
             position: absolute;
             top: 0;
@@ -78,7 +84,6 @@
             background: black;
         }
 
-        /* Zoom léger pour cacher les bords noirs de YouTube */
         .reel-iframe {
             width: 100%;
             height: 100%;
