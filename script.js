@@ -1,34 +1,34 @@
 // ==========================================
-// 1. CONFIGURATION SUPABASE (Base de données & Auth)
-// ==========================================
-const SUPABASE_URL = 'https://uduajuxobmywmkjnawjn.supabase.co';
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVkdWFqdXhvYm15d21ram5hd2puIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc0NjUyMTUsImV4cCI6MjA4MzA0MTIxNX0.Vn1DpT9l9N7sVb3kVUPRqr141hGvM74vkZULJe59YUU';
-
-const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-
-// ==========================================
-// 1.1 CONFIGURATION APPWRITE (Stockage Vidéo)
+// 1. CONFIGURATION APPWRITE (Project & DB)
+// (VERSION DU NOUVEAU CODE)
 // ==========================================
 const client = new Appwrite.Client();
 client
     .setEndpoint('https://cloud.appwrite.io/v1')
-    .setProject('695fc25c0015900d7334'); // Ton ID Projet
+    .setProject('695fc25c0015900d7334');
 
+const account = new Appwrite.Account(client);
+const databases = new Appwrite.Databases(client);
 const storage = new Appwrite.Storage(client);
-const APPWRITE_BUCKET_ID = 'reels-videos'; // ⚠️ Crée ce bucket sur Appwrite !
+
+const DB_ID = '695fcf8000003dcafb64'; 
+const COLL_PROFILES = 'profiles';
+const COLL_POSTS = 'posts';
+const COLL_REELS = 'reels';
+const COLL_MESSAGES = 'messages';
+const BUCKET_ID = 'faith-storage';
 
 // ==========================================
-// 2. GESTION UTILISATEUR & AUTH
+// 2. AUTH & SESSION (NOUVEAU CODE)
 // ==========================================
 let currentUser = null;
 let userProfile = null;
-let activeChatUser = null; 
-let selectedImageFile = null;        
-let selectedAvatarFile = null;      
+let activeChatUser = null;
+let selectedImageFile = null;
+let selectedAvatarFile = null;
 
 document.addEventListener('DOMContentLoaded', checkSession);
 
-// --- GESTION TOUCHE ENTRÉE ---
 document.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
         if (document.activeElement.id === 'chat-input') {
@@ -37,8 +37,7 @@ document.addEventListener('keydown', (e) => {
         }
         if (document.activeElement.id.startsWith('input-comment-')) {
             e.preventDefault();
-            const postId = document.activeElement.id.replace('input-comment-', '');
-            sendComment(postId);
+            sendComment(document.activeElement.id.replace('input-comment-', ''));
         }
         if (document.activeElement.id === 'reel-comment-input') {
             e.preventDefault();
@@ -52,30 +51,34 @@ document.addEventListener('keydown', (e) => {
 });
 
 async function checkSession() {
-    const { data: { session } } = await supabaseClient.auth.getSession();
-    if (session) {
-        currentUser = session.user;
+    try {
+        currentUser = await account.get();
         await loadUserProfile();
         loginSuccess();
-    } else {
+    } catch {
         document.getElementById('login-page').classList.remove('hidden');
     }
 }
 
 async function loadUserProfile() {
-    let { data } = await supabaseClient.from('profiles').select('*').eq('id', currentUser.id).single();
-    if (!data) {
-        const namePart = currentUser.email.split('@')[0];
-        const newProfile = { 
-            id: currentUser.id, email: currentUser.email, username: namePart, bio: "Nouveau membre", status_text: "Nouveau ici !", status_emoji: "👋"
-        };
-        await supabaseClient.from('profiles').insert([newProfile]);
-        userProfile = newProfile;
-    } else {
-        userProfile = data;
+    try {
+        userProfile = await databases.getDocument(DB_ID, COLL_PROFILES, currentUser.$id);
+    } catch {
+        const username = currentUser.email.split('@')[0];
+        userProfile = await databases.createDocument(
+            DB_ID,
+            COLL_PROFILES,
+            currentUser.$id,
+            {
+                username,
+                bio: "Nouveau membre",
+                status_text: "Nouveau ici !",
+                status_emoji: "👋",
+                avatar_url: ""
+            }
+        );
     }
     updateUIProfile();
-    updateFriendCount(currentUser.id);
 }
 
 function loginSuccess() {
@@ -84,88 +87,29 @@ function loginSuccess() {
     loadAppData();
 }
 
-async function handleSignUp() {
-    const email = document.getElementById('login-email').value;
-    const password = document.getElementById('login-password').value;
-    const { error } = await supabaseClient.auth.signUp({ email, password });
-    if (error) alert(error.message); else alert("Compte créé ! Vérifiez vos emails.");
-}
-
-async function handleLogin() {
-    const email = document.getElementById('login-email').value;
-    const password = document.getElementById('login-password').value;
-    const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
-    if (error) alert(error.message); else location.reload();
-}
-
-async function logout() { await supabaseClient.auth.signOut(); location.reload(); }
-
 // ==========================================
-// 3. NAVIGATION & UI
+// 3. NAVIGATION (NOUVEAU CODE)
 // ==========================================
-
 function switchView(viewName) {
-    ['home', 'reels', 'bible', 'messages', 'profile', 'public-profile'].forEach(v => {
-        const el = document.getElementById('view-' + v);
-        if(el) {
-            el.classList.add('hidden');
-            el.classList.remove('animate-view');
-        }
-        const btn = document.getElementById('nav-' + v);
-        if(btn) { 
-            btn.classList.remove('text-purple-400', 'scale-110');
-            btn.classList.add('text-gray-500'); 
-        }
+    ['home','reels','bible','messages','profile','public-profile'].forEach(v => {
+        document.getElementById('view-'+v)?.classList.add('hidden');
+        document.getElementById('nav-'+v)?.classList.remove('text-purple-400','scale-110');
     });
 
-    const target = document.getElementById('view-' + viewName);
-    if(target) {
-        target.classList.remove('hidden');
-        void target.offsetWidth; 
-        target.classList.add('animate-view');
-    }
-    
-    const activeBtn = document.getElementById('nav-' + viewName);
-    if(activeBtn) { 
-        activeBtn.classList.remove('text-gray-500'); 
-        activeBtn.classList.add('text-purple-400', 'scale-110', 'transition-transform', 'duration-200'); 
-    }
+    document.getElementById('view-'+viewName)?.classList.remove('hidden');
+    document.getElementById('nav-'+viewName)?.classList.add('text-purple-400','scale-110');
 
-    const reelsContainer = document.getElementById('reels-container');
-    if (viewName === 'reels') {
-        fetchReels(); 
-    } else {
-        if(reelsContainer) reelsContainer.innerHTML = '';
-    }
-
-    if (viewName === 'bible') {
-        showTestament('NT'); 
-    }
-
-    if (viewName === 'messages') {
-        const badge = document.getElementById('msg-badge');
-        if(badge) badge.classList.add('hidden');
-        if(!activeChatUser) resetChat();
-    }
-    if (viewName === 'profile') switchProfileTab('friends'); 
-    if(viewName !== 'messages' && viewName !== 'public-profile') activeChatUser = null;
+    if (viewName === 'reels') fetchReels();
+    if (viewName === 'bible') showTestament('NT');
+    if (viewName === 'messages' && !activeChatUser) resetChat();
+    if (viewName !== 'messages') activeChatUser = null;
 }
 
-async function loadAppData() {
-    await Promise.all([
-        fetchPosts(),
-        renderStoriesList(),
-        fetchPrayers(),
-        fetchHelpRequests(), 
-        fetchEvents(),
-        loadConversations(),
-        fetchNotifications()
-    ]);
-    resetChat();
-    subscribeToRealtime();
-    if(typeof lucide !== 'undefined') lucide.createIcons();
+function loadAppData() {
+    fetchPosts();
+    loadConversations(); // 🔥 conservé de l’ancien code
+    lucide?.createIcons();
 }
-
 // ==========================================
 // 4. BIBLE
 // ==========================================
