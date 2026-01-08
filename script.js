@@ -922,7 +922,7 @@ function closeStoryViewer() { document.getElementById('story-viewer').classList.
 async function deleteStory(id) { if (confirm("Supprimer ?")) { await supabaseClient.from('stories').delete().eq('id', id); closeStoryViewer(); renderStoriesList(); } }
 
 // ==========================================
-// 13. GESTION DES REELS (NOUVELLE SECTION)
+// 13. GESTION DES REELS (STYLE TIKTOK FINAL)
 // ==========================================
 
 function shuffleArray(array) {
@@ -933,6 +933,7 @@ function shuffleArray(array) {
     return array;
 }
 
+// Ouvrir/Fermer le modal d'ajout
 function openAddReelModal() { document.getElementById('add-reel-modal').classList.remove('hidden'); }
 function closeAddReelModal() { document.getElementById('add-reel-modal').classList.add('hidden'); }
 
@@ -947,63 +948,84 @@ async function saveReel() {
     fetchReels(); 
 }
 
-// --- MODIFICATION POUR BLOQUER LA BARRE DE PAUSE ---
-// Nous remplaçons l'action "Pause" par "Mute/Unmute" sur le clic de l'overlay
+// --- CHARGEMENT DES REELS (Mode TikTok) ---
 async function fetchReels() {
     const container = document.getElementById('reels-container');
-    container.innerHTML = '<div class="flex items-center justify-center h-full"><div class="w-8 h-8 border-4 border-purple-500 border-t-transparent rounded-full animate-spin"></div></div>';
+    container.innerHTML = '<div class="flex items-center justify-center h-full text-white">Chargement des vidéos...</div>';
     
     const { data: reels } = await supabaseClient.from('reels').select('*, profiles:user_id(username, avatar_url)').order('created_at', { ascending: false });
     
     container.innerHTML = '';
+    
     if (reels && reels.length > 0) {
         const shuffledReels = shuffleArray([...reels]); 
-        shuffledReels.forEach(reel => {
+        
+        shuffledReels.forEach((reel, index) => {
             let videoId = '';
             let rawUrl = reel.video_url;
             if(rawUrl.includes('shorts/')) videoId = rawUrl.split('shorts/')[1].split('?')[0];
             else if(rawUrl.includes('v=')) videoId = rawUrl.split('v=')[1].split('&')[0];
             else videoId = rawUrl.split('/').pop();
 
-            // Note: enablejsapi=1 est requis pour le contrôle du son
-            const playUrl = `https://www.youtube.com/embed/${videoId}?autoplay=1&controls=0&loop=1&playlist=${videoId}&rel=0&playsinline=1&iv_load_policy=3&modestbranding=1&enablejsapi=1&disablekb=1`;
-            const avatar = reel.profiles?.avatar_url || 'https://ui-avatars.com/api/?name=' + reel.profiles?.username;
+            // Paramètres YouTube pour cacher les contrôles et permettre le contrôle JS
+            const playUrl = `https://www.youtube.com/embed/${videoId}?enablejsapi=1&controls=0&rel=0&playsinline=1&modestbranding=1&loop=1&playlist=${videoId}`;
             
+            const avatar = reel.profiles?.avatar_url || 'https://ui-avatars.com/api/?name=' + (reel.profiles?.username || 'Anonyme');
+            const username = reel.profiles?.username || 'Utilisateur';
+
+            // Structure HTML TikTok-like
             const html = `
-                <div class="reel-item relative w-full h-full flex items-center justify-center bg-black snap-start snap-always overflow-hidden">
-                    <div class="absolute inset-0 z-0">
+                <div class="reel-item" id="reel-${index}">
+                    
+                    <div class="absolute inset-0 z-0 overflow-hidden">
                         <iframe 
-                            id="reel-iframe-${reel.id}"
-                            class="reel-iframe w-full h-full opacity-0 transition-opacity duration-500 scale-[1.35]" 
-                            style="pointer-events: none;"
+                            id="iframe-${index}"
+                            class="reel-iframe opacity-0 transition-opacity duration-500" 
                             data-src="${playUrl}" 
-                            src="" 
                             frameborder="0" 
-                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
                             allowfullscreen>
                         </iframe>
-                        <div class="absolute inset-0 bg-transparent z-10 cursor-pointer" onclick="toggleReelSound('${reel.id}')"></div>
+                        <div class="absolute inset-0 z-10 cursor-pointer" onclick="toggleReelSound('iframe-${index}')"></div>
                     </div>
-                    <div class="absolute bottom-20 right-4 z-20 flex flex-col gap-6 items-center">
-                        <div class="flex flex-col items-center gap-1">
-                            <button onclick="toggleReelAmen('${reel.id}')" class="bg-black/40 backdrop-blur-md p-3 rounded-full active:scale-90 transition-transform">
-                                <i data-lucide="heart" class="w-7 h-7 text-white" id="reel-heart-${reel.id}"></i>
-                            </button>
-                            <span class="text-white text-xs font-bold drop-shadow-md">Amen</span>
+
+                    <div class="absolute bottom-24 right-4 z-20 flex flex-col gap-6 items-center">
+                        <div class="relative mb-2">
+                            <img src="${avatar}" class="w-10 h-10 rounded-full border-2 border-white shadow-lg object-cover">
+                            <div class="absolute -bottom-2 left-1/2 -translate-x-1/2 bg-red-500 rounded-full p-0.5 text-white w-4 h-4 flex items-center justify-center">
+                                <i data-lucide="plus" class="w-3 h-3"></i>
+                            </div>
                         </div>
+
                         <div class="flex flex-col items-center gap-1">
-                            <button onclick="openReelComments('${reel.id}')" class="bg-black/40 backdrop-blur-md p-3 rounded-full active:scale-90 transition-transform">
-                                <i data-lucide="message-circle" class="w-7 h-7 text-white"></i>
+                            <button onclick="toggleReelAmen('${reel.id}')" class="p-2 transition-transform active:scale-75">
+                                <i data-lucide="heart" class="w-8 h-8 text-white drop-shadow-md" id="reel-heart-${reel.id}"></i>
                             </button>
-                            <span class="text-white text-xs font-bold drop-shadow-md">Coms</span>
+                            <span class="text-white text-xs font-bold shadow-black drop-shadow-md">Amen</span>
+                        </div>
+
+                        <div class="flex flex-col items-center gap-1">
+                            <button onclick="openReelComments('${reel.id}')" class="p-2 transition-transform active:scale-75">
+                                <i data-lucide="message-circle" class="w-8 h-8 text-white drop-shadow-md"></i>
+                            </button>
+                            <span class="text-white text-xs font-bold shadow-black drop-shadow-md">Coms</span>
+                        </div>
+
+                        <div class="flex flex-col items-center gap-1">
+                            <button class="p-2 transition-transform active:scale-75">
+                                <i data-lucide="share-2" class="w-8 h-8 text-white drop-shadow-md"></i>
+                            </button>
+                            <span class="text-white text-xs font-bold shadow-black drop-shadow-md">Partager</span>
                         </div>
                     </div>
-                    <div class="absolute bottom-4 left-4 right-16 z-20 pointer-events-none">
-                        <div class="flex items-center gap-3 mb-3 pointer-events-auto">
-                            <img src="${avatar}" class="w-10 h-10 rounded-full border-2 border-white shadow-md object-cover">
-                            <span class="text-white font-bold text-sm shadow-black drop-shadow-md">@${reel.profiles?.username}</span>
+
+                    <div class="absolute bottom-4 left-4 right-20 z-20 pointer-events-none text-left pb-16">
+                        <h3 class="text-white font-bold text-sm mb-1 shadow-black drop-shadow-md">@${username}</h3>
+                        <p class="text-white/90 text-sm line-clamp-2 shadow-black drop-shadow-md leading-tight">${reel.caption || ''}</p>
+                        <div class="flex items-center gap-2 mt-2 opacity-80">
+                            <i data-lucide="music" class="w-3 h-3 text-white"></i>
+                            <p class="text-xs text-white">Son original - ${username}</p>
                         </div>
-                        <p class="text-white text-sm line-clamp-2 drop-shadow-md">${reel.caption || ''}</p>
                     </div>
                 </div>`;
             container.insertAdjacentHTML('beforeend', html);
@@ -1014,31 +1036,56 @@ async function fetchReels() {
     }
 }
 
-// Fonction pour Couper/Activer le son (remplace la Pause)
-function toggleReelSound(reelId) {
-    const iframe = document.getElementById(`reel-iframe-${reelId}`);
+// Gestion du SON (Tap to Mute/Unmute)
+function toggleReelSound(iframeId) {
+    const iframe = document.getElementById(iframeId);
     if (iframe && iframe.contentWindow) {
+        // Envoie la commande YouTube pour activer/couper le son
+        // Note: Sur mobile, la première lecture nécessite souvent un clic utilisateur réel
         iframe.contentWindow.postMessage('{"event":"command","func":"unMute","args":""}', '*');
     }
 }
 
+// OBSERVER : Gère le scroll automatique (Play quand visible, Pause quand caché)
 function setupReelObserver() {
-    const options = { root: document.getElementById('reels-container'), threshold: 0.6 };
+    const options = {
+        root: document.getElementById('reels-container'),
+        threshold: 0.6 // La vidéo doit être visible à 60% pour se lancer
+    };
+
     const observer = new IntersectionObserver((entries) => {
         entries.forEach(entry => {
             const iframe = entry.target.querySelector('iframe');
+            if (!iframe) return;
+
             if (entry.isIntersecting) {
-                if (iframe.src !== iframe.dataset.src) {
+                // LA VIDÉO ARRIVE A L'ECRAN
+                
+                // 1. Si pas de source chargée, on la met (Lazy Load)
+                if (!iframe.src) {
                     iframe.src = iframe.dataset.src;
+                    iframe.onload = () => {
+                        iframe.classList.remove('opacity-0'); // Affiche l'image une fois chargée
+                    };
+                } else {
                     iframe.classList.remove('opacity-0');
                 }
+
+                // 2. On lance la lecture
+                iframe.contentWindow.postMessage('{"event":"command","func":"playVideo","args":""}', '*');
+                
             } else {
-                iframe.src = "";
-                iframe.classList.add('opacity-0');
+                // LA VIDÉO QUITTE L'ECRAN
+                
+                // On met en pause pour ne pas entendre 2 sons en même temps
+                iframe.contentWindow.postMessage('{"event":"command","func":"pauseVideo","args":""}', '*');
             }
         });
     }, options);
-    document.querySelectorAll('.reel-item').forEach(item => { observer.observe(item); });
+
+    document.querySelectorAll('.reel-item').forEach(item => {
+        observer.observe(item);
+    });
 }
 
 async function toggleReelAmen(reelId) {
