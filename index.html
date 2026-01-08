@@ -249,7 +249,12 @@
                                     <p class="text-[10px] text-gray-400">Posez une question sur la Bible</p>
                                 </div>
                             </div>
-                       
+                       <div class="flex gap-2">
+                            <input id="ai-bible-input" type="text" placeholder="Ex: Qui est Jésus ?" class="flex-1 bg-gray-900 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-purple-500">
+                            <button onclick="askFaithAI()" class="bg-purple-600 px-3 py-2 rounded-xl text-white hover:bg-purple-500 transition-colors">
+                                <i data-lucide="send" class="w-4 h-4"></i>
+                            </button>
+                        </div>
                     </div>
                 </div>
 
