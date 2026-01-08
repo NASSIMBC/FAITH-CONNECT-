@@ -238,9 +238,16 @@
                 </div>
 
                 <div id="view-reels" class="hidden absolute inset-0 bg-black z-40 flex flex-col h-full w-full animate-view">
-                    <div class="absolute top-4 left-0 right-0 z-50 px-4 flex justify-between items-center pt-safe">
-                        <h2 class="text-xl font-bold text-white shadow-lg drop-shadow-md">Reels Spirituels</h2>
+                    <div class="absolute top-4 left-0 right-0 z-50 px-4 flex justify-between items-center pt-safe pointer-events-none">
+                        <h2 class="text-xl font-bold text-white shadow-lg drop-shadow-md pointer-events-auto">Reels Spirituels</h2>
+                        
+                        <button onclick="document.getElementById('btn-upload-reel').click()" class="bg-purple-600 p-3 rounded-full shadow-xl active:scale-90 transition-transform pointer-events-auto">
+                            <i data-lucide="plus" class="w-6 h-6 text-white"></i>
+                        </button>
                     </div>
+
+                    <input type="file" id="btn-upload-reel" accept="video/mp4,video/quicktime" class="hidden" onchange="uploadReelFile(this)">
+
                     <div id="reels-container" class="flex-1 w-full h-full overflow-y-scroll snap-y snap-mandatory scrollbar-hide bg-black">
                         </div>
                 </div>
