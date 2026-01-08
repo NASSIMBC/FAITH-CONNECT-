@@ -20,40 +20,6 @@
         
         /* Style pour le texte biblique */
         .bible-text { font-family: 'Georgia', serif; line-height: 1.8; }
-        /* --- 1. EFFET GLASSMORPHISM (Verre Dépoli) --- */
-.glass-nav {
-    background: rgba(10, 10, 10, 0.7) !important; /* Fond noir transparent */
-    backdrop-filter: blur(12px); /* Le flou magique */
-    -webkit-backdrop-filter: blur(12px);
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-/* --- 2. EFFET CARTES PREMIUM (Néon & Glow) --- */
-.premium-card {
-    background: linear-gradient(145deg, rgba(30, 30, 40, 0.6), rgba(20, 20, 30, 0.8)) !important;
-    border: 1px solid rgba(168, 85, 247, 0.15) !important; /* Bordure violette fine */
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3); /* Ombre douce */
-    transition: transform 0.2s;
-}
-.premium-card:active {
-    transform: scale(0.98); /* Petit effet de clic */
-}
-
-/* --- 3. ANIMATIONS DE TRANSITION (Slide Up) --- */
-@keyframes slideUpFade {
-    0% {
-        opacity: 0;
-        transform: translateY(20px) scale(0.98);
-    }
-    100% {
-        opacity: 1;
-        transform: translateY(0) scale(1);
-    }
-}
-
-.animate-view {
-    animation: slideUpFade 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
-}
     </style>
 </head>
 <body class="bg-gray-900 text-white font-sans antialiased h-[100dvh] w-screen overflow-hidden fixed inset-0"> 
@@ -283,7 +249,11 @@
                                     <p class="text-[10px] text-gray-400">Posez une question sur la Bible</p>
                                 </div>
                             </div>
-                       <div class="flex gap-2">
+                        </div>
+
+                        <div id="ai-response-area" class="text-xs text-gray-300 italic mb-3 hidden bg-black/20 p-2 rounded-lg border border-white/5 max-h-24 overflow-y-auto"></div>
+
+                        <div class="flex gap-2">
                             <input id="ai-bible-input" type="text" placeholder="Ex: Qui est Jésus ?" class="flex-1 bg-gray-900 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-purple-500">
                             <button onclick="askFaithAI()" class="bg-purple-600 px-3 py-2 rounded-xl text-white hover:bg-purple-500 transition-colors">
                                 <i data-lucide="send" class="w-4 h-4"></i>
