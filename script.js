@@ -5,6 +5,16 @@ const SUPABASE_URL = 'https://uduajuxobmywmkjnawjn.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVkdWFqdXhvYm15d21ram5hd2puIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc0NjUyMTUsImV4cCI6MjA4MzA0MTIxNX0.Vn1DpT9l9N7sVb3kVUPRqr141hGvM74vkZULJe59YUU';
 
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+// ==========================================
+// 1.1 CONFIGURATION APPWRITE (Stockage Vidéo Uniquement)
+// ==========================================
+const client = new Appwrite.Client();
+client
+    .setEndpoint('https://fra.cloud.appwrite.io/v1')
+    .setProject('696018ca0000881fb8a2'); // Ton ID Projet
+
+const storage = new Appwrite.Storage(client);
+const APPWRITE_BUCKET_ID = 'reels-videos'; // Assure-toi que ce bucket existe sur Appwrite avec droits "Any"
 
 // ==========================================
 // 2. GESTION UTILISATEUR & AUTH
@@ -931,6 +941,59 @@ function shuffleArray(array) {
         [array[i], array[j]] = [array[j], array[i]];
     }
     return array;
+}// ==========================================
+// AJOUTE CETTE FONCTION DANS LA SECTION 13
+// ==========================================
+
+async function uploadReelFile(input) {
+    if (!input.files || !input.files[0]) return;
+    
+    const file = input.files[0];
+    // Récupère le bouton "+" pour mettre un chargement
+    const btn = document.querySelector('#view-reels button'); 
+    const originalIcon = btn.innerHTML;
+    
+    // Animation de chargement
+    btn.innerHTML = `<div class="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>`;
+    btn.disabled = true;
+
+    try {
+        console.log("1. Upload vers Appwrite (Frankfurt)...");
+
+        // 1. Upload du fichier vers Appwrite Storage
+        const uploadedFile = await storage.createFile(
+            APPWRITE_BUCKET_ID,
+            Appwrite.ID.unique(),
+            file
+        );
+
+        // 2. Construction de l'URL publique (Endpoint Frankfurt)
+        // Note: On utilise bien 'fra.cloud.appwrite.io' comme dans ta config
+        const fileUrl = `https://fra.cloud.appwrite.io/v1/storage/buckets/${APPWRITE_BUCKET_ID}/files/${uploadedFile.$id}/view?project=696018ca0000881fb8a2`;
+
+        console.log("2. Sauvegarde dans Supabase...");
+
+        // 3. Sauvegarde des infos dans Supabase Database
+        const { error } = await supabaseClient.from('reels').insert([{
+            user_id: currentUser.id,
+            video_url: fileUrl,
+            caption: "Nouveau Reel ✨" // Tu pourras rendre ça dynamique plus tard
+        }]);
+
+        if (error) throw error;
+
+        alert("Reel publié avec succès !");
+        fetchReels(); // Rafraîchit la liste immédiatement
+
+    } catch (error) {
+        console.error(error);
+        alert("Erreur lors de l'envoi : " + error.message);
+    } finally {
+        // Remet le bouton normal
+        btn.innerHTML = originalIcon;
+        btn.disabled = false;
+        input.value = ""; // Vide l'input file
+    }
 }
 
 // Ouvrir/Fermer le modal d'ajout
