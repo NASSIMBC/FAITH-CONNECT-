@@ -941,7 +941,8 @@ function shuffleArray(array) {
         [array[i], array[j]] = [array[j], array[i]];
     }
     return array;
-}// ==========================================
+}
+// ==========================================
 // AJOUTE CETTE FONCTION DANS LA SECTION 13
 // ==========================================
 
