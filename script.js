@@ -1059,146 +1059,111 @@ function wrapText(context, text, x, y, maxWidth, lineHeight) {
     }
 }
 
-// --- PUBLICATION (Canvas -> Image -> Supabase) ---
-async function publishVerseCard() {
-    const btn = document.getElementById('btn-publish-verse');
-    const originalText = btn.innerHTML;
-    const caption = document.getElementById('verse-text-input').value.trim();
-
-    if (!caption) return alert("Veuillez écrire un texte.");
-
-    btn.innerHTML = '<div class="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div> Création...';
-    btn.disabled = true;
-
-    try {
-        // 1. Convertir le canvas en fichier image (Blob)
-        canvas.toBlob(async (blob) => {
-            if (!blob) throw new Error("Erreur de génération d'image");
-            
-            const fileName = `${currentUser.id}/${Date.now()}.png`;
-            
-            // 2. Upload vers SUPABASE Storage (Bucket 'verse-images')
-            const { error: uploadError } = await supabaseClient.storage
-                .from('verse-images')
-                .upload(fileName, blob, { contentType: 'image/png' });
-
-            if (uploadError) throw uploadError;
-
-            // 3. Récupérer l'URL publique
-            const { data: urlData } = supabaseClient.storage
-                .from('verse-images')
-                .getPublicUrl(fileName);
-
-            // 4. Sauvegarder dans la table 'reels'
-            // Note: on utilise la colonne video_url pour stocker l'image
-            const { error: dbError } = await supabaseClient.from('reels').insert([{
-                user_id: currentUser.id,
-                video_url: urlData.publicUrl, // C'est une image maintenant
-                caption: caption
-            }]);
-
-            if (dbError) throw dbError;
-
-            // Succès !
-            closeVerseEditor();
-            document.getElementById('verse-text-input').value = "";
-            setBackground('color', '#1f2937'); // Reset fond
-            fetchReels(); // Recharger la liste
-            alert("Votre carte verset est publiée ! ✨");
-
-        }, 'image/png', 0.95); // Qualité JPEG 95%
-
-    } catch (error) {
-        console.error(error);
-        alert("Erreur : " + error.message);
-    } finally {
-        btn.innerHTML = originalText;
-        btn.disabled = false;
-    }
-}
-
-// --- NOUVELLE FONCTION D'AFFICHAGE DES REELS (Mode Galerie d'Images) ---
-async function fetchReels() {
-    const container = document.getElementById('reels-container');
-    if(!container) return;
-    container.innerHTML = '<div class="col-span-full text-center pt-10 text-gray-500 animate-pulse">Chargement des inspirations...</div>';
+// --- NOUVELLE FONCTION DRAWCANVAS "STYLE CANVA" ---
+function drawCanvas() {
+    const canvas = document.getElementById('verse-canvas');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
     
-    const { data: reels, error } = await supabaseClient
-        .from('reels')
-        .select('*, profiles:user_id(username, avatar_url)')
-        .order('created_at', { ascending: false });
+    // --- 1. RÉCUPÉRATION DE TOUTES LES VALEURS DES INPUTS ---
+    const text = document.getElementById('verse-text-input').value;
+    // Texte Basic
+    const color = document.getElementById('text-color-picker').value;
+    const fontSize = parseInt(document.getElementById('font-size-picker').value);
+    const fontFamily = document.getElementById('font-family-picker').value;
+    const lineHeightMultiplier = parseFloat(document.getElementById('line-height-slider').value);
+    // Texte Effets
+    const strokeColor = document.getElementById('stroke-color-picker').value;
+    const strokeWidth = parseFloat(document.getElementById('stroke-width-slider').value);
+    // Fond Filtres
+    const overlayOpacity = document.getElementById('overlay-slider').value;
+    const blurAmount = document.getElementById('blur-slider').value;
+    const grayscaleAmount = document.getElementById('grayscale-slider').value;
 
-    container.innerHTML = '';
-    
-    if (reels && reels.length > 0) {
-        reels.forEach(reel => {
-            const avatar = reel.profiles?.avatar_url || 'https://ui-avatars.com/api/?name=' + (reel.profiles?.username || '?');
-            const username = reel.profiles?.username || 'Anonyme';
-            // Note : reel.video_url contient maintenant l'URL de l'image générée
-            
-            const html = `
-                <div class="bg-gray-800 rounded-2xl overflow-hidden border border-white/10 shadow-lg animate-view group">
-                    <div class="relative aspect-square bg-gray-900">
-                        <img src="${reel.video_url}" class="w-full h-full object-cover" loading="lazy">
-                         <div class="absolute inset-0 bg-black/0 transition-colors group-hover:bg-black/20"></div>
-                    </div>
-                    
-                    <div class="p-4 bg-gray-800/90 relative">
-                         <div class="absolute -top-6 left-4 flex items-center gap-2">
-                             <img src="${avatar}" class="w-10 h-10 rounded-full border-2 border-gray-800 shadow-md">
-                             <span class="text-sm font-bold text-white bg-gray-900/60 px-2 py-0.5 rounded-full backdrop-blur-md">${username}</span>
-                        </div>
 
-                        <div class="mt-4 pt-1">
-                            <p class="text-sm text-gray-300 line-clamp-2 italic">"${reel.caption || ''}"</p>
-                            
-                            <div class="flex justify-between items-center mt-4 pt-3 border-t border-white/5">
-                                <div class="flex gap-4">
-                                    <button onclick="toggleReelAmen('${reel.id}')" class="flex items-center gap-1.5 text-gray-400 hover:text-pink-500 transition-colors text-xs">
-                                        <i data-lucide="heart" class="w-5 h-5" id="reel-heart-${reel.id}"></i> Amen
-                                    </button>
-                                    <button onclick="openReelComments('${reel.id}')" class="flex items-center gap-1.5 text-gray-400 hover:text-purple-500 transition-colors text-xs">
-                                        <i data-lucide="message-circle" class="w-5 h-5"></i> Coms
-                                    </button>
-                                </div>
-                                <button onclick="shareImage('${reel.video_url}')" class="text-gray-400 hover:text-blue-400 transition-colors">
-                                    <i data-lucide="share-2" class="w-5 h-5"></i>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>`;
-            container.insertAdjacentHTML('beforeend', html);
-        });
-        if(typeof lucide !== 'undefined') lucide.createIcons();
-    } else {
-        container.innerHTML = '<div class="col-span-full text-center pt-20 text-gray-500 flex flex-col items-center gap-2"><i data-lucide="image-off" class="w-10 h-10 opacity-50"></i><p>Aucune carte verset pour le moment.<br>Soyez le premier !</p></div>';
-        if(typeof lucide !== 'undefined') lucide.createIcons();
+    // --- 2. DESSIN DU FOND AVEC FILTRES ---
+    ctx.clearRect(0, 0, canvas.width, canvas.height); // Nettoyage
+
+    // Application des filtres CSS sur le contexte avant de dessiner l'image
+    ctx.filter = `blur(${blurAmount}px) grayscale(${grayscaleAmount}%)`;
+
+    if (currentBgType === 'color') {
+        ctx.fillStyle = currentBgValue;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+    } else if (currentBgType === 'image' && uploadedBgImage) {
+        const scale = Math.max(canvas.width / uploadedBgImage.width, canvas.height / uploadedBgImage.height);
+        const x = (canvas.width / 2) - (uploadedBgImage.width / 2) * scale;
+        const y = (canvas.height / 2) - (uploadedBgImage.height / 2) * scale;
+        ctx.drawImage(uploadedBgImage, x, y, uploadedBgImage.width * scale, uploadedBgImage.height * scale);
     }
-}
+    
+    // Réinitialiser les filtres pour ne pas affecter le texte et l'overlay
+    ctx.filter = 'none';
 
-// Petit bonus : fonction de partage native
-async function shareImage(url) {
-    if (navigator.share) {
-        try {
-            // On essaie de transformer l'URL en fichier pour un vrai partage d'image
-            const response = await fetch(url);
-            const blob = await response.blob();
-            const file = new File([blob], "verset-faithconnect.png", { type: "image/png" });
-            
-            await navigator.share({
-                files: [file],
-                title: 'Verset Faith Connect',
-                text: 'Regarde ce verset !'
-            });
-        } catch (err) {
-            console.error("Erreur partage:", err);
-            // Fallback : partage du lien
-             navigator.clipboard.writeText(url).then(() => alert("Lien de l'image copié !"));
+
+    // --- 3. DESSIN DU FILTRE SOMBRE (OVERLAY) ---
+    ctx.fillStyle = `rgba(0, 0, 0, ${overlayOpacity})`;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+
+    // --- 4. CONFIGURATION ET DESSIN DU TEXTE ---
+    if (text) {
+        ctx.fillStyle = color;
+        ctx.font = `bold ${fontSize}px ${fontFamily}`;
+        ctx.textAlign = currentTextAlign;
+        ctx.textBaseline = 'middle';
+        
+        // Configuration du contour (Stroke)
+        if (strokeWidth > 0) {
+            ctx.strokeStyle = strokeColor;
+            ctx.lineWidth = strokeWidth;
+            ctx.lineJoin = 'round'; // Coins arrondis pour le contour
         }
-    } else {
-        navigator.clipboard.writeText(url).then(() => alert("Lien de l'image copié !"));
-    }
-}
 
-// Note : Les fonctions toggleReelAmen et openReelComments existantes devraient toujours fonctionner sans modification.
+        // Ombre portée standard (peut être améliorée plus tard)
+        ctx.shadowColor = "rgba(0, 0, 0, 0.5)";
+        ctx.shadowBlur = 4;
+        ctx.shadowOffsetX = 2;
+        ctx.shadowOffsetY = 2;
+
+        // Calcul du retour à la ligne (Word Wrap)
+        const maxWidth = canvas.width - 60; // Marge
+        const words = text.split(' ');
+        let lines = [];
+        let currentLine = words[0];
+
+        for (let i = 1; i < words.length; i++) {
+            let testLine = currentLine + ' ' + words[i];
+            let metrics = ctx.measureText(testLine);
+            if (metrics.width > maxWidth) {
+                lines.push(currentLine);
+                currentLine = words[i];
+            } else {
+                currentLine = testLine;
+            }
+        }
+        lines.push(currentLine);
+
+        // Dessin ligne par ligne avec interligne variable
+        const lineHeight = fontSize * lineHeightMultiplier; // Utilisation du nouveau multiplicateur
+        const totalHeight = lines.length * lineHeight;
+        let startY = (canvas.height - totalHeight) / 2 + (lineHeight / 2);
+
+        let startX = canvas.width / 2;
+        if (currentTextAlign === 'left') startX = 30;
+        if (currentTextAlign === 'right') startX = canvas.width - 30;
+
+        lines.forEach((line, i) => {
+            let yPos = startY + (i * lineHeight);
+            // Dessiner le contour d'abord si activé
+            if (strokeWidth > 0) {
+                ctx.strokeText(line, startX, yPos);
+            }
+            // Dessiner le remplissage du texte ensuite
+            ctx.fillText(line, startX, yPos);
+        });
+    }
+    
+    // Reset shadow
+    ctx.shadowColor = "transparent";
+}
