@@ -90,6 +90,97 @@ async function handleLogin() {
 async function logout() { await supabaseClient.auth.signOut(); location.reload(); }
 
 // ==========================================
+// 4. RECHERCHE & PROFIL PUBLIC (NOUVEAU)
+// ==========================================
+
+async function searchUsers(query) {
+    const resultsContainer = document.getElementById('search-results');
+    if (!query || query.length < 2) {
+        resultsContainer.classList.add('hidden');
+        return;
+    }
+
+    const { data: users } = await supabaseClient
+        .from('profiles')
+        .select('*')
+        .ilike('username', `%${query}%`)
+        .limit(5);
+
+    resultsContainer.innerHTML = '';
+    if (users && users.length > 0) {
+        resultsContainer.classList.remove('hidden');
+        users.forEach(user => {
+            if (user.id === currentUser.id) return;
+            const avatar = user.avatar_url ? `<img src="${user.avatar_url}" class="w-8 h-8 rounded-full object-cover">` : `<div class="w-8 h-8 bg-purple-600 rounded-full flex items-center justify-center text-xs font-bold">${user.username[0]}</div>`;
+            
+            resultsContainer.insertAdjacentHTML('beforeend', `
+                <div onclick="openPublicProfile('${user.id}')" class="flex items-center gap-3 p-3 hover:bg-white/5 cursor-pointer transition-colors">
+                    ${avatar}
+                    <div>
+                        <p class="text-sm font-bold text-white">${user.username}</p>
+                        <p class="text-[10px] text-gray-400 truncate">${user.bio || ''}</p>
+                    </div>
+                </div>
+            `);
+        });
+    } else {
+        resultsContainer.innerHTML = '<div class="p-3 text-xs text-gray-500">Aucun utilisateur trouvé.</div>';
+        resultsContainer.classList.remove('hidden');
+    }
+}
+
+async function openPublicProfile(userId) {
+    // Fermer la recherche
+    document.getElementById('search-results').classList.add('hidden');
+    document.querySelector('#view-home input').value = '';
+
+    // Charger les données
+    const { data: profile } = await supabaseClient.from('profiles').select('*').eq('id', userId).single();
+    if(!profile) return alert("Profil introuvable");
+
+    // Remplir l'UI
+    switchView('public-profile');
+    document.getElementById('public-username').innerText = profile.username;
+    document.getElementById('public-bio').innerText = profile.bio || "Aucune description.";
+    
+    const avatarEl = document.getElementById('public-avatar');
+    if(profile.avatar_url) {
+        avatarEl.innerHTML = `<img src="${profile.avatar_url}" class="w-full h-full object-cover">`;
+    } else {
+        avatarEl.innerText = profile.username[0].toUpperCase();
+    }
+
+    // Gestion du bouton Ajouter
+    const btnAdd = document.getElementById('btn-add-friend');
+    
+    // Vérifier amitié
+    const { data: friendship } = await supabaseClient.from('friendships')
+        .select('*')
+        .or(`and(requester_id.eq.${currentUser.id},receiver_id.eq.${userId}),and(requester_id.eq.${userId},receiver_id.eq.${currentUser.id})`)
+        .single();
+
+    if(friendship) {
+        if(friendship.status === 'accepted') {
+            btnAdd.innerText = "Amis ✔";
+            btnAdd.disabled = true;
+            btnAdd.className = "px-8 py-3 bg-green-600/50 text-white font-bold text-sm rounded-xl cursor-default";
+        } else {
+            btnAdd.innerText = "En attente...";
+            btnAdd.disabled = true;
+            btnAdd.className = "px-8 py-3 bg-gray-600 text-gray-300 font-bold text-sm rounded-xl cursor-default";
+        }
+    } else {
+        btnAdd.innerText = "Ajouter";
+        btnAdd.disabled = false;
+        btnAdd.className = "px-8 py-3 bg-purple-600 rounded-xl text-white font-bold text-sm shadow-lg shadow-purple-900/30 hover:bg-purple-500";
+        btnAdd.onclick = () => addFriend(userId);
+    }
+
+    // Bouton Message
+    document.getElementById('btn-message').onclick = () => openDirectChat(userId, profile.username);
+}
+
+// ==========================================
 // 3. NAVIGATION & UI (DESIGN PREMIUM + ANIMATIONS)
 // ==========================================
 
@@ -157,6 +248,70 @@ async function loadAppData() {
     resetChat();
     subscribeToRealtime();
     if(typeof lucide !== 'undefined') lucide.createIcons();
+}
+// ==========================================
+// 5. PARAMÈTRES & SÉCURITÉ (NOUVEAU)
+// ==========================================
+
+async function updatePassword() {
+    const newPass = document.getElementById('settings-new-password').value;
+    if(!newPass || newPass.length < 6) return alert("Le mot de passe doit faire 6 caractères minimum.");
+    
+    const { error } = await supabaseClient.auth.updateUser({ password: newPass });
+    if(error) alert("Erreur: " + error.message);
+    else {
+        alert("Mot de passe mis à jour !");
+        document.getElementById('settings-new-password').value = '';
+    }
+}
+// ==========================================
+// 6. OBJECTIFS PERSONNELS (NOUVEAU)
+// ==========================================
+
+async function loadPersonalGoals() {
+    const container = document.getElementById('profile-goals-list');
+    if(!container) return;
+    
+    // Note: Assure-toi d'avoir créé la table 'personal_goals' dans Supabase
+    // (id, user_id, content, is_completed)
+    const { data: goals, error } = await supabaseClient
+        .from('personal_goals')
+        .select('*')
+        .eq('user_id', currentUser.id)
+        .order('created_at', { ascending: false });
+
+    if(error || !goals || goals.length === 0) {
+        container.innerHTML = '<div class="text-xs text-gray-500 italic">Aucun objectif défini.</div>';
+        return;
+    }
+
+    container.innerHTML = goals.map(g => `
+        <div class="flex items-center gap-2 p-2 bg-gray-800 rounded-lg">
+            <input type="checkbox" onchange="toggleGoal('${g.id}', this.checked)" ${g.is_completed ? 'checked' : ''} class="accent-green-500 w-4 h-4">
+            <span class="text-sm text-gray-300 ${g.is_completed ? 'line-through opacity-50' : ''}">${g.content}</span>
+            <button onclick="deleteGoal('${g.id}')" class="ml-auto text-gray-600 hover:text-red-400"><i data-lucide="trash" class="w-3 h-3"></i></button>
+        </div>
+    `).join('');
+    lucide.createIcons();
+}
+
+async function addPersonalGoal() {
+    const text = prompt("Quel est votre objectif spirituel ?");
+    if(!text) return;
+    await supabaseClient.from('personal_goals').insert([{ user_id: currentUser.id, content: text }]);
+    loadPersonalGoals();
+}
+
+async function toggleGoal(id, status) {
+    await supabaseClient.from('personal_goals').update({ is_completed: status }).eq('id', id);
+    loadPersonalGoals(); // Rafraichir pour le style barré
+}
+
+async function deleteGoal(id) {
+    if(confirm("Supprimer ?")) {
+        await supabaseClient.from('personal_goals').delete().eq('id', id);
+        loadPersonalGoals();
+    }
 }
 
 // ==========================================
@@ -335,6 +490,35 @@ function getFallbackResponse(text) {
     if (t.includes("triste")) return "L'Éternel est près de ceux qui ont le cœur brisé. (Psaumes 34:18)";
     if (t.includes("amour")) return "L'amour est patient, il est plein de bonté. (1 Corinthiens 13)";
     return "Confie-toi en l'Éternel de tout ton cœur. (Proverbes 3:5)";
+}
+// ==========================================
+// 7. CRÉATION GROUPE / PAGE (UI SEULEMENT)
+// ==========================================
+let creationType = 'group';
+
+function setCreationType(type) {
+    creationType = type;
+    const btnGroup = document.getElementById('btn-type-group');
+    const btnPage = document.getElementById('btn-type-page');
+    
+    if(type === 'group') {
+        btnGroup.className = "flex-1 py-2 bg-purple-600 text-white rounded-xl text-xs font-bold";
+        btnPage.className = "flex-1 py-2 bg-gray-700 text-gray-400 rounded-xl text-xs font-bold";
+    } else {
+        btnPage.className = "flex-1 py-2 bg-purple-600 text-white rounded-xl text-xs font-bold";
+        btnGroup.className = "flex-1 py-2 bg-gray-700 text-gray-400 rounded-xl text-xs font-bold";
+    }
+}
+
+async function submitCreation() {
+    const title = document.getElementById('create-title').value;
+    const desc = document.getElementById('create-desc').value;
+    
+    if(!title) return alert("Le nom est obligatoire.");
+    
+    // Simulation (nécessite table 'groups' ou 'pages')
+    alert(`Votre ${creationType === 'group' ? 'Groupe' : 'Page'} "${title}" a été créé(e) avec succès ! (Simulation)`);
+    document.getElementById('create-group-modal').classList.add('hidden');
 }
 // ==========================================
 // 5. PROFIL
