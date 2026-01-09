@@ -91,97 +91,6 @@ async function handleLogin() {
 async function logout() { await supabaseClient.auth.signOut(); location.reload(); }
 
 // ==========================================
-// 4. RECHERCHE & PROFIL PUBLIC (NOUVEAU)
-// ==========================================
-
-async function searchUsers(query) {
-    const resultsContainer = document.getElementById('search-results');
-    if (!query || query.length < 2) {
-        resultsContainer.classList.add('hidden');
-        return;
-    }
-
-    const { data: users } = await supabaseClient
-        .from('profiles')
-        .select('*')
-        .ilike('username', `%${query}%`)
-        .limit(5);
-
-    resultsContainer.innerHTML = '';
-    if (users && users.length > 0) {
-        resultsContainer.classList.remove('hidden');
-        users.forEach(user => {
-            if (user.id === currentUser.id) return;
-            const avatar = user.avatar_url ? `<img src="${user.avatar_url}" class="w-8 h-8 rounded-full object-cover">` : `<div class="w-8 h-8 bg-purple-600 rounded-full flex items-center justify-center text-xs font-bold">${user.username[0]}</div>`;
-            
-            resultsContainer.insertAdjacentHTML('beforeend', `
-                <div onclick="openPublicProfile('${user.id}')" class="flex items-center gap-3 p-3 hover:bg-white/5 cursor-pointer transition-colors">
-                    ${avatar}
-                    <div>
-                        <p class="text-sm font-bold text-white">${user.username}</p>
-                        <p class="text-[10px] text-gray-400 truncate">${user.bio || ''}</p>
-                    </div>
-                </div>
-            `);
-        });
-    } else {
-        resultsContainer.innerHTML = '<div class="p-3 text-xs text-gray-500">Aucun utilisateur trouvé.</div>';
-        resultsContainer.classList.remove('hidden');
-    }
-}
-
-async function openPublicProfile(userId) {
-    // Fermer la recherche
-    document.getElementById('search-results').classList.add('hidden');
-    document.querySelector('#view-home input').value = '';
-
-    // Charger les données
-    const { data: profile } = await supabaseClient.from('profiles').select('*').eq('id', userId).single();
-    if(!profile) return alert("Profil introuvable");
-
-    // Remplir l'UI
-    switchView('public-profile');
-    document.getElementById('public-username').innerText = profile.username;
-    document.getElementById('public-bio').innerText = profile.bio || "Aucune description.";
-    
-    const avatarEl = document.getElementById('public-avatar');
-    if(profile.avatar_url) {
-        avatarEl.innerHTML = `<img src="${profile.avatar_url}" class="w-full h-full object-cover">`;
-    } else {
-        avatarEl.innerText = profile.username[0].toUpperCase();
-    }
-
-    // Gestion du bouton Ajouter
-    const btnAdd = document.getElementById('btn-add-friend');
-    
-    // Vérifier amitié
-    const { data: friendship } = await supabaseClient.from('friendships')
-        .select('*')
-        .or(`and(requester_id.eq.${currentUser.id},receiver_id.eq.${userId}),and(requester_id.eq.${userId},receiver_id.eq.${currentUser.id})`)
-        .single();
-
-    if(friendship) {
-        if(friendship.status === 'accepted') {
-            btnAdd.innerText = "Amis ✔";
-            btnAdd.disabled = true;
-            btnAdd.className = "px-8 py-3 bg-green-600/50 text-white font-bold text-sm rounded-xl cursor-default";
-        } else {
-            btnAdd.innerText = "En attente...";
-            btnAdd.disabled = true;
-            btnAdd.className = "px-8 py-3 bg-gray-600 text-gray-300 font-bold text-sm rounded-xl cursor-default";
-        }
-    } else {
-        btnAdd.innerText = "Ajouter";
-        btnAdd.disabled = false;
-        btnAdd.className = "px-8 py-3 bg-purple-600 rounded-xl text-white font-bold text-sm shadow-lg shadow-purple-900/30 hover:bg-purple-500";
-        btnAdd.onclick = () => addFriend(userId);
-    }
-
-    // Bouton Message
-    document.getElementById('btn-message').onclick = () => openDirectChat(userId, profile.username);
-}
-
-// ==========================================
 // 3. NAVIGATION & UI (DESIGN PREMIUM + ANIMATIONS)
 // ==========================================
 
@@ -250,73 +159,9 @@ async function loadAppData() {
     subscribeToRealtime();
     if(typeof lucide !== 'undefined') lucide.createIcons();
 }
-// ==========================================
-// 5. PARAMÈTRES & SÉCURITÉ (NOUVEAU)
-// ==========================================
-
-async function updatePassword() {
-    const newPass = document.getElementById('settings-new-password').value;
-    if(!newPass || newPass.length < 6) return alert("Le mot de passe doit faire 6 caractères minimum.");
-    
-    const { error } = await supabaseClient.auth.updateUser({ password: newPass });
-    if(error) alert("Erreur: " + error.message);
-    else {
-        alert("Mot de passe mis à jour !");
-        document.getElementById('settings-new-password').value = '';
-    }
-}
-// ==========================================
-// 6. OBJECTIFS PERSONNELS (NOUVEAU)
-// ==========================================
-
-async function loadPersonalGoals() {
-    const container = document.getElementById('profile-goals-list');
-    if(!container) return;
-    
-    // Note: Assure-toi d'avoir créé la table 'personal_goals' dans Supabase
-    // (id, user_id, content, is_completed)
-    const { data: goals, error } = await supabaseClient
-        .from('personal_goals')
-        .select('*')
-        .eq('user_id', currentUser.id)
-        .order('created_at', { ascending: false });
-
-    if(error || !goals || goals.length === 0) {
-        container.innerHTML = '<div class="text-xs text-gray-500 italic">Aucun objectif défini.</div>';
-        return;
-    }
-
-    container.innerHTML = goals.map(g => `
-        <div class="flex items-center gap-2 p-2 bg-gray-800 rounded-lg">
-            <input type="checkbox" onchange="toggleGoal('${g.id}', this.checked)" ${g.is_completed ? 'checked' : ''} class="accent-green-500 w-4 h-4">
-            <span class="text-sm text-gray-300 ${g.is_completed ? 'line-through opacity-50' : ''}">${g.content}</span>
-            <button onclick="deleteGoal('${g.id}')" class="ml-auto text-gray-600 hover:text-red-400"><i data-lucide="trash" class="w-3 h-3"></i></button>
-        </div>
-    `).join('');
-    lucide.createIcons();
-}
-
-async function addPersonalGoal() {
-    const text = prompt("Quel est votre objectif spirituel ?");
-    if(!text) return;
-    await supabaseClient.from('personal_goals').insert([{ user_id: currentUser.id, content: text }]);
-    loadPersonalGoals();
-}
-
-async function toggleGoal(id, status) {
-    await supabaseClient.from('personal_goals').update({ is_completed: status }).eq('id', id);
-    loadPersonalGoals(); // Rafraichir pour le style barré
-}
-
-async function deleteGoal(id) {
-    if(confirm("Supprimer ?")) {
-        await supabaseClient.from('personal_goals').delete().eq('id', id);
-        loadPersonalGoals();
-    }
-}
 
 // ==========================================
-// 7. BIBLE (VERSION FINALE : GETBIBLE.NET)
+// 4. BIBLE (VERSION FINALE : GETBIBLE.NET)
 // ==========================================
 
 const bibleStructure = {
@@ -444,7 +289,7 @@ function closeBibleReader() {
 }
 
 // ==========================================
-// 8. FAITH AI (HYBRIDE & ROBUSTE)
+// 5. FAITH AI (HYBRIDE & ROBUSTE)
 // ==========================================
 
 async function askFaithAI() {
@@ -493,36 +338,7 @@ function getFallbackResponse(text) {
     return "Confie-toi en l'Éternel de tout ton cœur. (Proverbes 3:5)";
 }
 // ==========================================
-// 9. CRÉATION GROUPE / PAGE (UI SEULEMENT)
-// ==========================================
-let creationType = 'group';
-
-function setCreationType(type) {
-    creationType = type;
-    const btnGroup = document.getElementById('btn-type-group');
-    const btnPage = document.getElementById('btn-type-page');
-    
-    if(type === 'group') {
-        btnGroup.className = "flex-1 py-2 bg-purple-600 text-white rounded-xl text-xs font-bold";
-        btnPage.className = "flex-1 py-2 bg-gray-700 text-gray-400 rounded-xl text-xs font-bold";
-    } else {
-        btnPage.className = "flex-1 py-2 bg-purple-600 text-white rounded-xl text-xs font-bold";
-        btnGroup.className = "flex-1 py-2 bg-gray-700 text-gray-400 rounded-xl text-xs font-bold";
-    }
-}
-
-async function submitCreation() {
-    const title = document.getElementById('create-title').value;
-    const desc = document.getElementById('create-desc').value;
-    
-    if(!title) return alert("Le nom est obligatoire.");
-    
-    // Simulation (nécessite table 'groups' ou 'pages')
-    alert(`Votre ${creationType === 'group' ? 'Groupe' : 'Page'} "${title}" a été créé(e) avec succès ! (Simulation)`);
-    document.getElementById('create-group-modal').classList.add('hidden');
-}
-// ==========================================
-// 10. PROFIL
+// 5. PROFIL
 // ==========================================
 
 async function updateMyStatus() {
@@ -602,7 +418,7 @@ async function saveProfile() {
 }
 
 // ==========================================
-// 11. GESTION DES AMIS
+// 5. GESTION DES AMIS
 // ==========================================
 
 async function getFriendIds() {
@@ -668,7 +484,7 @@ async function removeFriend(friendId) {
 }
 
 // ==========================================
-// 12. CHAT & MESSAGERIE
+// 6. CHAT & MESSAGERIE
 // ==========================================
 
 function openDirectChat(userId, username) {
@@ -797,7 +613,7 @@ async function sendChatMessage() {
 }
 
 // ==========================================
-// 13. GESTION DES POSTS (DESIGN PREMIUM)
+// 8. GESTION DES POSTS (DESIGN PREMIUM)
 // ==========================================
 
 function handleImageSelect(input) {
@@ -926,7 +742,7 @@ async function sendComment(postId) {
 }
 
 // ==========================================
-// 14. ENTRAIDE & ÉVÉNEMENTS & NOTIFS
+// 9. ENTRAIDE & ÉVÉNEMENTS & NOTIFS
 // ==========================================
 
 async function fetchHelpRequests() {
@@ -1054,7 +870,7 @@ async function addFriend(targetId) {
 function toggleNotifDropdown() { document.getElementById('notif-dropdown').classList.toggle('hidden'); }
 
 // ==========================================
-// 15. GESTION DES STORIES
+// 12. GESTION DES STORIES
 // ==========================================
 
 function triggerAddStory() { document.getElementById('btn-add-story-input').click(); }
@@ -1105,3 +921,273 @@ function openStoryViewer(storyDataEncoded) {
 function closeStoryViewer() { document.getElementById('story-viewer').classList.add('hidden'); if (currentStoryTimer) clearTimeout(currentStoryTimer); }
 async function deleteStory(id) { if (confirm("Supprimer ?")) { await supabaseClient.from('stories').delete().eq('id', id); closeStoryViewer(); renderStoriesList(); } }
 
+// ==========================================
+// 13. NOUVEAU : CRÉATEUR DE VERSETS (CANVAS)
+// ==========================================
+
+// Variables globales pour l'éditeur
+let canvas, ctx;
+let currentBgType = 'color';
+let currentBgValue = '#1f2937'; // Couleur par défaut (gris foncé)
+let uploadedBgImage = null;
+
+// Initialisation au chargement
+document.addEventListener('DOMContentLoaded', () => {
+    canvas = document.getElementById('verse-canvas');
+    if(canvas) {
+        ctx = canvas.getContext('2d');
+        // On dessine une première fois au démarrage
+        setTimeout(drawCanvas, 500); 
+    }
+});
+
+// --- GESTION DU MODAL ---
+function openVerseEditor() {
+    document.getElementById('verse-editor-modal').classList.remove('hidden');
+    drawCanvas(); // Redessiner à l'ouverture
+}
+function closeVerseEditor() {
+    document.getElementById('verse-editor-modal').classList.add('hidden');
+}
+
+// --- GESTION DE L'IMAGE DE FOND ---
+function setBackground(type, value) {
+    currentBgType = type;
+    currentBgValue = value;
+    uploadedBgImage = null; // Reset si on choisit une couleur
+    drawCanvas();
+}
+
+function handleBgUpload(input) {
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            uploadedBgImage = new Image();
+            uploadedBgImage.onload = function() {
+                currentBgType = 'image';
+                drawCanvas();
+            };
+            uploadedBgImage.src = e.target.result;
+        }
+        reader.readAsDataURL(input.files[0]);
+    }
+}
+
+// --- FONCTION PRINCIPALE : DESSINER SUR LE CANVAS ---
+function drawCanvas() {
+    if(!canvas || !ctx) return;
+
+    // 1. Nettoyer le canvas
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // 2. Dessiner le fond
+    if (currentBgType === 'color') {
+        ctx.fillStyle = currentBgValue;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+    } else if (currentBgType === 'image' && uploadedBgImage) {
+        // Dessiner l'image en mode "cover" (remplit tout sans déformer)
+        const ratio = Math.max(canvas.width / uploadedBgImage.width, canvas.height / uploadedBgImage.height);
+        const centerShift_x = (canvas.width - uploadedBgImage.width * ratio) / 2;
+        const centerShift_y = (canvas.height - uploadedBgImage.height * ratio) / 2;
+        ctx.drawImage(uploadedBgImage, 0, 0, uploadedBgImage.width, uploadedBgImage.height,
+                      centerShift_x, centerShift_y, uploadedBgImage.width * ratio, uploadedBgImage.height * ratio);
+        
+        // Ajouter un filtre sombre par dessus l'image pour lisibilité
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
+
+    // 3. Configurer le texte
+    const text = document.getElementById('verse-text-input').value || "Votre verset ici...";
+    const textColor = document.getElementById('text-color-picker').value;
+    const fontSize = document.getElementById('font-size-picker').value;
+    
+    ctx.fillStyle = textColor;
+    ctx.font = `bold ${fontSize}px sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+
+    // 4. Dessiner le texte (avec retour à la ligne automatique)
+    const x = canvas.width / 2;
+    const y = canvas.height / 2;
+    const maxWidth = canvas.width - 60; // Marges de 30px
+    const lineHeight = fontSize * 1.2;
+
+    wrapText(ctx, text, x, y, maxWidth, lineHeight);
+    
+    // 5. Petit filigrane de l'app en bas
+    ctx.font = 'italic 20px sans-serif';
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+    ctx.fillText("Faith Connect", canvas.width / 2, canvas.height - 30);
+}
+
+// Fonction utilitaire pour gérer les retours à la ligne sur Canvas
+function wrapText(context, text, x, y, maxWidth, lineHeight) {
+    const words = text.split(' ');
+    let line = '';
+    let lines = [];
+
+    for(let n = 0; n < words.length; n++) {
+      const testLine = line + words[n] + ' ';
+      const metrics = context.measureText(testLine);
+      const testWidth = metrics.width;
+      if (testWidth > maxWidth && n > 0) {
+        lines.push(line);
+        line = words[n] + ' ';
+      } else {
+        line = testLine;
+      }
+    }
+    lines.push(line);
+
+    // Calculer la hauteur totale pour centrer verticalement
+    let startY = y - ((lines.length - 1) * lineHeight) / 2;
+
+    for(let k = 0; k < lines.length; k++) {
+        context.fillText(lines[k], x, startY + (k * lineHeight));
+    }
+}
+
+// --- PUBLICATION (Canvas -> Image -> Supabase) ---
+async function publishVerseCard() {
+    const btn = document.getElementById('btn-publish-verse');
+    const originalText = btn.innerHTML;
+    const caption = document.getElementById('verse-text-input').value.trim();
+
+    if (!caption) return alert("Veuillez écrire un texte.");
+
+    btn.innerHTML = '<div class="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div> Création...';
+    btn.disabled = true;
+
+    try {
+        // 1. Convertir le canvas en fichier image (Blob)
+        canvas.toBlob(async (blob) => {
+            if (!blob) throw new Error("Erreur de génération d'image");
+            
+            const fileName = `${currentUser.id}/${Date.now()}.png`;
+            
+            // 2. Upload vers SUPABASE Storage (Bucket 'verse-images')
+            const { error: uploadError } = await supabaseClient.storage
+                .from('verse-images')
+                .upload(fileName, blob, { contentType: 'image/png' });
+
+            if (uploadError) throw uploadError;
+
+            // 3. Récupérer l'URL publique
+            const { data: urlData } = supabaseClient.storage
+                .from('verse-images')
+                .getPublicUrl(fileName);
+
+            // 4. Sauvegarder dans la table 'reels'
+            // Note: on utilise la colonne video_url pour stocker l'image
+            const { error: dbError } = await supabaseClient.from('reels').insert([{
+                user_id: currentUser.id,
+                video_url: urlData.publicUrl, // C'est une image maintenant
+                caption: caption
+            }]);
+
+            if (dbError) throw dbError;
+
+            // Succès !
+            closeVerseEditor();
+            document.getElementById('verse-text-input').value = "";
+            setBackground('color', '#1f2937'); // Reset fond
+            fetchReels(); // Recharger la liste
+            alert("Votre carte verset est publiée ! ✨");
+
+        }, 'image/png', 0.95); // Qualité JPEG 95%
+
+    } catch (error) {
+        console.error(error);
+        alert("Erreur : " + error.message);
+    } finally {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+    }
+}
+
+// --- NOUVELLE FONCTION D'AFFICHAGE DES REELS (Mode Galerie d'Images) ---
+async function fetchReels() {
+    const container = document.getElementById('reels-container');
+    if(!container) return;
+    container.innerHTML = '<div class="col-span-full text-center pt-10 text-gray-500 animate-pulse">Chargement des inspirations...</div>';
+    
+    const { data: reels, error } = await supabaseClient
+        .from('reels')
+        .select('*, profiles:user_id(username, avatar_url)')
+        .order('created_at', { ascending: false });
+
+    container.innerHTML = '';
+    
+    if (reels && reels.length > 0) {
+        reels.forEach(reel => {
+            const avatar = reel.profiles?.avatar_url || 'https://ui-avatars.com/api/?name=' + (reel.profiles?.username || '?');
+            const username = reel.profiles?.username || 'Anonyme';
+            // Note : reel.video_url contient maintenant l'URL de l'image générée
+            
+            const html = `
+                <div class="bg-gray-800 rounded-2xl overflow-hidden border border-white/10 shadow-lg animate-view group">
+                    <div class="relative aspect-square bg-gray-900">
+                        <img src="${reel.video_url}" class="w-full h-full object-cover" loading="lazy">
+                         <div class="absolute inset-0 bg-black/0 transition-colors group-hover:bg-black/20"></div>
+                    </div>
+                    
+                    <div class="p-4 bg-gray-800/90 relative">
+                         <div class="absolute -top-6 left-4 flex items-center gap-2">
+                             <img src="${avatar}" class="w-10 h-10 rounded-full border-2 border-gray-800 shadow-md">
+                             <span class="text-sm font-bold text-white bg-gray-900/60 px-2 py-0.5 rounded-full backdrop-blur-md">${username}</span>
+                        </div>
+
+                        <div class="mt-4 pt-1">
+                            <p class="text-sm text-gray-300 line-clamp-2 italic">"${reel.caption || ''}"</p>
+                            
+                            <div class="flex justify-between items-center mt-4 pt-3 border-t border-white/5">
+                                <div class="flex gap-4">
+                                    <button onclick="toggleReelAmen('${reel.id}')" class="flex items-center gap-1.5 text-gray-400 hover:text-pink-500 transition-colors text-xs">
+                                        <i data-lucide="heart" class="w-5 h-5" id="reel-heart-${reel.id}"></i> Amen
+                                    </button>
+                                    <button onclick="openReelComments('${reel.id}')" class="flex items-center gap-1.5 text-gray-400 hover:text-purple-500 transition-colors text-xs">
+                                        <i data-lucide="message-circle" class="w-5 h-5"></i> Coms
+                                    </button>
+                                </div>
+                                <button onclick="shareImage('${reel.video_url}')" class="text-gray-400 hover:text-blue-400 transition-colors">
+                                    <i data-lucide="share-2" class="w-5 h-5"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>`;
+            container.insertAdjacentHTML('beforeend', html);
+        });
+        if(typeof lucide !== 'undefined') lucide.createIcons();
+    } else {
+        container.innerHTML = '<div class="col-span-full text-center pt-20 text-gray-500 flex flex-col items-center gap-2"><i data-lucide="image-off" class="w-10 h-10 opacity-50"></i><p>Aucune carte verset pour le moment.<br>Soyez le premier !</p></div>';
+        if(typeof lucide !== 'undefined') lucide.createIcons();
+    }
+}
+
+// Petit bonus : fonction de partage native
+async function shareImage(url) {
+    if (navigator.share) {
+        try {
+            // On essaie de transformer l'URL en fichier pour un vrai partage d'image
+            const response = await fetch(url);
+            const blob = await response.blob();
+            const file = new File([blob], "verset-faithconnect.png", { type: "image/png" });
+            
+            await navigator.share({
+                files: [file],
+                title: 'Verset Faith Connect',
+                text: 'Regarde ce verset !'
+            });
+        } catch (err) {
+            console.error("Erreur partage:", err);
+            // Fallback : partage du lien
+             navigator.clipboard.writeText(url).then(() => alert("Lien de l'image copié !"));
+        }
+    } else {
+        navigator.clipboard.writeText(url).then(() => alert("Lien de l'image copié !"));
+    }
+}
+
+// Note : Les fonctions toggleReelAmen et openReelComments existantes devraient toujours fonctionner sans modification.
