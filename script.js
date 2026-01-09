@@ -570,39 +570,69 @@ function resetChat() {
 }
 
 async function fetchMessages() {
-    const container = document.getElementById('chat-history');
-    if(!container || !activeChatUser) return;
-    const { data } = await supabaseClient.from('messages').select('*').or(`and(sender_id.eq.${currentUser.id},receiver_id.eq.${activeChatUser.id}),and(sender_id.eq.${activeChatUser.id},receiver_id.eq.${currentUser.id})`).order('created_at', { ascending: true });
-    container.innerHTML = '';
-    
-    if(data && data.length > 0) {
-        let lastSenderId = null;
-        
-        data.forEach(msg => {
-            const isMe = msg.sender_id === currentUser.id;
-            const isSameSender = lastSenderId === msg.sender_id;
-            const time = new Date(msg.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-            
-            const bubbleClass = isMe 
-                ? 'bg-purple-600 text-white rounded-tr-sm' 
-                : 'bg-gray-800 text-gray-200 rounded-tl-sm';
-            
-            const marginClass = isSameSender ? 'mt-1' : 'mt-4';
+    const container = document.getElementById('chat-history');
+    if(!container || !activeChatUser) return;
 
-            container.insertAdjacentHTML('beforeend', `
-                <div class="flex ${isMe ? 'justify-end' : 'justify-start'} ${marginClass} group">
-                    <div class="max-w-[75%]">
-                        <div class="${bubbleClass} px-4 py-2 rounded-2xl text-sm shadow-sm relative">
-                            ${msg.content}
-                            <span class="text-[9px] opacity-60 block text-right mt-1 w-full ${isMe ? 'text-purple-200' : 'text-gray-400'}">${time}</span>
-                        </div>
-                    </div>
-                </div>
-            `);
-            lastSenderId = msg.sender_id;
-        });
-        container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
-    } else { container.innerHTML = '<div class="text-center text-gray-600 text-xs mt-10 italic">Dites bonjour ! 👋</div>'; }
+    // Récupération des messages
+    const { data } = await supabaseClient
+        .from('messages')
+        .select('*')
+        .or(`and(sender_id.eq.${currentUser.id},receiver_id.eq.${activeChatUser.id}),and(sender_id.eq.${activeChatUser.id},receiver_id.eq.${currentUser.id})`)
+        .order('created_at', { ascending: true });
+
+    container.innerHTML = '';
+    
+    if(data && data.length > 0) {
+        let lastSenderId = null;
+        
+        data.forEach(msg => {
+            const isMe = msg.sender_id === currentUser.id;
+            const isSameSender = lastSenderId === msg.sender_id;
+            const time = new Date(msg.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+            
+            // DESIGN BULLE :
+            // rounded-tr-sm = coin haut droit pointu pour moi
+            // rounded-tl-sm = coin haut gauche pointu pour l'autre
+            const bubbleClass = isMe 
+                ? 'bg-purple-600 text-white rounded-2xl rounded-tr-sm' 
+                : 'bg-gray-800 text-gray-200 rounded-2xl rounded-tl-sm border border-white/5';
+            
+            const marginClass = isSameSender ? 'mt-1' : 'mt-4';
+
+            // CORRECTION TAILLE : "max-w-[85%] md:max-w-md" empêche la bulle de devenir géante sur PC
+            container.insertAdjacentHTML('beforeend', `
+                <div class="flex ${isMe ? 'justify-end' : 'justify-start'} ${marginClass} group animate-fade-in">
+                    <div class="max-w-[85%] md:max-w-md"> 
+                        <div class="${bubbleClass} px-4 py-2 text-sm shadow-md relative break-words">
+                            ${msg.content}
+                            <div class="text-[9px] opacity-60 text-right mt-1 gap-1 flex justify-end items-center">
+                                ${time}
+                                ${isMe ? '<i data-lucide="check" class="w-3 h-3"></i>' : ''}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `);
+            lastSenderId = msg.sender_id;
+        });
+        
+        // Scroll automatique en bas
+        setTimeout(() => {
+            container.scrollTop = container.scrollHeight;
+        }, 100);
+        
+        if(typeof lucide !== 'undefined') lucide.createIcons();
+    } else { 
+        // Message vide sympa
+        container.innerHTML = `
+            <div class="flex flex-col items-center justify-center h-full text-gray-600 opacity-50 space-y-2">
+                <div class="p-4 bg-gray-800 rounded-full">
+                    <i data-lucide="hand" class="w-8 h-8"></i>
+                </div>
+                <p class="text-sm">Dites bonjour à ${activeChatUser.username} !</p>
+            </div>`; 
+            if(typeof lucide !== 'undefined') lucide.createIcons();
+    }
 }
 
 async function sendChatMessage() {
