@@ -26,3 +26,51 @@
 /* Animation slide up pour les commentaires */
 @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
 .animate-slide-up { animation: slideUp 0.3s ease-out; }
+/* Fond dégradé spécifique */
+.bible-gradient-bg {
+    background: linear-gradient(180deg, #0F0C29 0%, #302B63 50%, #24243E 100%);
+}
+
+/* Style des boutons du haut (effet vitré) */
+.menu-btn {
+    flex: 1;
+    background: rgba(45, 43, 68, 0.6);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 20px;
+    padding: 16px 8px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+}
+
+.menu-btn.active, .menu-btn:hover {
+    background: rgba(108, 99, 255, 0.2);
+    border-color: rgba(108, 99, 255, 0.5);
+    transform: translateY(-2px);
+}
+
+/* Le Rectangle Flottant (Effet 3D et Ombre) */
+.reading-card {
+    background: #1A1A2E;
+    border-top-left-radius: 35px;
+    border-top-right-radius: 35px;
+    /* C'est cette ligne qui donne l'effet qu'il flotte au-dessus du fond */
+    box-shadow: 0 -15px 40px rgba(0, 0, 0, 0.6); 
+    
+    /* Scrollbar fine et stylisée */
+    scrollbar-width: thin;
+    scrollbar-color: #302B63 #1A1A2E;
+}
+
+/* Style du Surlignage */
+.highlighted {
+    background: rgba(255, 215, 0, 0.15);
+    color: #FFD700;
+    border-left: 3px solid #FFD700;
+    padding: 5px 10px;
+    border-radius: 4px;
+}
