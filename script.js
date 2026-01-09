@@ -174,6 +174,8 @@ async function loadAppData() {
 // 4. BIBLE (VERSION FINALE : GETBIBLE.NET)
 // ==========================================
 
+let currentBibleVersion = 'ls1910'; // Langue par défaut
+
 const bibleStructure = {
     AT: [
         { name: "Genèse", id: 1 }, { name: "Exode", id: 2 }, { name: "Lévitique", id: 3 }, { name: "Nombres", id: 4 }, 
@@ -296,6 +298,84 @@ async function loadBibleChapter(id, name, chapter) {
 
 function closeBibleReader() {
     document.getElementById('bible-reader').classList.add('hidden');
+}
+
+// --- GESTION BIBLE MULTI-LANGUES ---
+
+function changeBibleVersion(version) {
+    currentBibleVersion = version;
+    const reader = document.getElementById('bible-reader');
+    // Si on est déjà en train de lire, on recharge la page dans la nouvelle langue
+    if (reader && !reader.classList.contains('hidden')) {
+        loadBibleChapter(currentBookId, currentBookName, currentChapter);
+    }
+}
+
+async function loadBibleChapter(id, name, chapter) {
+    const reader = document.getElementById('bible-reader');
+    const content = document.getElementById('reader-content');
+    const title = document.getElementById('reader-title');
+    
+    if(!reader) return;
+    reader.classList.remove('hidden');
+    
+    currentBookId = id;
+    currentBookName = name;
+    currentChapter = chapter;
+
+    title.innerText = `${name} ${chapter}`;
+    
+    content.innerHTML = `
+        <div class="flex flex-col h-full items-center justify-center space-y-4">
+            <div class="w-8 h-8 border-4 border-purple-500 rounded-full animate-spin border-t-transparent"></div>
+            <p class="text-xs text-gray-500 animate-pulse">Chargement...</p>
+        </div>`;
+
+    try {
+        // C'est ici que la magie opère : on utilise la variable de langue
+        const response = await fetch(`https://api.getbible.net/v2/${currentBibleVersion}/${id}/${chapter}.json`);
+        
+        if (!response.ok) throw new Error("Chapitre introuvable");
+
+        const data = await response.json();
+
+        if (data.verses && data.verses.length > 0) {
+            // Gestion de l'Arabe (écriture de droite à gauche)
+            const isArabic = currentBibleVersion === 'vandyke';
+            const dir = isArabic ? 'rtl' : 'ltr';
+            const align = isArabic ? 'text-right' : 'text-justify';
+            const font = isArabic ? 'font-sans' : 'font-serif';
+
+            let formattedText = data.verses.map(v => 
+                `<p class="mb-3 leading-relaxed text-gray-200 ${align}" dir="${dir}">
+                    <sup class="text-purple-400 text-[10px] font-bold mr-1 select-none">${v.verse}</sup>${v.text}
+                </p>`
+            ).join('');
+
+            const prevBtn = chapter > 1 
+                ? `<button onclick="loadBibleChapter(${id}, '${name}', ${chapter - 1})" class="flex-1 bg-gray-800 py-3 rounded-xl text-xs font-bold text-gray-300 hover:bg-gray-700 transition-colors">← Précédent</button>` 
+                : `<div class="flex-1"></div>`;
+            
+            const nextBtn = `<button onclick="loadBibleChapter(${id}, '${name}', ${chapter + 1})" class="flex-1 bg-purple-600 py-3 rounded-xl text-xs font-bold text-white shadow-lg hover:bg-purple-500 transition-colors">Suivant →</button>`;
+
+            content.innerHTML = `
+                <div class="${font} text-sm px-2 pt-2 pb-20 animate-fade-in">
+                    ${formattedText}
+                    <div class="flex justify-between gap-4 mt-8 border-t border-white/10 pt-6" dir="ltr">
+                        ${prevBtn}
+                        ${nextBtn}
+                    </div>
+                </div>
+            `;
+            content.scrollTop = 0;
+
+        } else {
+            content.innerHTML = `<div class="text-center text-gray-400 mt-20"><p class="mb-4">Fin du livre.</p><button onclick="closeBibleReader()" class="bg-gray-800 px-6 py-2 rounded-full text-xs text-white border border-white/10 hover:bg-gray-700">Fermer</button></div>`;
+        }
+    } catch (error) {
+        console.error("Erreur Bible:", error);
+        content.innerHTML = `<div class="text-center text-red-400 mt-20 px-6"><p class="text-xs mb-2">Erreur de chargement.</p><button onclick="loadBibleChapter(${id}, '${name}', ${chapter})" class="bg-red-500/10 text-red-400 px-4 py-2 rounded text-xs hover:bg-red-500/20">Réessayer</button></div>`;
+    }
 }
 
 // ==========================================
