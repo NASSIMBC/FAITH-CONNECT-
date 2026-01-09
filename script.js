@@ -171,13 +171,12 @@ async function loadAppData() {
 }
 
 // ==========================================
-// 4. BIBLE (VERSION FINALE : GETBIBLE.NET)
+// 4. BIBLE (VERSION FINALE & CORRIGÉE)
 // ==========================================
 
 let currentBibleVersion = 'ls1910'; // Langue par défaut
-let currentBibleVersion = 'ls1910';
-let currentBookId = 1; 
-let currentBookName = "Genèse";
+let currentBookId = 43; 
+let currentBookName = "Jean";
 let currentChapter = 1;
 
 const bibleStructure = {
@@ -204,13 +203,17 @@ const bibleStructure = {
     ]
 };
 
-let currentBookId = 43; 
-let currentBookName = "Jean";
-let currentChapter = 1;
-
+// --- 1. AFFICHER LA LISTE DES LIVRES ---
 function showTestament(type) {
     const atBtn = document.getElementById('btn-at');
     const ntBtn = document.getElementById('btn-nt');
+    const listContainer = document.getElementById('bible-books-list');
+    const reader = document.getElementById('bible-reader');
+
+    // Sécurité : On s'assure que le lecteur est fermé quand on change de testament
+    if (reader) reader.classList.add('hidden');
+    if (listContainer) listContainer.classList.remove('hidden');
+
     if(!atBtn || !ntBtn) return;
 
     if(type === 'AT') {
@@ -221,29 +224,33 @@ function showTestament(type) {
         atBtn.className = "flex-1 py-2 bg-gray-800 text-gray-400 rounded-xl text-xs font-bold hover:bg-gray-700 transition-colors";
     }
 
-    const container = document.getElementById('bible-books-list');
-    if(container) {
-        container.innerHTML = bibleStructure[type].map(book => `
-            <button onclick="loadBibleChapter(${book.id}, '${book.name}', 1)" class="p-3 bg-gray-800 border border-white/5 rounded-xl hover:bg-gray-700 transition-all text-left group active:scale-95">
+    if(listContainer) {
+        listContainer.innerHTML = bibleStructure[type].map(book => `
+            <button onclick="loadBibleChapter(${book.id}, '${book.name}', 1)" class="p-3 bg-gray-800 border border-white/5 rounded-xl hover:bg-gray-700 transition-all text-left group active:scale-95 animate-fade-in">
                 <span class="font-bold text-white group-hover:text-purple-400 text-sm transition-colors">${book.name}</span>
             </button>
         `).join('');
     }
 }
 
+// --- 2. CHARGER UN CHAPITRE (LECTURE) ---
 async function loadBibleChapter(id, name, chapter) {
     const reader = document.getElementById('bible-reader');
+    const listContainer = document.getElementById('bible-books-list'); // Ajout important
     const content = document.getElementById('reader-content');
     const title = document.getElementById('reader-title');
     
     if(!reader) return;
+    
+    // BASCULE D'AFFICHAGE : On cache la liste, on montre le lecteur
+    if(listContainer) listContainer.classList.add('hidden');
     reader.classList.remove('hidden');
     
     currentBookId = id;
     currentBookName = name;
     currentChapter = chapter;
 
-    title.innerText = `${name} ${chapter}`;
+    if(title) title.innerText = `${name} ${chapter}`;
     
     content.innerHTML = `
         <div class="flex flex-col h-full items-center justify-center space-y-4">
@@ -252,99 +259,16 @@ async function loadBibleChapter(id, name, chapter) {
         </div>`;
 
     try {
-        const response = await fetch(`https://api.getbible.net/v2/ls1910/${id}/${chapter}.json`);
+        // Utilisation d'un proxy pour éviter les erreurs CORS si nécessaire (optionnel mais recommandé)
+        const apiUrl = `https://api.getbible.net/v2/${currentBibleVersion}/${id}/${chapter}.json`;
         
+        const response = await fetch(apiUrl);
         if (!response.ok) throw new Error("Chapitre introuvable");
 
         const data = await response.json();
 
         if (data.verses && data.verses.length > 0) {
-            let formattedText = data.verses.map(v => 
-                `<p class="mb-3 leading-relaxed text-gray-200 text-justify">
-                    <sup class="text-purple-400 text-[10px] font-bold mr-2 select-none">${v.verse}</sup>${v.text}
-                </p>`
-            ).join('');
-
-            const prevBtn = chapter > 1 
-                ? `<button onclick="loadBibleChapter(${id}, '${name}', ${chapter - 1})" class="flex-1 bg-gray-800 py-3 rounded-xl text-xs font-bold text-gray-300 hover:bg-gray-700 transition-colors">← Précédent</button>` 
-                : `<div class="flex-1"></div>`;
-            
-            const nextBtn = `<button onclick="loadBibleChapter(${id}, '${name}', ${chapter + 1})" class="flex-1 bg-purple-600 py-3 rounded-xl text-xs font-bold text-white shadow-lg hover:bg-purple-500 transition-colors">Suivant →</button>`;
-
-            content.innerHTML = `
-                <div class="font-serif text-sm px-2 pt-2 pb-20 animate-fade-in">
-                    ${formattedText}
-                    <div class="flex justify-between gap-4 mt-8 border-t border-white/10 pt-6">
-                        ${prevBtn}
-                        ${nextBtn}
-                    </div>
-                </div>
-            `;
-            content.scrollTop = 0;
-
-        } else {
-            content.innerHTML = `
-                <div class="text-center text-gray-400 mt-20">
-                    <p class="mb-4">Fin du livre de ${name}.</p>
-                    <button onclick="closeBibleReader()" class="bg-gray-800 px-6 py-2 rounded-full text-xs text-white border border-white/10 hover:bg-gray-700">Fermer la lecture</button>
-                </div>`;
-        }
-    } catch (error) {
-        console.error("Erreur Bible:", error);
-        content.innerHTML = `
-            <div class="text-center text-red-400 mt-20 px-6">
-                <p class="text-xs mb-2">Impossible de charger le texte.</p>
-                <p class="text-[10px] text-gray-600 mb-4 opacity-50">${error.message}</p>
-                <button onclick="loadBibleChapter(${id}, '${name}', ${chapter})" class="bg-red-500/10 text-red-400 px-4 py-2 rounded text-xs hover:bg-red-500/20">Réessayer</button>
-            </div>`;
-    }
-}
-
-function closeBibleReader() {
-    document.getElementById('bible-reader').classList.add('hidden');
-}
-
-// --- GESTION BIBLE MULTI-LANGUES ---
-
-function changeBibleVersion(version) {
-    currentBibleVersion = version;
-    const reader = document.getElementById('bible-reader');
-    // Si on est déjà en train de lire, on recharge la page dans la nouvelle langue
-    if (reader && !reader.classList.contains('hidden')) {
-        loadBibleChapter(currentBookId, currentBookName, currentChapter);
-    }
-}
-
-async function loadBibleChapter(id, name, chapter) {
-    const reader = document.getElementById('bible-reader');
-    const content = document.getElementById('reader-content');
-    const title = document.getElementById('reader-title');
-    
-    if(!reader) return;
-    reader.classList.remove('hidden');
-    
-    currentBookId = id;
-    currentBookName = name;
-    currentChapter = chapter;
-
-    title.innerText = `${name} ${chapter}`;
-    
-    content.innerHTML = `
-        <div class="flex flex-col h-full items-center justify-center space-y-4">
-            <div class="w-8 h-8 border-4 border-purple-500 rounded-full animate-spin border-t-transparent"></div>
-            <p class="text-xs text-gray-500 animate-pulse">Chargement...</p>
-        </div>`;
-
-    try {
-        // C'est ici que la magie opère : on utilise la variable de langue
-        const response = await fetch(`https://api.getbible.net/v2/${currentBibleVersion}/${id}/${chapter}.json`);
-        
-        if (!response.ok) throw new Error("Chapitre introuvable");
-
-        const data = await response.json();
-
-        if (data.verses && data.verses.length > 0) {
-            // Gestion de l'Arabe (écriture de droite à gauche)
+            // Gestion RTL (Arabe)
             const isArabic = currentBibleVersion === 'vandyke';
             const dir = isArabic ? 'rtl' : 'ltr';
             const align = isArabic ? 'text-right' : 'text-justify';
@@ -374,11 +298,41 @@ async function loadBibleChapter(id, name, chapter) {
             content.scrollTop = 0;
 
         } else {
-            content.innerHTML = `<div class="text-center text-gray-400 mt-20"><p class="mb-4">Fin du livre.</p><button onclick="closeBibleReader()" class="bg-gray-800 px-6 py-2 rounded-full text-xs text-white border border-white/10 hover:bg-gray-700">Fermer</button></div>`;
+            content.innerHTML = `
+                <div class="text-center text-gray-400 mt-20">
+                    <p class="mb-4">Fin du livre.</p>
+                    <button onclick="closeBibleReader()" class="bg-gray-800 px-6 py-2 rounded-full text-xs text-white border border-white/10 hover:bg-gray-700">Retour aux livres</button>
+                </div>`;
         }
     } catch (error) {
         console.error("Erreur Bible:", error);
-        content.innerHTML = `<div class="text-center text-red-400 mt-20 px-6"><p class="text-xs mb-2">Erreur de chargement.</p><button onclick="loadBibleChapter(${id}, '${name}', ${chapter})" class="bg-red-500/10 text-red-400 px-4 py-2 rounded text-xs hover:bg-red-500/20">Réessayer</button></div>`;
+        content.innerHTML = `
+            <div class="text-center text-red-400 mt-20 px-6">
+                <p class="text-xs mb-2">Impossible de charger le texte.</p>
+                <p class="text-[10px] text-gray-600 mb-4 opacity-50">${error.message}</p>
+                <button onclick="loadBibleChapter(${id}, '${name}', ${chapter})" class="bg-red-500/10 text-red-400 px-4 py-2 rounded text-xs hover:bg-red-500/20">Réessayer</button>
+            </div>`;
+    }
+}
+
+// --- 3. FONCTION DE FERMETURE (C'est ici que c'était cassé) ---
+function closeBibleReader() {
+    // 1. Cacher le lecteur
+    document.getElementById('bible-reader').classList.add('hidden');
+    // 2. IMPORTANT : Réafficher la liste des livres
+    const listContainer = document.getElementById('bible-books-list');
+    if (listContainer) {
+        listContainer.classList.remove('hidden');
+    }
+}
+
+// --- 4. CHANGEMENT DE LANGUE ---
+function changeBibleVersion(version) {
+    currentBibleVersion = version;
+    const reader = document.getElementById('bible-reader');
+    // Si on est déjà en train de lire, on recharge la page dans la nouvelle langue
+    if (reader && !reader.classList.contains('hidden')) {
+        loadBibleChapter(currentBookId, currentBookName, currentChapter);
     }
 }
 
