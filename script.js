@@ -1,25 +1,3 @@
-J'ai analysé tes erreurs dans la console. Voici le diagnostic précis et la solution **radicale** pour que tout marche.
-
-### 🚨 Analyse des erreurs
-
-1. **`openVerseEditor is not defined`** : C'est la preuve que le Javascript s'est arrêté avant d'arriver à cette fonction à cause d'une erreur plus haut.
-2. **`DELETE 409 Conflict` (Supabase)** : Tu essaies de supprimer un post, mais la base de données refuse car il y a des commentaires ou des likes liés à ce post. **Je vais corriger ça dans le code pour tout supprimer proprement.**
-3. **`POST 409 Conflict` (Friendships)** : Tu essaies d'ajouter un ami alors que la demande existe déjà. **Je vais ajouter une vérification.**
-4. **`GET 406 Not Acceptable`** : La syntaxe de ma requête pour vérifier l'amitié était trop complexe pour Supabase. **Je vais la simplifier.**
-
----
-
-Voici le **CODE JAVASCRIPT CORRIGÉ ET COMPLET**. Il contient :
-
-1. Le système de **Versets (Canvas)** réparé.
-2. Le système de **Recherche et Profil Public** fonctionnel.
-3. La correction des bugs de suppression (409) et d'ajout d'amis.
-4. Le Chat avec **Appel Vidéo** et **Envoi d'images**.
-5. Le Feed intelligent (Amis + Découverte).
-
-👉 **Remplace TOUT le contenu de ton fichier `script.js` par celui-ci :**
-
-```javascript
 // ==========================================
 // 1. CONFIGURATION
 // ==========================================
