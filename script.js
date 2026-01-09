@@ -1172,7 +1172,7 @@ async function fetchReels() {
     const container = document.getElementById('reels-container');
     if(!container) return;
     
-    container.innerHTML = '<div class="col-span-full text-center text-gray-500 mt-10">Chargement des versets...</div>';
+    container.innerHTML = '<div class="col-span-full text-center text-gray-500 mt-10 animate-pulse">Chargement des versets...</div>';
     
     // On récupère les reels (vidéos ET images créées via Canvas)
     const { data: reels, error } = await supabaseClient
@@ -1194,33 +1194,34 @@ async function fetchReels() {
             let contentHtml = '';
             
             if (isImage) {
-                // Affichage IMAGE (Carte Verset)
-                contentHtml = `<img src="${reel.video_url}" class="w-full h-auto object-cover" loading="lazy">`;
+                // IMAGE : Coins arrondis, ombre douce
+                contentHtml = `<img src="${reel.video_url}" class="w-full h-auto object-cover rounded-2xl shadow-lg border border-white/5" loading="lazy">`;
             } else {
-                // Affichage VIDÉO (Youtube/Shorts - Code précédent)
+                // VIDÉO
                 let videoId = reel.video_url.split('v=')[1] || reel.video_url.split('/').pop();
                 const ampersandPosition = videoId.indexOf('&');
                 if(ampersandPosition !== -1) videoId = videoId.substring(0, ampersandPosition);
-                contentHtml = `<iframe class="w-full aspect-[9/16]" src="https://www.youtube.com/embed/${videoId}?controls=0&rel=0" frameborder="0" allowfullscreen></iframe>`;
+                contentHtml = `<iframe class="w-full aspect-[9/16] rounded-2xl shadow-lg border border-white/5" src="https://www.youtube.com/embed/${videoId}?controls=0&rel=0" frameborder="0" allowfullscreen></iframe>`;
             }
 
+            // MODIFICATION ICI : On retire "bg-gray-800" pour "bg-transparent"
             container.insertAdjacentHTML('beforeend', `
-                <div class="bg-gray-800 rounded-xl overflow-hidden border border-white/10 break-inside-avoid mb-4">
+                <div class="bg-transparent break-inside-avoid mb-6 animate-fade-in group">
                     ${contentHtml}
-                    <div class="p-3">
-                        <div class="flex items-center gap-2 mb-2">
-                            <div class="w-6 h-6 rounded-full bg-purple-600 flex items-center justify-center text-[10px] text-white font-bold">
-                                ${reel.profiles?.username?.[0] || '?'}
+                    <div class="px-1 py-2">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-2">
+                                <div class="w-5 h-5 rounded-full bg-gradient-to-tr from-purple-500 to-pink-500 flex items-center justify-center text-[9px] text-white font-bold shadow-md">
+                                    ${reel.profiles?.username?.[0] || '?'}
+                                </div>
+                                <span class="text-xs font-bold text-gray-300">${reel.profiles?.username || 'Anonyme'}</span>
                             </div>
-                            <span class="text-xs font-bold text-white">${reel.profiles?.username || 'Anonyme'}</span>
-                        </div>
-                        <p class="text-xs text-gray-300 line-clamp-2">${reel.caption}</p>
-                        
-                        <div class="flex gap-4 mt-3 pt-2 border-t border-white/5">
-                            <button onclick="toggleReelAmen('${reel.id}')" class="text-gray-400 hover:text-pink-500 transition-colors flex items-center gap-1 text-xs">
-                                <i data-lucide="heart" class="w-4 h-4"></i> Amen
+                            
+                            <button onclick="toggleReelAmen('${reel.id}')" class="text-gray-500 hover:text-pink-500 transition-colors flex items-center gap-1.5 text-xs group-hover:opacity-100 opacity-70">
+                                <i data-lucide="heart" class="w-4 h-4 transition-transform active:scale-125"></i>
                             </button>
                         </div>
+                        ${reel.caption ? `<p class="text-xs text-gray-400 mt-1 line-clamp-2 pl-7">${reel.caption}</p>` : ''}
                     </div>
                 </div>
             `);
