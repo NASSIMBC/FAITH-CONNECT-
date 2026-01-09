@@ -15,7 +15,6 @@
     <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/3004/3004458.png">
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="https://cdn.jsdelivr.net/npm/appwrite@13.0.0"></script> 
 
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
@@ -58,9 +57,8 @@
             animation: slideUpFade 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
         }
 
-        /* --- 5. STYLE TIKTOK (REELS) --- */
+        /* --- 5. STYLE TIKTOK (REELS) & GRID --- */
         #reels-container {
-            /* Modifié pour la grille d'images */
             min-height: 100%;
         }
 
@@ -130,8 +128,13 @@
                 <h1 class="text-lg font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">FAITH CONNECT</h1>
             </div>
             
-            <div class="flex items-center gap-4">
+            <div class="flex items-center gap-3">
                 <div id="user-display" class="hidden sm:block text-sm font-medium text-gray-300"></div>
+                
+                <button onclick="switchView('settings')" class="p-2 rounded-full hover:bg-white/5 transition-colors">
+                    <i data-lucide="settings" class="w-5 h-5 text-gray-400"></i>
+                </button>
+
                 <div class="relative">
                     <button onclick="toggleNotifDropdown()" class="p-2 rounded-full hover:bg-white/5 transition-colors relative">
                         <i data-lucide="bell" class="w-5 h-5 text-gray-400"></i>
@@ -413,6 +416,33 @@
                     </div>
                 </div>
 
+                <div id="view-settings" class="hidden animate-view pb-20">
+                    <div class="p-4">
+                        <h2 class="text-xl font-bold text-white mb-6 flex items-center gap-2">
+                            <i data-lucide="settings" class="w-6 h-6 text-gray-400"></i> Paramètres
+                        </h2>
+
+                        <div class="bg-gray-800/50 rounded-2xl p-4 border border-white/5 mb-4">
+                            <h3 class="text-sm font-bold text-purple-400 mb-3 uppercase tracking-wider">Sécurité</h3>
+                            <div class="space-y-3">
+                                <input type="password" id="settings-new-password" placeholder="Nouveau mot de passe" class="w-full bg-gray-900 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:border-purple-500 outline-none">
+                                <button onclick="updatePassword()" class="w-full py-3 bg-gray-700 hover:bg-gray-600 rounded-xl text-white font-bold text-sm transition-colors">Modifier le mot de passe</button>
+                            </div>
+                        </div>
+
+                        <div class="bg-gray-800/50 rounded-2xl p-4 border border-white/5 mb-4">
+                            <h3 class="text-sm font-bold text-red-400 mb-3 uppercase tracking-wider">Zone Danger</h3>
+                            <button onclick="showBlockedUsers()" class="w-full flex justify-between items-center py-3 px-2 text-gray-300 hover:bg-white/5 rounded-lg">
+                                <span>Gérer les utilisateurs bloqués</span>
+                                <i data-lucide="chevron-right" class="w-4 h-4"></i>
+                            </button>
+                             <button onclick="logout()" class="w-full mt-2 py-3 bg-red-500/10 text-red-400 border border-red-500/20 rounded-xl font-bold text-sm hover:bg-red-500/20 transition-colors">
+                                Déconnexion
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
                 <div id="view-profile" class="hidden animate-view">
                     <div class="bg-gray-800/30 rounded-3xl p-6 border border-white/5 text-center relative overflow-hidden">
                         <div class="absolute inset-0 bg-gradient-to-b from-purple-900/20 to-transparent pointer-events-none"></div>
@@ -425,6 +455,19 @@
                                 <span id="status-text-display" class="text-sm text-gray-300">Mon statut</span>
                                 <button onclick="updateMyStatus()" class="ml-2 text-xs text-purple-400 hover:text-purple-300 font-bold">MODIFIER</button>
                             </div>
+                            
+                            <div class="bg-gray-900/50 rounded-2xl p-4 border border-white/5 mb-6 text-left">
+                                <div class="flex justify-between items-center mb-2">
+                                    <h3 class="text-sm font-bold text-green-400 flex items-center gap-2">
+                                        <i data-lucide="target" class="w-4 h-4"></i> Objectifs Spirituels
+                                    </h3>
+                                    <button onclick="addPersonalGoal()" class="text-xs bg-green-500/20 text-green-400 px-2 py-1 rounded-lg">+ Ajout</button>
+                                </div>
+                                <div id="profile-goals-list" class="space-y-2">
+                                    <div class="text-xs text-gray-500 italic">Aucun objectif défini.</div>
+                                </div>
+                            </div>
+
                             <div class="grid grid-cols-3 gap-4 mb-8">
                                 <div class="bg-gray-900/50 p-3 rounded-2xl border border-white/5"><div class="text-xl font-bold">0</div><div class="text-[10px] text-gray-500 uppercase">Posts</div></div>
                                 <div class="bg-gray-900/50 p-3 rounded-2xl border border-white/5"><div class="text-xl font-bold" id="stats-friends-count">0</div><div class="text-[10px] text-gray-500 uppercase">Amis</div></div>
@@ -432,7 +475,7 @@
                             </div>
                             <div class="flex justify-center gap-3 mb-8">
                                 <button onclick="openEditModal()" class="px-6 py-2.5 bg-white text-gray-900 rounded-xl font-bold text-sm hover:bg-gray-200 transition-colors">Éditer Profil</button>
-                                <button onclick="logout()" class="px-6 py-2.5 bg-red-500/10 text-red-400 border border-red-500/20 rounded-xl font-bold text-sm hover:bg-red-500/20 transition-colors">Déconnexion</button>
+                                <button onclick="document.getElementById('create-group-modal').classList.remove('hidden')" class="px-6 py-2.5 bg-purple-600 text-white rounded-xl font-bold text-sm hover:bg-purple-500 transition-colors">Créer +</button>
                             </div>
                             <div class="border-t border-white/10 pt-6">
                                 <div class="flex items-center justify-center space-x-8 mb-4">
@@ -476,6 +519,25 @@
                 <button onclick="switchView('profile')" id="nav-profile" class="flex flex-col items-center justify-center w-14 h-14 rounded-2xl text-gray-500 transition-all"><i data-lucide="user" class="w-6 h-6"></i><span class="text-[10px] mt-0.5">Profil</span></button>
             </div>
         </nav>
+    </div>
+
+    <div id="create-group-modal" class="hidden fixed inset-0 z-[150] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-gray-800 p-6 rounded-3xl w-full max-w-sm border border-white/10 animate-fade-in">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-lg font-bold text-white">Créer</h2>
+                <button onclick="document.getElementById('create-group-modal').classList.add('hidden')" class="p-2 text-gray-400"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+            
+            <div class="flex gap-2 mb-4">
+                <button onclick="setCreationType('group')" id="btn-type-group" class="flex-1 py-2 bg-purple-600 text-white rounded-xl text-xs font-bold">Groupe</button>
+                <button onclick="setCreationType('page')" id="btn-type-page" class="flex-1 py-2 bg-gray-700 text-gray-400 rounded-xl text-xs font-bold">Page</button>
+            </div>
+
+            <input type="text" id="create-title" placeholder="Nom du groupe/page" class="w-full bg-gray-900 border border-white/10 rounded-xl p-3 mb-3 text-white text-sm outline-none focus:border-purple-500">
+            <textarea id="create-desc" placeholder="Description courte..." class="w-full bg-gray-900 border border-white/10 rounded-xl p-3 mb-4 text-white text-sm outline-none resize-none h-20"></textarea>
+            
+            <button onclick="submitCreation()" class="w-full py-3 bg-white text-gray-900 rounded-xl font-bold">Créer maintenant</button>
+        </div>
     </div>
 
     <div id="edit-profile-modal" class="hidden fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
