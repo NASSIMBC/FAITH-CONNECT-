@@ -936,12 +936,11 @@ async function deleteStory(id) { if (confirm("Supprimer ?")) { await supabaseCli
 // 13. NOUVEAU : CRÉATEUR DE VERSETS (CANVAS)
 // ==========================================
 
-// Variables globales pour l'éditeur
-let canvas, ctx;
-let currentBgType = 'color';
-let currentBgValue = '#1f2937'; // Couleur par défaut (gris foncé)
+// --- VARIABLES GLOBALES CANVAS ---
+let currentTextAlign = 'center';
+let currentBgType = 'color'; 
+let currentBgValue = '#1f2937'; 
 let uploadedBgImage = null;
-
 // Initialisation au chargement
 document.addEventListener('DOMContentLoaded', () => {
     canvas = document.getElementById('verse-canvas');
@@ -960,6 +959,8 @@ function openVerseEditor() {
 function closeVerseEditor() {
     document.getElementById('verse-editor-modal').classList.add('hidden');
 }
+
+
 
 // --- GESTION DE L'IMAGE DE FOND ---
 function setBackground(type, value) {
@@ -1167,3 +1168,135 @@ function drawCanvas() {
     // Reset shadow
     ctx.shadowColor = "transparent";
 }
+async function fetchReels() {
+    const container = document.getElementById('reels-container');
+    if(!container) return;
+    
+    container.innerHTML = '<div class="col-span-full text-center text-gray-500 mt-10">Chargement des versets...</div>';
+    
+    // On récupère les reels (vidéos ET images créées via Canvas)
+    const { data: reels, error } = await supabaseClient
+        .from('reels')
+        .select('*, profiles:user_id(username, avatar_url)')
+        .order('created_at', { ascending: false });
+
+    if (error) {
+        console.error(error);
+        return;
+    }
+
+    container.innerHTML = '';
+
+    if (reels && reels.length > 0) {
+        reels.forEach(reel => {
+            const isImage = reel.video_url.includes('.png') || reel.video_url.includes('.jpg') || reel.video_url.includes('verses/');
+            
+            let contentHtml = '';
+            
+            if (isImage) {
+                // Affichage IMAGE (Carte Verset)
+                contentHtml = `<img src="${reel.video_url}" class="w-full h-auto object-cover" loading="lazy">`;
+            } else {
+                // Affichage VIDÉO (Youtube/Shorts - Code précédent)
+                let videoId = reel.video_url.split('v=')[1] || reel.video_url.split('/').pop();
+                const ampersandPosition = videoId.indexOf('&');
+                if(ampersandPosition !== -1) videoId = videoId.substring(0, ampersandPosition);
+                contentHtml = `<iframe class="w-full aspect-[9/16]" src="https://www.youtube.com/embed/${videoId}?controls=0&rel=0" frameborder="0" allowfullscreen></iframe>`;
+            }
+
+            container.insertAdjacentHTML('beforeend', `
+                <div class="bg-gray-800 rounded-xl overflow-hidden border border-white/10 break-inside-avoid mb-4">
+                    ${contentHtml}
+                    <div class="p-3">
+                        <div class="flex items-center gap-2 mb-2">
+                            <div class="w-6 h-6 rounded-full bg-purple-600 flex items-center justify-center text-[10px] text-white font-bold">
+                                ${reel.profiles?.username?.[0] || '?'}
+                            </div>
+                            <span class="text-xs font-bold text-white">${reel.profiles?.username || 'Anonyme'}</span>
+                        </div>
+                        <p class="text-xs text-gray-300 line-clamp-2">${reel.caption}</p>
+                        
+                        <div class="flex gap-4 mt-3 pt-2 border-t border-white/5">
+                            <button onclick="toggleReelAmen('${reel.id}')" class="text-gray-400 hover:text-pink-500 transition-colors flex items-center gap-1 text-xs">
+                                <i data-lucide="heart" class="w-4 h-4"></i> Amen
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `);
+        });
+        if(typeof lucide !== 'undefined') lucide.createIcons();
+    } else {
+        container.innerHTML = '<div class="col-span-full text-center text-gray-600 mt-10">Aucun verset pour le moment.</div>';
+    }
+}
+
+async function publishVerseCard() {
+    const canvas = document.getElementById('verse-canvas');
+    const btn = document.getElementById('btn-publish-verse');
+    
+    // 1. UI Loading
+    const originalText = btn.innerHTML;
+    btn.innerHTML = 'Publication...';
+    btn.disabled = true;
+
+    // 2. Conversion Canvas -> Image
+    canvas.toBlob(async (blob) => {
+        try {
+            // 3. Upload vers Supabase Storage
+            const fileName = `verses/${currentUser.id}_${Date.now()}.png`;
+            const { error: uploadError } = await supabaseClient.storage.from('post-images').upload(fileName, blob);
+            
+            if (uploadError) throw uploadError;
+            
+            const { data } = supabaseClient.storage.from('post-images').getPublicUrl(fileName);
+            
+            // 4. Création du Post dans la base de données
+            // On l'ajoute comme un "Reel" (Verset)
+            const { error: dbError } = await supabaseClient.from('reels').insert([{
+                user_id: currentUser.id,
+                video_url: data.publicUrl, // On utilise ce champ pour l'image du verset
+                caption: document.getElementById('verse-text-input').value || "Verset du jour",
+                // Tu peux ajouter un champ 'type': 'image' dans ta table si tu veux distinguer vidéo/image
+            }]);
+
+            if (dbError) throw dbError;
+
+            alert("Carte verset publiée avec succès !");
+            closeVerseEditor();
+            switchView('reels'); // Rafraîchir la vue
+
+        } catch (error) {
+            console.error(error);
+            alert("Erreur lors de la publication : " + error.message);
+        } finally {
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+        }
+    });
+}
+
+function setBackground(type, value) {
+    currentBgType = type;
+    currentBgValue = value;
+    drawCanvas();
+}
+
+function handleBgUpload(input) {
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            uploadedBgImage = new Image();
+            uploadedBgImage.onload = function() {
+                currentBgType = 'image';
+                drawCanvas();
+            };
+            uploadedBgImage.src = e.target.result;
+        };
+        reader.readAsDataURL(input.files[0]);
+    }
+}
+
+// Fonctions nécessaires pour l'ouverture/fermeture du modal (si manquantes)
+function openVerseEditor() { document.getElementById('verse-editor-modal').classList.remove('hidden'); drawCanvas(); }
+function closeVerseEditor() { document.getElementById('verse-editor-modal').classList.add('hidden'); }
