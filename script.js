@@ -171,11 +171,15 @@ async function loadAppData() {
 }
 
 // ==========================================
-// 4. BIBLE (VERSION FINALE : GETBIBLE.NET)
+// LOGIQUE BIBLE (DESIGN "FAITH CONNECT" PREMIUM)
 // ==========================================
 
-let currentBibleVersion = 'ls1910'; // Langue par défaut
+let currentBibleVersion = 'ls1910'; // Version par défaut
+let currentBookId = 1; 
+let currentBookName = "Genèse";
+let currentChapter = 1;
 
+// Structure des livres (identique à ta version, nécessaire pour l'API)
 const bibleStructure = {
     AT: [
         { name: "Genèse", id: 1 }, { name: "Exode", id: 2 }, { name: "Lévitique", id: 3 }, { name: "Nombres", id: 4 }, 
@@ -200,35 +204,42 @@ const bibleStructure = {
     ]
 };
 
-let currentBookId = 43; 
-let currentBookName = "Jean";
-let currentChapter = 1;
-
+// --- 1. FONCTION PRINCIPALE : AFFICHER LES LIVRES ---
 function showTestament(type) {
-    const atBtn = document.getElementById('btn-at');
-    const ntBtn = document.getElementById('btn-nt');
-    if(!atBtn || !ntBtn) return;
+    const listContainer = document.getElementById('bible-books-list');
+    const reader = document.getElementById('bible-reader');
+    
+    // Fermer le lecteur si ouvert
+    if(reader) reader.classList.add('hidden');
+    if(listContainer) listContainer.classList.remove('hidden');
 
-    if(type === 'AT') {
-        atBtn.className = "flex-1 py-2 bg-purple-600 text-white rounded-xl text-xs font-bold transition-colors shadow-lg";
-        ntBtn.className = "flex-1 py-2 bg-gray-800 text-gray-400 rounded-xl text-xs font-bold hover:bg-gray-700 transition-colors";
-    } else {
-        ntBtn.className = "flex-1 py-2 bg-purple-600 text-white rounded-xl text-xs font-bold transition-colors shadow-lg";
-        atBtn.className = "flex-1 py-2 bg-gray-800 text-gray-400 rounded-xl text-xs font-bold hover:bg-gray-700 transition-colors";
-    }
+    // Gérer l'état actif des boutons du haut (Style Visuel)
+    document.querySelectorAll('.menu-btn').forEach(btn => btn.classList.remove('active'));
+    if(type === 'AT') document.getElementById('btn-at')?.classList.add('active');
+    if(type === 'NT') document.getElementById('btn-nt')?.classList.add('active');
 
-    const container = document.getElementById('bible-books-list');
-    if(container) {
-        container.innerHTML = bibleStructure[type].map(book => `
-            <button onclick="loadBibleChapter(${book.id}, '${book.name}', 1)" class="p-3 bg-gray-800 border border-white/5 rounded-xl hover:bg-gray-700 transition-all text-left group active:scale-95">
-                <span class="font-bold text-white group-hover:text-purple-400 text-sm transition-colors">${book.name}</span>
+    // Générer la grille des livres
+    if(container = document.getElementById('bible-books-list')) {
+        container.innerHTML = bibleStructure[type].map((book, index) => {
+            // Numéro formaté (01, 02...)
+            const num = (index + 1).toString().padStart(2, '0');
+            
+            // Nouveau Design du bouton Livre
+            return `
+            <button onclick="loadBibleChapter(${book.id}, '${book.name}', 1)" 
+                class="bg-white/5 border border-white/10 rounded-xl p-4 text-left hover:bg-purple-600/30 hover:border-purple-500 transition-all group animate-fade-in">
+                <span class="block text-xs text-purple-400 font-bold mb-1 opacity-70 group-hover:opacity-100">${num}</span>
+                <span class="text-white font-serif text-sm group-hover:translate-x-1 transition-transform inline-block">${book.name}</span>
             </button>
-        `).join('');
+            `;
+        }).join('');
     }
 }
 
+// --- 2. FONCTION : CHARGER UN CHAPITRE (API) ---
 async function loadBibleChapter(id, name, chapter) {
     const reader = document.getElementById('bible-reader');
+    const listContainer = document.getElementById('bible-books-list');
     const content = document.getElementById('reader-content');
     const title = document.getElementById('reader-title');
     
@@ -236,54 +247,90 @@ async function loadBibleChapter(id, name, chapter) {
     currentBookName = name;
     currentChapter = chapter;
 
-    if(reader) reader.classList.remove('hidden');
+    // Interface : Basculer de la liste vers le lecteur
+    if(listContainer) listContainer.classList.add('hidden'); // Cacher la liste
+    if(reader) reader.classList.remove('hidden'); // Montrer le lecteur
+    
     if(title) title.innerText = `${name} ${chapter}`;
-    if(content) content.innerHTML = '<div class="text-center p-10 text-purple-400">Chargement...</div>';
+    if(content) content.innerHTML = '<div class="flex justify-center items-center h-40"><div class="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-500"></div></div>';
 
     try {
-        // --- C'EST CETTE LIGNE QUI EST IMPORTANTE ---
         const apiUrl = `https://api.getbible.net/v2/${currentBibleVersion}/${id}/${chapter}.json`;
+        // Utilisation d'un proxy différent si allorigins pose problème, sinon garder le tien
         const url = `https://api.allorigins.win/raw?url=${encodeURIComponent(apiUrl)}`;
-        // --------------------------------------------
         
         const response = await fetch(url);
         if (!response.ok) throw new Error("Erreur réseau");
 
         const data = await response.json();
 
-        // Gestion RTL (Arabe)
+        // Styles dynamiques (Arabe vs Français)
         const isArabic = currentBibleVersion === 'vandyke';
         const direction = isArabic ? 'rtl' : 'ltr';
-        const align = isArabic ? 'text-right' : 'text-justify';
         const font = isArabic ? 'font-sans' : 'font-serif';
+        const align = isArabic ? 'text-right' : 'text-left';
 
         let htmlContent = '';
         if (data.verses) {
             htmlContent = data.verses.map(v => 
-                `<p class="mb-3 ${align} ${font}" dir="${direction}">
-                    <span class="text-purple-400 font-bold text-xs mr-1">${v.verse}</span>
-                    <span class="text-gray-200 text-sm">${v.text}</span>
-                </p>`
+                // Mise en page du verset adaptée au nouveau design (Espacé, Élégant)
+                `<div class="mb-6 relative ${align} ${font}" dir="${direction}">
+                    <span class="text-purple-400 font-bold text-xs absolute top-1 ${isArabic ? '-right-0' : '-left-0'}">${v.verse}</span>
+                    <p class="text-white/90 text-lg leading-8 ${isArabic ? 'pr-6' : 'pl-6'}">
+                        ${v.text}
+                    </p>
+                </div>`
             ).join('');
         }
 
+        // Boutons Suivant / Précédent (Style Pillule)
         const navButtons = `
-            <div class="flex gap-4 mt-6 pt-4 border-t border-white/10" dir="ltr">
-                ${chapter > 1 ? `<button onclick="loadBibleChapter(${id}, '${name}', ${chapter - 1})" class="flex-1 bg-gray-700 py-2 rounded-lg text-xs">Précédent</button>` : '<div class="flex-1"></div>'}
-                <button onclick="loadBibleChapter(${id}, '${name}', ${chapter + 1})" class="flex-1 bg-purple-600 py-2 rounded-lg text-xs font-bold">Suivant</button>
+            <div class="flex gap-4 mt-8 pt-6 border-t border-white/10" dir="ltr">
+                ${chapter > 1 ? 
+                    `<button onclick="loadBibleChapter(${id}, '${name}', ${chapter - 1})" class="flex-1 bg-white/10 hover:bg-white/20 text-white py-3 rounded-full text-sm font-medium transition-colors">Précédent</button>` 
+                    : '<div class="flex-1"></div>'}
+                
+                <button onclick="loadBibleChapter(${id}, '${name}', ${chapter + 1})" class="flex-1 bg-[#6C63FF] hover:bg-[#5a52d5] text-white py-3 rounded-full text-sm font-bold shadow-lg transition-transform hover:scale-105">
+                    Suivant
+                </button>
             </div>
+            <div class="h-20"></div>
         `;
 
-        if(content) content.innerHTML = `<div class="pb-20">${htmlContent} ${navButtons}</div>`;
-        content.scrollTop = 0;
+        if(content) content.innerHTML = htmlContent + navButtons;
+        // Remonter en haut du texte
+        document.getElementById('main-card-container').scrollTop = 0; 
 
     } catch (error) {
         console.error("Erreur:", error);
-        let msg = "Erreur de chargement.";
-        if(currentBibleVersion === 'kab') msg = "Traduction Kabyle indisponible pour ce chapitre.";
-        if(content) content.innerHTML = `<div class="text-red-400 text-center p-10">${msg} <br><button onclick="loadBibleChapter(${id}, '${name}', ${chapter})" class="mt-2 bg-gray-800 px-3 py-1 rounded text-xs">Réessayer</button></div>`;
+        if(content) content.innerHTML = `
+            <div class="text-center p-10">
+                <p class="text-red-400 mb-4">Impossible de charger le chapitre.</p>
+                <button onclick="loadBibleChapter(${id}, '${name}', ${chapter})" class="bg-white/10 px-4 py-2 rounded-full text-sm text-white hover:bg-white/20">Réessayer</button>
+            </div>`;
     }
 }
+
+// --- 3. FONCTION : FERMER LE LECTEUR ---
+function closeBibleReader() {
+    document.getElementById('bible-reader').classList.add('hidden');
+    document.getElementById('bible-books-list').classList.remove('hidden');
+}
+
+// --- 4. FONCTION : CHANGER DE VERSION ---
+function changeBibleVersion(version) {
+    currentBibleVersion = version;
+    // Si on est en train de lire, on recharge le chapitre actuel avec la nouvelle langue
+    if(!document.getElementById('bible-reader').classList.contains('hidden')) {
+        loadBibleChapter(currentBookId, currentBookName, currentChapter);
+    }
+}
+
+// Initialisation au chargement de la page
+document.addEventListener('DOMContentLoaded', () => {
+    // Charger l'Ancien Testament par défaut
+    showTestament('AT');
+});
 
 // ==========================================
 // 5. FAITH AI (HYBRIDE & ROBUSTE)
