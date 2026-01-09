@@ -306,38 +306,37 @@ async function askFaithAI() {
     const input = document.getElementById('ai-bible-input');
     const area = document.getElementById('ai-response-area');
     const question = input.value.trim();
+    
+    // Ton URL Supabase correcte
+    const FUNCTION_URL = 'https://uduajuxobmywmkjnawjn.supabase.co/functions/v1/faith-ai';
 
-    if (!question) return;
-
+    if(!question) return;
+    
     area.classList.remove('hidden');
-    area.innerHTML = `<div class="text-purple-300 text-xs animate-pulse">Faith AI réfléchit...</div>`;
+    area.innerHTML = `<div class="flex items-center gap-2 text-purple-300 text-xs animate-pulse">Faith AI réfléchit...</div>`;
     input.value = '';
 
     try {
-        const response = await fetch(
-            'https://uduajuxobmywmkjnawjn.supabase.co/functions/v1/faith-ai',
-            {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ question })
-            }
-        );
+        const response = await fetch(FUNCTION_URL, {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json',
+                // C'EST ICI LA CORRECTION DE L'ERREUR 401 :
+                'Authorization': `Bearer ${SUPABASE_KEY}` 
+            },
+            body: JSON.stringify({ question: question })
+        });
 
         const data = await response.json();
 
-        area.innerHTML = `
-        <div class="bg-gray-800/50 border-l-4 border-purple-500 p-3 rounded shadow">
-            <p class="text-gray-500 text-xs mb-1">QUESTION :</p>
-            <p class="text-white text-sm mb-2">${question}</p>
-            <p class="text-purple-200 font-serif">${data.answer}</p>
-        </div>`;
-    } catch (e) {
-        area.innerHTML = `
-        <div class="bg-gray-800/50 border-l-4 border-blue-500 p-3 rounded italic text-white">
-            Confie-toi en l'Éternel de tout ton cœur. (Proverbes 3:5)
-        </div>`;
+        if (data.error) throw new Error(data.error);
+
+        // Affichage de la réponse
+        area.innerHTML = `<div class="bg-gray-800/50 border-l-4 border-purple-500 pl-3 py-2 rounded-r-lg shadow-lg"><p class="text-[10px] text-gray-500 mb-1">QUESTION : "${question}"</p><p class="text-white text-sm font-serif leading-relaxed text-justify">${data.answer}</p></div>`;
+
+    } catch (error) {
+        console.error("Erreur Faith AI:", error);
+        area.innerHTML = `<div class="text-red-400 text-xs">Erreur : ${error.message}</div>`;
     }
 }
 
