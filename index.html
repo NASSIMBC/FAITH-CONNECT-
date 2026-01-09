@@ -10,7 +10,6 @@
     
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/3004/3004458.png">
 
@@ -61,15 +60,8 @@
 
         /* --- 5. STYLE TIKTOK (REELS) --- */
         #reels-container {
-            scroll-snap-type: y mandatory;
-            overflow-y: scroll;
-            height: 100dvh;
-            width: 100%;
-            position: absolute;
-            top: 0;
-            bottom: 0;
-            background: black;
-            z-index: 0;
+            /* Modifié pour la grille d'images */
+            min-height: 100%;
         }
 
         .reel-item {
@@ -242,19 +234,72 @@
                     <div id="posts-container" class="space-y-4 pb-4"></div>
                 </div>
 
-                <div id="view-reels" class="hidden absolute inset-0 bg-black z-40 flex flex-col h-full w-full animate-view">
-                    <div class="absolute top-4 left-0 right-0 z-50 px-4 flex justify-between items-center pt-safe pointer-events-none">
-                        <h2 class="text-xl font-bold text-white shadow-lg drop-shadow-md pointer-events-auto">Reels Spirituels</h2>
-                        
-                        <button onclick="document.getElementById('btn-upload-reel').click()" class="bg-purple-600 p-3 rounded-full shadow-xl active:scale-90 transition-transform pointer-events-auto">
-                            <i data-lucide="plus" class="w-6 h-6 text-white"></i>
+                <div id="view-reels" class="hidden h-full flex flex-col relative animate-view pb-20 bg-gray-900">
+                    <div class="p-4 shrink-0 flex justify-between items-center bg-gray-900/95 backdrop-blur z-10 sticky top-0">
+                        <h2 class="text-xl font-bold text-white flex items-center gap-2">
+                            <i data-lucide="image" class="w-6 h-6 text-purple-400"></i> Versets Créatifs
+                        </h2>
+                        <button onclick="openVerseEditor()" class="bg-gradient-to-r from-purple-600 to-pink-600 px-4 py-2 rounded-full shadow-lg active:scale-95 transition-transform text-sm font-bold text-white flex items-center gap-2">
+                            <i data-lucide="plus-circle" class="w-5 h-5"></i> Créer
                         </button>
                     </div>
 
-                    <input type="file" id="btn-upload-reel" accept="video/mp4,video/quicktime" class="hidden" onchange="uploadReelFile(this)">
+                    <div id="reels-container" class="flex-1 overflow-y-auto p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                    </div>
+                </div>
 
-                    <div id="reels-container" class="flex-1 w-full h-full overflow-y-scroll snap-y snap-mandatory scrollbar-hide bg-black">
+                <div id="verse-editor-modal" class="hidden fixed inset-0 z-[200] bg-black/90 backdrop-blur-sm flex flex-col overflow-y-auto pt-safe">
+                    <div class="bg-gray-900 min-h-full md:m-6 md:rounded-3xl border border-white/10 flex flex-col">
+                        <div class="p-4 border-b border-white/10 flex justify-between items-center shrink-0">
+                            <h3 class="font-bold text-white">Créer une Carte Verset</h3>
+                            <button onclick="closeVerseEditor()" class="p-2 hover:bg-white/10 rounded-full"><i data-lucide="x" class="w-6 h-6 text-gray-400"></i></button>
                         </div>
+
+                        <div class="flex-1 p-4 flex flex-col md:flex-row gap-6">
+                            <div class="flex-1 flex items-center justify-center bg-black/50 rounded-2xl p-4 border border-white/5">
+                                <canvas id="verse-canvas" width="600" height="600" class="w-full h-auto max-w-md shadow-2xl rounded-xl border border-white/10"></canvas>
+                            </div>
+
+                            <div class="flex-1 space-y-5 max-w-md mx-auto w-full">
+                                
+                                <div>
+                                    <label class="text-xs font-bold text-purple-300 mb-2 block">1. Votre Verset ou Pensée</label>
+                                    <textarea id="verse-text-input" oninput="drawCanvas()" rows="4" placeholder="L'Éternel est mon berger..." class="w-full bg-gray-800 border border-white/10 rounded-xl p-3 text-white focus:border-purple-500 outline-none resize-none"></textarea>
+                                </div>
+
+                                <div>
+                                    <label class="text-xs font-bold text-purple-300 mb-2 block">2. Image de fond</label>
+                                    <div class="flex gap-2 overflow-x-auto pb-2 scrollbar-hide" id="background-options">
+                                        <button onclick="setBackground('color', '#1f2937')" class="w-12 h-12 rounded-lg bg-gray-800 border-2 border-white/20 hover:border-purple-500 shrink-0"></button>
+                                        <button onclick="setBackground('color', '#4c1d95')" class="w-12 h-12 rounded-lg bg-purple-800 border-2 border-white/20 hover:border-purple-500 shrink-0"></button>
+                                        <button onclick="setBackground('color', '#831843')" class="w-12 h-12 rounded-lg bg-pink-800 border-2 border-white/20 hover:border-purple-500 shrink-0"></button>
+                                        <button onclick="setBackground('color', '#0f172a')" class="w-12 h-12 rounded-lg bg-slate-900 border-2 border-white/20 hover:border-purple-500 shrink-0"></button>
+                                        <label class="w-12 h-12 rounded-lg bg-gray-700 border-2 border-white/20 hover:border-purple-500 shrink-0 flex items-center justify-center cursor-pointer">
+                                            <i data-lucide="image-plus" class="w-6 h-6 text-gray-300"></i>
+                                            <input type="file" id="bg-image-upload" accept="image/*" class="hidden" onchange="handleBgUpload(this)">
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label class="text-xs font-bold text-purple-300 mb-2 block">3. Style du texte</label>
+                                    <div class="flex gap-4">
+                                        <input type="color" id="text-color-picker" value="#ffffff" onchange="drawCanvas()" class="h-10 w-14 rounded cursor-pointer bg-transparent">
+                                        <select id="font-size-picker" onchange="drawCanvas()" class="bg-gray-800 text-white rounded-xl px-3 border border-white/10">
+                                            <option value="30">Petit</option>
+                                            <option value="40" selected>Moyen</option>
+                                            <option value="60">Grand</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                
+                                <button id="btn-publish-verse" onclick="publishVerseCard()" class="w-full py-4 bg-gradient-to-r from-purple-600 to-pink-600 rounded-xl text-white font-bold shadow-lg text-lg mt-4 hover:from-purple-500 hover:to-pink-500 transition-all flex items-center justify-center gap-2">
+                                    <i data-lucide="sparkles" class="w-5 h-5"></i> Créer & Publier
+                                </button>
+
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 <div id="reel-comments-modal" class="hidden fixed inset-0 z-[120] bg-black/50 backdrop-blur-sm flex flex-col justify-end">
@@ -323,7 +368,7 @@
                         <div class="p-4 border-b border-white/5 space-y-3">
                             <div class="flex justify-between items-center">
                                 <h2 class="font-bold text-white text-lg">Discussions</h2>
-                                <button class="p-2 hover:bg-white/5 rounded-full"><i data-lucide="edit" class="w-4 h-4 text-purple-400"></i></button>
+                                <button onclick="document.getElementById('create-group-modal').classList.remove('hidden')" class="p-2 hover:bg-white/5 rounded-full"><i data-lucide="users" class="w-4 h-4 text-purple-400"></i></button>
                             </div>
                             <div class="relative">
                                 <i data-lucide="search" class="absolute left-3 top-2.5 w-4 h-4 text-gray-500"></i>
@@ -425,7 +470,7 @@
         <nav id="bottom-nav" class="fixed bottom-0 w-full glass-nav z-50 pb-safe">
             <div class="flex justify-around items-center h-16 max-w-md mx-auto">
                 <button onclick="switchView('home')" id="nav-home" class="flex flex-col items-center justify-center w-14 h-14 rounded-2xl text-purple-400 transition-all"><i data-lucide="home" class="w-6 h-6"></i><span class="text-[10px] mt-0.5">Accueil</span></button>
-                <button onclick="switchView('reels')" id="nav-reels" class="flex flex-col items-center justify-center w-14 h-14 rounded-2xl text-gray-500 transition-all"><i data-lucide="video" class="w-6 h-6"></i><span class="text-[10px] mt-0.5">Reels</span></button>
+                <button onclick="switchView('reels')" id="nav-reels" class="flex flex-col items-center justify-center w-14 h-14 rounded-2xl text-gray-500 transition-all"><i data-lucide="image" class="w-6 h-6"></i><span class="text-[10px] mt-0.5">Versets</span></button>
                 <button onclick="switchView('bible')" id="nav-bible" class="flex flex-col items-center justify-center w-14 h-14 rounded-2xl text-gray-500 transition-all"><i data-lucide="book-open" class="w-6 h-6"></i><span class="text-[10px] mt-0.5">Bible</span></button>
                 <button onclick="switchView('messages')" id="nav-messages" class="flex flex-col items-center justify-center w-14 h-14 rounded-2xl text-gray-500 transition-all relative"><div class="relative"><i data-lucide="message-circle" class="w-6 h-6"></i><span id="msg-badge" class="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full border border-gray-900 hidden"></span></div><span class="text-[10px] mt-0.5">Chat</span></button>
                 <button onclick="switchView('profile')" id="nav-profile" class="flex flex-col items-center justify-center w-14 h-14 rounded-2xl text-gray-500 transition-all"><i data-lucide="user" class="w-6 h-6"></i><span class="text-[10px] mt-0.5">Profil</span></button>
@@ -462,6 +507,15 @@
                 </div>
                 <button onclick="saveProfile()" class="w-full bg-white text-gray-900 hover:bg-gray-200 font-bold py-3.5 rounded-xl transition-colors">Enregistrer</button>
             </div>
+        </div>
+    </div>
+
+    <div id="create-group-modal" class="hidden fixed inset-0 z-[150] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-gray-800 p-6 rounded-3xl w-full max-w-sm border border-white/10 animate-fade-in">
+            <h2 class="text-lg font-bold text-white mb-4">Créer un Groupe</h2>
+            <input type="text" id="group-name" placeholder="Nom du groupe" class="w-full bg-gray-900 p-3 rounded-lg mb-4 text-white">
+            <button class="w-full bg-purple-600 py-3 rounded-xl font-bold" onclick="alert('Bientôt disponible !')">Créer</button>
+            <button onclick="document.getElementById('create-group-modal').classList.add('hidden')" class="w-full mt-2 text-gray-500">Annuler</button>
         </div>
     </div>
 
