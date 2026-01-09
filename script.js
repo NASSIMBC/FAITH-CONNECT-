@@ -175,6 +175,10 @@ async function loadAppData() {
 // ==========================================
 
 let currentBibleVersion = 'ls1910'; // Langue par défaut
+let currentBibleVersion = 'ls1910';
+let currentBookId = 1; 
+let currentBookName = "Genèse";
+let currentChapter = 1;
 
 const bibleStructure = {
     AT: [
