@@ -392,57 +392,58 @@
                     </div>
                 </div>
 
-                <<div id="view-bible" class="hidden h-full flex flex-col relative animate-view bible-gradient-bg">
+               <div id="view-bible" class="hidden h-full flex flex-col relative animate-view bible-gradient-bg">
     
     <header class="p-5 flex justify-end shrink-0">
         <div class="flex items-center gap-2 bg-white/10 px-4 py-2 rounded-full border border-white/20 cursor-pointer hover:bg-white/20 transition-all">
             <i data-lucide="globe" class="w-4 h-4 text-white/70"></i>
-            <span class="text-sm text-white font-medium">Français</span>
+            <select onchange="changeBibleVersion(this.value)" class="bg-transparent text-sm text-white font-medium outline-none cursor-pointer appearance-none border-none focus:ring-0">
+                <option value="ls1910" class="text-black">Français (Louis Segond)</option>
+                <option value="kjv" class="text-black">English (KJV)</option>
+                <option value="kab" class="text-black">Tamazight (Kabyle)</option>
+            </select>
             <i data-lucide="chevron-down" class="w-4 h-4 text-white/70"></i>
         </div>
     </header>
 
     <nav class="flex justify-between px-5 pb-6 gap-3 shrink-0">
-        <button class="menu-btn group">
+        <button onclick="showTestament('AT')" id="btn-at" class="menu-btn group active">
             <i data-lucide="book-open" class="w-7 h-7 mb-2 text-white/70 group-hover:text-white transition-colors"></i>
             <span class="text-xs text-white/60 font-medium group-hover:text-white">Ancien<br>Testament</span>
         </button>
         
-        <button class="menu-btn active group">
+        <button onclick="showTestament('NT')" id="btn-nt" class="menu-btn group">
             <i data-lucide="book" class="w-7 h-7 mb-2 text-white/70 group-hover:text-white transition-colors"></i>
             <span class="text-xs text-white/60 font-medium group-hover:text-white">Nouveau<br>Testament</span>
         </button>
         
-        <button class="menu-btn group">
+        <button onclick="showQuiz()" class="menu-btn group">
             <i data-lucide="help-circle" class="w-7 h-7 mb-2 text-white/70 group-hover:text-white transition-colors"></i>
             <span class="text-xs text-white/60 font-medium group-hover:text-white">Quiz<br>Biblique</span>
         </button>
     </nav>
 
-    <main class="reading-card flex-1 mx-4 p-8 relative overflow-y-auto" id="bibleTextContainer">
+    <main class="reading-card flex-1 mx-4 mb-4 relative overflow-hidden flex flex-col" id="main-card-container">
         
-        <div class="sticky top-0 bg-[#1A1A2E] z-10 flex justify-between items-center pb-4 mb-4 border-b border-white/5">
-            <h2 class="text-2xl text-white font-serif font-bold">Genèse 1:1-3</h2>
-            <button class="text-white/70 hover:text-purple-400">
-                <i data-lucide="bookmark" class="w-6 h-6"></i>
+        <div id="bible-books-list" class="absolute inset-0 p-6 overflow-y-auto grid grid-cols-2 gap-3 content-start">
+            <button onclick="openBook('Genèse')" class="bg-white/5 border border-white/10 rounded-xl p-4 text-left hover:bg-purple-600/30 hover:border-purple-500 transition-all group">
+                <span class="block text-xs text-purple-400 font-bold mb-1">01</span>
+                <span class="text-white font-serif text-sm">Genèse</span>
             </button>
         </div>
 
-        <div class="text-content text-lg text-white/85 leading-8 font-serif pb-20">
-            <p class="mb-4"><span class="text-purple-400 text-xs align-top font-bold mr-1">1</span> Au commencement, Dieu créa les cieux et la terre.</p>
-            
-            <p class="mb-4"><span class="text-purple-400 text-xs align-top font-bold mr-1">2</span> La terre était informe et vide: il y avait des ténèbres à la surface de l'abîme, et l'esprit de Dieu se mouvait au-dessus des eaux.</p>
-            
-            <p class="highlighted mb-4">
-                <span class="text-[#FFD700] text-xs align-top font-bold mr-1">3</span> Dieu dit: Que la lumière soit! Et la lumière fut.
-            </p>
+        <div id="bible-reader" class="hidden absolute inset-0 flex flex-col bg-[#1A1A2E] z-20">
+            <div class="p-6 pb-2 border-b border-white/5 bg-[#1A1A2E] flex justify-between items-center shrink-0">
+                <h2 id="reader-title" class="text-xl text-white font-serif font-bold">Livre</h2>
+                <button onclick="closeBibleReader()" class="p-2 bg-white/10 rounded-full hover:bg-white/20 text-white transition-colors">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
 
-            <p class="mb-4"><span class="text-purple-400 text-xs align-top font-bold mr-1">4</span> Dieu vit que la lumière était bonne; et Dieu sépara la lumière d'avec les ténèbres.</p>
-            
-            <p class="mb-4"><span class="text-purple-400 text-xs align-top font-bold mr-1">5</span> Dieu appela la lumière jour, et il appela les ténèbres nuit. Ainsi, il y eut un soir, et il y eut un matin: ce fut le premier jour.</p>
-            <p class="mb-4"><span class="text-purple-400 text-xs align-top font-bold mr-1">6</span> Dieu dit: Qu'il y ait une étendue entre les eaux, et qu'elle sépare les eaux d'avec les eaux.</p>
-            <p class="mb-4"><span class="text-purple-400 text-xs align-top font-bold mr-1">7</span> Et Dieu fit l'étendue, et il sépara les eaux qui sont au-dessous de l'étendue d'avec les eaux qui sont au-dessus de l'étendue. Et cela fut ainsi.</p>
+            <div id="reader-content" class="flex-1 overflow-y-auto p-6 text-lg text-white/85 leading-8 font-serif">
+                </div>
         </div>
+
     </main>
 
     <div class="absolute bottom-6 left-1/2 transform -translate-x-1/2 z-50">
@@ -452,7 +453,7 @@
         </button>
     </div>
 
-</div>>
+</div>
 
                 <div id="view-messages" class="hidden absolute top-16 bottom-16 left-0 right-0 bg-gray-900 z-40 flex flex-col md:flex-row animate-view">
                     <div id="conversations-sidebar" class="w-full md:w-80 border-r border-white/5 bg-gray-900 md:bg-gray-900/50 h-full flex flex-col">
