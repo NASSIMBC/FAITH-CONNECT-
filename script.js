@@ -5,16 +5,6 @@ const SUPABASE_URL = 'https://uduajuxobmywmkjnawjn.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVkdWFqdXhvYm15d21ram5hd2puIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc0NjUyMTUsImV4cCI6MjA4MzA0MTIxNX0.Vn1DpT9l9N7sVb3kVUPRqr141hGvM74vkZULJe59YUU';
 
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-// ==========================================
-// 1.1 CONFIGURATION APPWRITE (Stockage Vidéo Uniquement)
-// ==========================================
-const client = new Appwrite.Client();
-client
-    .setEndpoint('https://fra.cloud.appwrite.io/v1')
-    .setProject('696018ca0000881fb8a2'); // Ton ID Projet
-
-const storage = new Appwrite.Storage(client);
-const APPWRITE_BUCKET_ID = 'reels-videos'; // Assure-toi que ce bucket existe sur Appwrite avec droits "Any"
 
 // ==========================================
 // 2. GESTION UTILISATEUR & AUTH
