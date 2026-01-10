@@ -90,7 +90,7 @@ async function handleSignUp() {
     if (error) alert(error.message); else alert("Compte créé ! Vérifiez vos emails.");
 }
 
-/ ==========================================
+// ==========================================
 // GESTION CONNEXION (CODE MANQUANT)
 // ==========================================
 
