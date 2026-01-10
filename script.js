@@ -469,19 +469,37 @@ async function getFriendIds() {
     return Array.from(friendIds);
 }
 
-async function switchProfileTab(tabName) {
-    const btnFriends = document.getElementById('tab-friends');
-    const btnRequests = document.getElementById('tab-requests');
-    const container = document.getElementById('profile-social-list');
-    if(!btnFriends || !btnRequests || !container) return;
-    if(tabName === 'friends') {
-        btnFriends.className = "pb-2 text-sm font-bold text-purple-400 border-b-2 border-purple-400";
-        btnRequests.className = "pb-2 text-sm font-bold text-gray-500 hover:text-white";
-        await fetchMyFriendsList(container);
-    } else {
-        btnRequests.className = "pb-2 text-sm font-bold text-purple-400 border-b-2 border-purple-400";
-        btnFriends.className = "pb-2 text-sm font-bold text-gray-500 hover:text-white";
-        await fetchMyRequestsList(container);
+// ... (tout ton code précédent) ...
+
+// ==========================================
+// GESTION DES ONGLETS DU PROFIL
+// ==========================================
+function switchProfileTab(tabName) {
+    // 1. Réinitialiser le style de tous les boutons
+    ['posts', 'prieres', 'amis'].forEach(t => {
+        const btn = document.getElementById(`tab-btn-${t}`);
+        const content = document.getElementById(`profile-content-${t}`);
+        
+        // Reset boutons (Gris, pas de bordure)
+        if(btn) {
+            btn.className = "flex-1 pb-3 text-sm font-medium text-gray-400 hover:text-white transition-colors cursor-pointer";
+        }
+        // Cacher contenu
+        if(content) {
+            content.classList.add('hidden');
+        }
+    });
+
+    // 2. Activer l'onglet choisi
+    const activeBtn = document.getElementById(`tab-btn-${tabName}`);
+    const activeContent = document.getElementById(`profile-content-${tabName}`);
+
+    if(activeBtn) {
+        // Style Actif (Blanc, Bordure Violette)
+        activeBtn.className = "flex-1 pb-3 text-sm font-bold text-white border-b-2 border-purple-500 transition-colors cursor-pointer";
+    }
+    if(activeContent) {
+        activeContent.classList.remove('hidden');
     }
 }
 
