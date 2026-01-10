@@ -105,19 +105,11 @@ async function logout() { await supabaseClient.auth.signOut(); location.reload()
 // ==========================================
 
 function switchView(viewName) {
-    // 1. Cacher toutes les vues et reset les styles
-    ['home', 'reels', 'bible', 'messages', 'profile', 'public-profile'].forEach(v => {
-        const el = document.getElementById('view-' + v);
-        if(el) {
-            el.classList.add('hidden');
-            el.classList.remove('animate-view'); // Reset l'animation
-        }
-        const btn = document.getElementById('nav-' + v);
-        if(btn) { 
-            btn.classList.remove('text-purple-400', 'scale-110'); // Reset l'effet de zoom
-            btn.classList.add('text-gray-500'); 
-        }
-    });
+    // ... (votre code existant qui cache/montre les sections) ...
+    
+    // Ajoutez cette ligne à la fin de la fonction :
+    updateNavAnimation(viewName);
+}
 
     // 2. Afficher la nouvelle vue avec Animation
     const target = document.getElementById('view-' + viewName);
@@ -1424,3 +1416,40 @@ function saveProfile() {
     // Petit effet visuel pour confirmer (optionnel)
     // alert("Profil mis à jour !"); 
 }
+// --- ANIMATION DE LA BARRE DE NAVIGATION ---
+function updateNavAnimation(activeViewName) {
+    const buttons = ['home', 'reels', 'bible', 'messages', 'profile'];
+    const indicator = document.getElementById('nav-indicator');
+    
+    buttons.forEach(view => {
+        const btn = document.getElementById(`nav-btn-${view}`);
+        const icon = btn.querySelector('i');
+        
+        if (view === activeViewName) {
+            // 1. Activer le bouton (Texte Blanc)
+            btn.classList.remove('text-white/50');
+            btn.classList.add('text-white');
+            
+            // 2. Déplacer le cercle violet sous ce bouton
+            // On calcule la position exacte
+            const btnRect = btn.getBoundingClientRect();
+            const navRect = document.getElementById('bottom-nav').getBoundingClientRect();
+            const offsetLeft = btnRect.left - navRect.left + (btnRect.width / 2) - 28; // 28 = moitié de la largeur du cercle (56px/2)
+            
+            indicator.style.transform = `translateX(${offsetLeft}px)`;
+            
+            // 3. Petit effet de "saut" sur l'icône
+            icon.style.transform = "translateY(-2px) scale(1.1)";
+        } else {
+            // Désactiver les autres
+            btn.classList.add('text-white/50');
+            btn.classList.remove('text-white');
+            icon.style.transform = "translateY(0) scale(1)";
+        }
+    });
+}
+// Initialisation au chargement de la page
+document.addEventListener('DOMContentLoaded', () => {
+    // On s'assure que l'animation se lance sur l'accueil
+    updateNavAnimation('home');
+});
