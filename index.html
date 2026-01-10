@@ -15,7 +15,6 @@
     <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/3004/3004458.png">
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="https://cdn.jsdelivr.net/npm/appwrite@13.0.0"></script> 
 
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
@@ -652,6 +651,10 @@
                                 <span id="profile-req-badge" class="bg-pink-500 text-white text-[10px] px-2 py-0.5 rounded-full hidden">0 demandes</span>
                             </div>
                             <div id="profile-social-list" class="space-y-3 min-h-[150px]"></div>
+                            <div class="mt-4 border-t border-white/5 pt-4">
+                                <h4 class="text-white font-bold text-sm mb-2">Demandes reçues</h4>
+                                <div id="profile-requests-list" class="space-y-2"></div>
+                            </div>
                         </div>
 
                     </div>
@@ -713,6 +716,43 @@
             </button>
 
         </nav>
+
+        <div id="edit-profile-modal" class="hidden fixed inset-0 z-[150] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+            <div class="bg-gray-800 rounded-2xl w-full max-w-md border border-white/10 overflow-hidden shadow-2xl animate-view">
+                <div class="p-4 border-b border-white/10 flex justify-between items-center bg-gray-900">
+                    <h3 class="font-bold text-white">Modifier le profil</h3>
+                    <button onclick="closeEditModal()" class="p-2 hover:bg-white/10 rounded-full"><i data-lucide="x" class="w-5 h-5 text-gray-400"></i></button>
+                </div>
+                
+                <div class="p-6 space-y-4">
+                    <div class="flex flex-col items-center gap-3">
+                        <div class="relative w-24 h-24">
+                            <img id="edit-avatar-preview" src="" class="w-full h-full rounded-full object-cover border-2 border-purple-500 bg-gray-700">
+                            <label for="edit-avatar-input" class="absolute bottom-0 right-0 bg-purple-600 p-2 rounded-full cursor-pointer hover:bg-purple-500 transition-colors shadow-lg">
+                                <i data-lucide="camera" class="w-4 h-4 text-white"></i>
+                            </label>
+                            <input type="file" id="edit-avatar-input" accept="image/*" class="hidden" onchange="handleAvatarPreview(this)">
+                        </div>
+                        <p class="text-xs text-gray-400">Cliquez pour changer la photo</p>
+                    </div>
+
+                    <div>
+                        <label class="text-xs font-bold text-purple-300 mb-1 block">Nom d'utilisateur</label>
+                        <input type="text" id="edit-username" class="w-full bg-gray-900 border border-white/10 rounded-xl px-4 py-2 text-white focus:outline-none focus:border-purple-500">
+                    </div>
+
+                    <div>
+                        <label class="text-xs font-bold text-purple-300 mb-1 block">Bio</label>
+                        <textarea id="edit-bio" rows="3" class="w-full bg-gray-900 border border-white/10 rounded-xl px-4 py-2 text-white focus:outline-none focus:border-purple-500 resize-none"></textarea>
+                    </div>
+                </div>
+
+                <div class="p-4 bg-gray-900 border-t border-white/10 flex justify-end gap-3">
+                    <button onclick="closeEditModal()" class="px-4 py-2 rounded-xl text-gray-400 hover:text-white hover:bg-white/5 transition-colors text-sm font-bold">Annuler</button>
+                    <button onclick="saveProfile()" class="px-6 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-sm shadow-lg transition-colors">Enregistrer</button>
+                </div>
+            </div>
+        </div>
 
     </div>
                         
