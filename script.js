@@ -1416,36 +1416,40 @@ function saveProfile() {
     // Petit effet visuel pour confirmer (optionnel)
     // alert("Profil mis à jour !"); 
 }
-// --- ANIMATION DE LA BARRE DE NAVIGATION (CORRIGÉE) ---
+// ==========================================
+// ANIMATION BARRE NAVIGATION (CODE FINAL)
+// ==========================================
+
 function updateNavAnimation(activeViewName) {
     const buttons = ['home', 'reels', 'bible', 'messages', 'profile'];
     const indicator = document.getElementById('nav-indicator');
     
-    // SÉCURITÉ 1 : Si la barre n'existe pas (ex: page de login), on arrête tout
+    // SÉCURITÉ : Si la barre n'est pas là (ex: écran de login), on arrête tout de suite
     if (!indicator) return;
 
     buttons.forEach(view => {
         const btn = document.getElementById(`nav-btn-${view}`);
-        
-        // SÉCURITÉ 2 : Si un bouton manque, on ne fait rien
+        // SÉCURITÉ : Si le bouton n'existe pas, on passe au suivant
         if (!btn) return;
 
         const icon = btn.querySelector('i');
         
         if (view === activeViewName) {
-            // 1. Activer le bouton (Texte Blanc)
+            // Activer le bouton
             btn.classList.remove('text-white/50');
             btn.classList.add('text-white');
             
-            // 2. Déplacer le cercle violet sous ce bouton
+            // Calculer la position du cercle
             const btnRect = btn.getBoundingClientRect();
             const navRect = document.getElementById('bottom-nav').getBoundingClientRect();
-            // Calcul précis : position du bouton - position nav + moitié bouton - rayon cercle (28px)
+            
+            // Le calcul : (Position Bouton - Position Nav) + (Largeur Bouton / 2) - (Largeur Cercle / 2)
+            // Cercle = 56px de large (w-14) donc moitié = 28px
             const offsetLeft = btnRect.left - navRect.left + (btnRect.width / 2) - 28; 
             
             indicator.style.transform = `translateX(${offsetLeft}px)`;
             
-            // 3. Petit effet de "saut" sur l'icône
+            // Effet sur l'icône
             if(icon) icon.style.transform = "translateY(-2px) scale(1.1)";
         } else {
             // Désactiver les autres
@@ -1456,17 +1460,23 @@ function updateNavAnimation(activeViewName) {
     });
 }
 
-// --- INITIALISATION GÉNÉRALE (TOUT EN BAS DU FICHIER) ---
-document.addEventListener('DOMContentLoaded', () => {
-    console.log("Application Faith Connect chargée.");
+// ==========================================
+// INITIALISATION GÉNÉRALE (DOM READY)
+// ==========================================
 
-    // 1. Initialiser la Bible si la fonction existe
+document.addEventListener('DOMContentLoaded', () => {
+    console.log("Faith Connect : Démarrage...");
+
+    // 1. Initialiser la Bible (si la fonction est chargée)
     if (typeof showTestament === "function") {
         showTestament('AT');
     }
 
-    // 2. Initialiser l'animation de la barre (seulement si la barre est visible)
+    // 2. Initialiser l'animation de la Nav (si on est connecté)
     if (document.getElementById('bottom-nav')) {
         updateNavAnimation('home');
     }
+    
+    // 3. Vérifier si l'utilisateur est connecté (optionnel)
+    // Ici tu peux ajouter checkAuthStatus() si tu en as besoin
 });
