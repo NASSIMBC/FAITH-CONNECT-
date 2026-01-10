@@ -1350,3 +1350,77 @@ function handleBgUpload(input) {
 // Fonctions nécessaires pour l'ouverture/fermeture du modal (si manquantes)
 function openVerseEditor() { document.getElementById('verse-editor-modal').classList.remove('hidden'); drawCanvas(); }
 function closeVerseEditor() { document.getElementById('verse-editor-modal').classList.add('hidden'); }
+
+// ==========================================
+// GESTION : ÉDITER LE PROFIL (MODALE)
+// ==========================================
+
+// 1. Ouvrir la modale et pré-remplir les infos
+function openEditModal() {
+    const modal = document.getElementById('edit-profile-modal');
+    if(!modal) return; // Sécurité si la modale n'existe pas
+
+    // Récupérer les valeurs actuelles du profil
+    const currentName = document.getElementById('profile-name').innerText;
+    const currentBio = document.getElementById('profile-bio').innerText;
+
+    // Remplir les champs de la modale
+    document.getElementById('edit-username').value = currentName;
+    document.getElementById('edit-bio').value = currentBio;
+    
+    // Afficher la modale
+    modal.classList.remove('hidden');
+}
+
+// 2. Fermer la modale
+function closeEditModal() {
+    document.getElementById('edit-profile-modal').classList.add('hidden');
+}
+
+// 3. Prévisualiser l'avatar quand on choisit un fichier
+function handleAvatarPreview(input) {
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            // Mettre à jour l'image dans la modale
+            document.getElementById('edit-avatar-preview').src = e.target.result;
+        }
+        reader.readAsDataURL(input.files[0]);
+    }
+}
+
+// 4. SAUVEGARDER LES MODIFICATIONS
+function saveProfile() {
+    // Récupérer les nouvelles valeurs
+    const newName = document.getElementById('edit-username').value;
+    const newBio = document.getElementById('edit-bio').value;
+    const avatarInput = document.getElementById('edit-avatar-input');
+
+    // 1. Mettre à jour le texte
+    if(newName) {
+        document.getElementById('profile-name').innerText = newName;
+        // Met à jour le @pseudo aussi (en minuscules sans espaces)
+        document.getElementById('profile-email').innerText = "@" + newName.toLowerCase().replace(/\s/g, '');
+    }
+    
+    if(newBio) {
+        document.getElementById('profile-bio').innerText = newBio;
+    }
+
+    // 2. Mettre à jour l'image (si une nouvelle a été choisie)
+    if (avatarInput.files && avatarInput.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            // On remplace le contenu de la div "profile-avatar-big" par une image
+            const avatarContainer = document.getElementById('profile-avatar-big');
+            avatarContainer.innerHTML = `<img src="${e.target.result}" class="w-full h-full object-cover">`;
+        }
+        reader.readAsDataURL(avatarInput.files[0]);
+    }
+
+    // Fermer la modale et notifier
+    closeEditModal();
+    
+    // Petit effet visuel pour confirmer (optionnel)
+    // alert("Profil mis à jour !"); 
+}
