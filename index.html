@@ -688,7 +688,35 @@
         </div>
         <div id="story-delete-btn-container" class="absolute bottom-10 right-4 z-20"></div>
     </div>
+<nav id="bottom-nav" class="fixed bottom-6 left-4 right-4 h-20 z-50 rounded-[40px] border border-white/10 bg-[#0f172a]/60 backdrop-blur-2xl shadow-[0_8px_32px_rgba(0,0,0,0.5)] flex justify-between items-center px-2 relative">
+    
+    <div id="nav-indicator" class="absolute top-1/2 -translate-y-1/2 w-14 h-14 bg-gradient-to-tr from-purple-600 to-fuchsia-500 rounded-full shadow-[0_4px_20px_rgba(168,85,247,0.6)] transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] pointer-events-none"></div>
 
+    <button onclick="switchView('home')" id="nav-btn-home" class="nav-item relative w-16 h-full flex flex-col items-center justify-center rounded-full text-white z-10 transition-colors duration-300">
+        <i data-lucide="home" class="w-6 h-6 transition-transform duration-300"></i>
+    </button>
+    
+    <button onclick="switchView('reels')" id="nav-btn-reels" class="nav-item relative w-16 h-full flex flex-col items-center justify-center rounded-full text-white/50 hover:text-white/80 z-10 transition-colors duration-300">
+        <i data-lucide="video" class="w-6 h-6 transition-transform duration-300"></i>
+    </button>
+    
+    <button onclick="switchView('bible')" id="nav-btn-bible" class="nav-item relative w-16 h-full flex flex-col items-center justify-center rounded-full text-white/50 hover:text-white/80 z-10 transition-colors duration-300">
+        <i data-lucide="book-open" class="w-6 h-6 transition-transform duration-300"></i>
+    </button>
+    
+    <button onclick="switchView('messages')" id="nav-btn-messages" class="nav-item relative w-16 h-full flex flex-col items-center justify-center rounded-full text-white/50 hover:text-white/80 z-10 transition-colors duration-300">
+        <div class="relative">
+            <i data-lucide="message-circle" class="w-6 h-6 transition-transform duration-300"></i>
+            <span id="msg-badge" class="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full border border-gray-900 hidden"></span>
+        </div>
+    </button>
+    
+    <button onclick="switchView('profile')" id="nav-btn-profile" class="nav-item relative w-16 h-full flex flex-col items-center justify-center rounded-full text-white/50 hover:text-white/80 z-10 transition-colors duration-300">
+        <i data-lucide="user" class="w-6 h-6 transition-transform duration-300"></i>
+    </button>
+
+</nav>
+                    
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
