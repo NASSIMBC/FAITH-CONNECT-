@@ -90,49 +90,39 @@ async function handleSignUp() {
     if (error) alert(error.message); else alert("Compte créé ! Vérifiez vos emails.");
 }
 
-// ==========================================
+/ ==========================================
 // GESTION CONNEXION (CODE MANQUANT)
 // ==========================================
 
-function handleLogin(event) {
-    if(event) event.preventDefault(); // Empêche le rechargement si c'est un formulaire
+async function handleLogin() {
+    // 1. Récupérer les champs (Assure-toi que les ID sont corrects dans ton HTML)
+    const emailInput = document.getElementById('login-email');
+    const passwordInput = document.getElementById('login-password');
 
-    const emailInput = document.getElementById('email');
-    const passwordInput = document.getElementById('password');
-    
-    // Vérification simple
-    if (!emailInput || !passwordInput) return;
-    
+    if (!emailInput || !passwordInput) {
+        console.error("Erreur : Champs 'login-email' ou 'login-password' introuvables.");
+        return;
+    }
+
     const email = emailInput.value;
     const password = passwordInput.value;
 
-    if (email && password) {
-        console.log("Connexion réussie pour : " + email);
-        
-        // 1. Cacher l'écran de connexion avec une animation
-        const loginView = document.getElementById('view-login');
-        loginView.classList.add('opacity-0');
-        
-        setTimeout(() => {
-            loginView.classList.add('hidden');
-            
-            // 2. Afficher l'écran d'accueil
-            const homeView = document.getElementById('view-home');
-            homeView.classList.remove('hidden');
-            
-            // 3. Afficher la barre de navigation (si elle était cachée)
-            const nav = document.getElementById('bottom-nav');
-            if (nav) {
-                nav.classList.remove('hidden');
-                // Initialiser l'animation de la barre
-                if(typeof updateNavAnimation === "function") {
-                    updateNavAnimation('home');
-                }
-            }
-        }, 300); // Petit délai pour l'animation
-        
-    } else {
-        alert("Veuillez remplir tous les champs.");
+    // 2. Connexion via Supabase
+    try {
+        const { error } = await supabaseClient.auth.signInWithPassword({ 
+            email: email, 
+            password: password 
+        });
+
+        if (error) {
+            alert("Erreur : " + error.message);
+        } else {
+            // 3. Si ça marche, on recharge la page pour lancer checkSession()
+            // C'est la méthode la plus sûre avec ta structure actuelle
+            location.reload();
+        }
+    } catch (err) {
+        console.error("Erreur technique :", err);
     }
 }
 // ==========================================
