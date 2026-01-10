@@ -1416,13 +1416,20 @@ function saveProfile() {
     // Petit effet visuel pour confirmer (optionnel)
     // alert("Profil mis à jour !"); 
 }
-// --- ANIMATION DE LA BARRE DE NAVIGATION ---
+// --- ANIMATION DE LA BARRE DE NAVIGATION (CORRIGÉE) ---
 function updateNavAnimation(activeViewName) {
     const buttons = ['home', 'reels', 'bible', 'messages', 'profile'];
     const indicator = document.getElementById('nav-indicator');
     
+    // SÉCURITÉ 1 : Si la barre n'existe pas (ex: page de login), on arrête tout
+    if (!indicator) return;
+
     buttons.forEach(view => {
         const btn = document.getElementById(`nav-btn-${view}`);
+        
+        // SÉCURITÉ 2 : Si un bouton manque, on ne fait rien
+        if (!btn) return;
+
         const icon = btn.querySelector('i');
         
         if (view === activeViewName) {
@@ -1431,25 +1438,35 @@ function updateNavAnimation(activeViewName) {
             btn.classList.add('text-white');
             
             // 2. Déplacer le cercle violet sous ce bouton
-            // On calcule la position exacte
             const btnRect = btn.getBoundingClientRect();
             const navRect = document.getElementById('bottom-nav').getBoundingClientRect();
-            const offsetLeft = btnRect.left - navRect.left + (btnRect.width / 2) - 28; // 28 = moitié de la largeur du cercle (56px/2)
+            // Calcul précis : position du bouton - position nav + moitié bouton - rayon cercle (28px)
+            const offsetLeft = btnRect.left - navRect.left + (btnRect.width / 2) - 28; 
             
             indicator.style.transform = `translateX(${offsetLeft}px)`;
             
             // 3. Petit effet de "saut" sur l'icône
-            icon.style.transform = "translateY(-2px) scale(1.1)";
+            if(icon) icon.style.transform = "translateY(-2px) scale(1.1)";
         } else {
             // Désactiver les autres
             btn.classList.add('text-white/50');
             btn.classList.remove('text-white');
-            icon.style.transform = "translateY(0) scale(1)";
+            if(icon) icon.style.transform = "translateY(0) scale(1)";
         }
     });
 }
-// Initialisation au chargement de la page
+
+// --- INITIALISATION GÉNÉRALE (TOUT EN BAS DU FICHIER) ---
 document.addEventListener('DOMContentLoaded', () => {
-    // On s'assure que l'animation se lance sur l'accueil
-    updateNavAnimation('home');
+    console.log("Application Faith Connect chargée.");
+
+    // 1. Initialiser la Bible si la fonction existe
+    if (typeof showTestament === "function") {
+        showTestament('AT');
+    }
+
+    // 2. Initialiser l'animation de la barre (seulement si la barre est visible)
+    if (document.getElementById('bottom-nav')) {
+        updateNavAnimation('home');
+    }
 });
