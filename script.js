@@ -21,9 +21,9 @@ const APPWRITE_BUCKET_ID = 'reels-videos'; // Assure-toi que ce bucket existe su
 // ==========================================
 let currentUser = null;
 let userProfile = null;
-let activeChatUser = null; 
-let selectedImageFile = null;        
-let selectedAvatarFile = null;      
+let activeChatUser = null;
+let selectedImageFile = null;
+let selectedAvatarFile = null;
 
 document.addEventListener('DOMContentLoaded', checkSession);
 
@@ -43,7 +43,6 @@ document.addEventListener('keydown', (e) => {
             e.preventDefault();
             sendReelComment();
         }
-        // NOUVEAU : Touche Entrée pour l'IA
         if (document.activeElement.id === 'ai-bible-input') {
             e.preventDefault();
             askFaithAI();
@@ -101,50 +100,58 @@ async function handleLogin() {
 async function logout() { await supabaseClient.auth.signOut(); location.reload(); }
 
 // ==========================================
-// 3. NAVIGATION & UI (DESIGN PREMIUM + ANIMATIONS)
+// 3. NAVIGATION & UI (DESIGN PREMIUM)
 // ==========================================
 
 function switchView(viewName) {
-    // ... (votre code existant qui cache/montre les sections) ...
-    
-    // Ajoutez cette ligne à la fin de la fonction :
-    updateNavAnimation(viewName);
-}
+    // 1. Cacher toutes les vues
+    const views = document.querySelectorAll('[id^="view-"]');
+    views.forEach(view => view.classList.add('hidden'));
 
     // 2. Afficher la nouvelle vue avec Animation
     const target = document.getElementById('view-' + viewName);
     if(target) {
         target.classList.remove('hidden');
-        void target.offsetWidth; // Force le navigateur à relancer l'animation
+        void target.offsetWidth; // Force le reflow pour relancer l'animation
         target.classList.add('animate-view');
     }
-    
-    // 3. Activer le bouton du menu
-    const activeBtn = document.getElementById('nav-' + viewName);
-    if(activeBtn) { 
-        activeBtn.classList.remove('text-gray-500'); 
-        activeBtn.classList.add('text-purple-400', 'scale-110', 'transition-transform', 'duration-200'); 
+
+    // 3. Mettre à jour l'animation de la barre de navigation (Cercle Violet)
+    if (typeof updateNavAnimation === "function") {
+        updateNavAnimation(viewName);
     }
 
-    // Logiques spécifiques inchangées
+    // --- Logiques spécifiques par vue ---
+    
+    // REELS
     const reelsContainer = document.getElementById('reels-container');
     if (viewName === 'reels') {
         fetchReels(); 
     } else {
-        if(reelsContainer) reelsContainer.innerHTML = '';
+        if(reelsContainer) reelsContainer.innerHTML = ''; // Nettoyer pour économiser la mémoire
     }
 
+    // BIBLE
     if (viewName === 'bible') {
-        showTestament('NT'); 
+        if(typeof showTestament === "function") showTestament('AT'); 
     }
 
+    // MESSAGES
     if (viewName === 'messages') {
         const badge = document.getElementById('msg-badge');
         if(badge) badge.classList.add('hidden');
         if(!activeChatUser) resetChat();
     }
-    if (viewName === 'profile') switchProfileTab('friends'); 
-    if(viewName !== 'messages' && viewName !== 'public-profile') activeChatUser = null;
+
+    // PROFIL
+    if (viewName === 'profile') {
+        if(typeof switchProfileTab === "function") switchProfileTab('friends'); 
+    }
+
+    // RESET CHAT si on quitte les messages
+    if(viewName !== 'messages' && viewName !== 'public-profile') {
+        activeChatUser = null;
+    }
 }
 
 async function loadAppData() {
