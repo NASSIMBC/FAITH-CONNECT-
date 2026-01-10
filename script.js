@@ -90,15 +90,51 @@ async function handleSignUp() {
     if (error) alert(error.message); else alert("Compte créé ! Vérifiez vos emails.");
 }
 
-async function handleLogin() {
-    const email = document.getElementById('login-email').value;
-    const password = document.getElementById('login-password').value;
-    const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
-    if (error) alert(error.message); else location.reload();
+// ==========================================
+// GESTION CONNEXION (CODE MANQUANT)
+// ==========================================
+
+function handleLogin(event) {
+    if(event) event.preventDefault(); // Empêche le rechargement si c'est un formulaire
+
+    const emailInput = document.getElementById('email');
+    const passwordInput = document.getElementById('password');
+    
+    // Vérification simple
+    if (!emailInput || !passwordInput) return;
+    
+    const email = emailInput.value;
+    const password = passwordInput.value;
+
+    if (email && password) {
+        console.log("Connexion réussie pour : " + email);
+        
+        // 1. Cacher l'écran de connexion avec une animation
+        const loginView = document.getElementById('view-login');
+        loginView.classList.add('opacity-0');
+        
+        setTimeout(() => {
+            loginView.classList.add('hidden');
+            
+            // 2. Afficher l'écran d'accueil
+            const homeView = document.getElementById('view-home');
+            homeView.classList.remove('hidden');
+            
+            // 3. Afficher la barre de navigation (si elle était cachée)
+            const nav = document.getElementById('bottom-nav');
+            if (nav) {
+                nav.classList.remove('hidden');
+                // Initialiser l'animation de la barre
+                if(typeof updateNavAnimation === "function") {
+                    updateNavAnimation('home');
+                }
+            }
+        }, 300); // Petit délai pour l'animation
+        
+    } else {
+        alert("Veuillez remplir tous les champs.");
+    }
 }
-
-async function logout() { await supabaseClient.auth.signOut(); location.reload(); }
-
 // ==========================================
 // 3. NAVIGATION & UI (DESIGN PREMIUM)
 // ==========================================
@@ -1424,51 +1460,6 @@ function saveProfile() {
     // alert("Profil mis à jour !"); 
 }
 
-// ==========================================
-// GESTION CONNEXION (CODE MANQUANT)
-// ==========================================
-
-function handleLogin(event) {
-    if(event) event.preventDefault(); // Empêche le rechargement si c'est un formulaire
-
-    const emailInput = document.getElementById('email');
-    const passwordInput = document.getElementById('password');
-    
-    // Vérification simple
-    if (!emailInput || !passwordInput) return;
-    
-    const email = emailInput.value;
-    const password = passwordInput.value;
-
-    if (email && password) {
-        console.log("Connexion réussie pour : " + email);
-        
-        // 1. Cacher l'écran de connexion avec une animation
-        const loginView = document.getElementById('view-login');
-        loginView.classList.add('opacity-0');
-        
-        setTimeout(() => {
-            loginView.classList.add('hidden');
-            
-            // 2. Afficher l'écran d'accueil
-            const homeView = document.getElementById('view-home');
-            homeView.classList.remove('hidden');
-            
-            // 3. Afficher la barre de navigation (si elle était cachée)
-            const nav = document.getElementById('bottom-nav');
-            if (nav) {
-                nav.classList.remove('hidden');
-                // Initialiser l'animation de la barre
-                if(typeof updateNavAnimation === "function") {
-                    updateNavAnimation('home');
-                }
-            }
-        }, 300); // Petit délai pour l'animation
-        
-    } else {
-        alert("Veuillez remplir tous les champs.");
-    }
-}
 
 // ==========================================
 // ANIMATION BARRE NAVIGATION (CODE FINAL)
