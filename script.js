@@ -1199,150 +1199,110 @@ function drawCanvas() {
     // Reset shadow
     ctx.shadowColor = "transparent";
 }
-// ==========================================
-// MISE À JOUR : AFFICHAGE DES VERSETS (MASONRY)
-// ==========================================
-
 async function fetchReels() {
     const container = document.getElementById('reels-container');
-    if (!container) return;
+    if(!container) return;
     
-    // Animation de chargement
-    container.innerHTML = '<div class="col-span-full text-center text-gray-500 mt-10 animate-pulse">Chargement des inspirations...</div>';
+    container.innerHTML = '<div class="col-span-full text-center text-gray-500 mt-10 animate-pulse">Chargement des versets...</div>';
     
-    try {
-        const { data: reels, error } = await supabaseClient
-            .from('reels')
-            .select('*, profiles:user_id(username, avatar_url)')
-            .order('created_at', { ascending: false });
+    // On récupère les reels (vidéos ET images créées via Canvas)
+    const { data: reels, error } = await supabaseClient
+        .from('reels')
+        .select('*, profiles:user_id(username, avatar_url)')
+        .order('created_at', { ascending: false });
 
-        if (error) throw error;
+    if (error) {
+        console.error(error);
+        return;
+    }
 
-        container.innerHTML = '';
+    container.innerHTML = '';
 
-        if (reels && reels.length > 0) {
-            const itemsHtml = reels.map(reel => {
-                // 1. Gestion de l'Avatar
-                const avatarHtml = reel.profiles?.avatar_url 
-                    ? `<img src="${reel.profiles.avatar_url}" class="w-6 h-6 rounded-full object-cover border border-white/20">`
-                    : `<div class="w-6 h-6 rounded-full bg-fuchsia-600 flex items-center justify-center text-[10px] font-bold text-white">${reel.profiles?.username?.[0] || '?'}</div>`;
-
-                // 2. Gestion du Média (Image ou Vidéo Youtube)
-                let mediaHtml = '';
-                const isVideo = reel.video_url.includes('youtube') || reel.video_url.includes('youtu.be');
-
-                if (isVideo) {
-                    // Extraction ID Youtube simple
-                    let videoId = reel.video_url.split('v=')[1] || reel.video_url.split('/').pop();
-                    if (videoId.indexOf('&') !== -1) videoId = videoId.split('&')[0];
-                    mediaHtml = `<iframe class="w-full aspect-[9/16] object-cover pointer-events-none" src="https://www.youtube.com/embed/${videoId}?controls=0&rel=0&showinfo=0" frameborder="0"></iframe>`;
-                } else {
-                    // Image (Supabase Storage ou URL externe)
-                    mediaHtml = `<img src="${reel.video_url}" class="w-full h-auto object-cover" loading="lazy">`;
-                }
-
-                // 3. Construction de la Carte (Style Pinterest / Masonry)
-                return `
-                <div class="break-inside-avoid relative rounded-3xl overflow-hidden group cursor-pointer border border-white/10 mb-3 bg-[#151525]">
-                    ${mediaHtml}
-                    
-                    <div class="absolute bottom-0 left-0 right-0 p-3 pt-10 bg-gradient-to-t from-black/90 via-black/50 to-transparent flex justify-between items-end transition-opacity duration-300">
-                        <div class="flex items-center gap-2">
-                            ${avatarHtml}
-                            <span class="text-[10px] font-medium text-white/90 shadow-black drop-shadow-md truncate max-w-[80px]">
-                                ${reel.profiles?.username || 'Anonyme'}
-                            </span>
-                        </div>
-                        
-                        <div class="flex gap-2">
-                            <button onclick="toggleReelAmen('${reel.id}')" class="group/btn">
-                                <i data-lucide="heart" class="w-4 h-4 text-white group-hover/btn:text-pink-500 transition-colors drop-shadow-md"></i>
-                            </button>
-                            <button>
-                                <i data-lucide="bookmark" class="w-4 h-4 text-white hover:text-purple-400 transition-colors drop-shadow-md"></i>
-                            </button>
-                        </div>
-                    </div>
-
-                    ${reel.caption ? `
-                    <div class="absolute inset-0 flex items-center justify-center pointer-events-none p-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-black/40 backdrop-blur-[2px]">
-                        <p class="text-white font-bold text-center text-sm drop-shadow-xl">${reel.caption}</p>
-                    </div>` : ''}
-                </div>`;
-            }).join('');
-
-            container.innerHTML = itemsHtml;
+    if (reels && reels.length > 0) {
+        reels.forEach(reel => {
+            const isImage = reel.video_url.includes('.png') || reel.video_url.includes('.jpg') || reel.video_url.includes('verses/');
             
-            // Re-générer les icônes Lucide pour les nouveaux éléments
-            if (typeof lucide !== 'undefined') lucide.createIcons();
-        } else {
-            container.innerHTML = '<div class="col-span-full text-center text-gray-600 mt-20 text-sm">Soyez le premier à créer un verset ! ✨</div>';
-        }
+            let contentHtml = '';
+            
+            if (isImage) {
+                // IMAGE : Coins arrondis, ombre douce
+                contentHtml = `<img src="${reel.video_url}" class="w-full h-auto object-cover rounded-2xl shadow-lg border border-white/5" loading="lazy">`;
+            } else {
+                // VIDÉO
+                let videoId = reel.video_url.split('v=')[1] || reel.video_url.split('/').pop();
+                const ampersandPosition = videoId.indexOf('&');
+                if(ampersandPosition !== -1) videoId = videoId.substring(0, ampersandPosition);
+                contentHtml = `<iframe class="w-full aspect-[9/16] rounded-2xl shadow-lg border border-white/5" src="https://www.youtube.com/embed/${videoId}?controls=0&rel=0" frameborder="0" allowfullscreen></iframe>`;
+            }
 
-    } catch (error) {
-        console.error("Erreur fetchReels:", error);
-        container.innerHTML = '<div class="col-span-full text-center text-red-400 text-xs">Erreur de chargement</div>';
+            // MODIFICATION ICI : On retire "bg-gray-800" pour "bg-transparent"
+            container.insertAdjacentHTML('beforeend', `
+                <div class="bg-transparent break-inside-avoid mb-6 animate-fade-in group">
+                    ${contentHtml}
+                    <div class="px-1 py-2">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-2">
+                                <div class="w-5 h-5 rounded-full bg-gradient-to-tr from-purple-500 to-pink-500 flex items-center justify-center text-[9px] text-white font-bold shadow-md">
+                                    ${reel.profiles?.username?.[0] || '?'}
+                                </div>
+                                <span class="text-xs font-bold text-gray-300">${reel.profiles?.username || 'Anonyme'}</span>
+                            </div>
+                            
+                            <button onclick="toggleReelAmen('${reel.id}')" class="text-gray-500 hover:text-pink-500 transition-colors flex items-center gap-1.5 text-xs group-hover:opacity-100 opacity-70">
+                                <i data-lucide="heart" class="w-4 h-4 transition-transform active:scale-125"></i>
+                            </button>
+                        </div>
+                        ${reel.caption ? `<p class="text-xs text-gray-400 mt-1 line-clamp-2 pl-7">${reel.caption}</p>` : ''}
+                    </div>
+                </div>
+            `);
+        });
+        if(typeof lucide !== 'undefined') lucide.createIcons();
+    } else {
+        container.innerHTML = '<div class="col-span-full text-center text-gray-600 mt-10">Aucun verset pour le moment.</div>';
     }
 }
-
-// ==========================================
-// PUBLICATION VERS CANVAS (Mise à jour)
-// ==========================================
 
 async function publishVerseCard() {
     const canvas = document.getElementById('verse-canvas');
     const btn = document.getElementById('btn-publish-verse');
-    const captionInput = document.getElementById('verse-text-input');
     
-    if (!canvas) return;
-
     // 1. UI Loading
-    const originalText = btn.innerHTML; // Sauvegarde du texte (avec l'icône)
-    btn.innerHTML = '<span class="animate-pulse">Publication...</span>';
+    const originalText = btn.innerHTML;
+    btn.innerHTML = 'Publication...';
     btn.disabled = true;
 
+    // 2. Conversion Canvas -> Image
     canvas.toBlob(async (blob) => {
         try {
-            // 2. Upload Image
+            // 3. Upload vers Supabase Storage
             const fileName = `verses/${currentUser.id}_${Date.now()}.png`;
-            const { error: uploadError } = await supabaseClient.storage
-                .from('post-images')
-                .upload(fileName, blob);
+            const { error: uploadError } = await supabaseClient.storage.from('post-images').upload(fileName, blob);
             
             if (uploadError) throw uploadError;
             
-            // 3. Récupération URL publique
-            const { data } = supabaseClient.storage
-                .from('post-images')
-                .getPublicUrl(fileName);
+            const { data } = supabaseClient.storage.from('post-images').getPublicUrl(fileName);
             
-            // 4. Insertion BDD
-            const { error: dbError } = await supabaseClient
-                .from('reels')
-                .insert([{
-                    user_id: currentUser.id,
-                    video_url: data.publicUrl, // On stocke l'image ici
-                    caption: captionInput.value || "Verset créatif"
-                }]);
+            // 4. Création du Post dans la base de données
+            // On l'ajoute comme un "Reel" (Verset)
+            const { error: dbError } = await supabaseClient.from('reels').insert([{
+                user_id: currentUser.id,
+                video_url: data.publicUrl, // On utilise ce champ pour l'image du verset
+                caption: document.getElementById('verse-text-input').value || "Verset du jour",
+                // Tu peux ajouter un champ 'type': 'image' dans ta table si tu veux distinguer vidéo/image
+            }]);
 
             if (dbError) throw dbError;
 
-            // 5. Succès & Reset
-            alert("✨ Carte publiée avec succès !");
+            alert("Carte verset publiée avec succès !");
             closeVerseEditor();
-            
-            // Reset des champs
-            if(captionInput) captionInput.value = "";
-            setBackground('color', '#1f2937'); // Reset fond par défaut
-            
-            // Rafraîchir la grille
-            switchView('reels'); 
+            switchView('reels'); // Rafraîchir la vue
 
         } catch (error) {
             console.error(error);
-            alert("Erreur : " + error.message);
+            alert("Erreur lors de la publication : " + error.message);
         } finally {
-            btn.innerHTML = originalText; // Remettre le texte original (Créer & Publier)
+            btn.innerHTML = originalText;
             btn.disabled = false;
         }
     });
