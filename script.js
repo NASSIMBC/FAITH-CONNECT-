@@ -1,5 +1,5 @@
 // ==========================================
-// FAITH CONNECT - SCRIPT.JS (VERSION FINALE COMPLETE)
+// FAITH CONNECT - SCRIPT.JS (VERSION COMPLETE & CORRIGÉE)
 // ==========================================
 
 // 1. CONFIGURATION SUPABASE
@@ -37,7 +37,6 @@ let currentBookId = 43;
 let currentBookName = "Jean";
 let currentChapter = 1;
 
-// Structure Bible 
 const bibleStructure = {
     AT: [
         { name: "Genèse", id: 1 }, { name: "Exode", id: 2 }, { name: "Psaumes", id: 19 }, { name: "Proverbes", id: 20 }, 
@@ -139,7 +138,7 @@ async function loadUserProfile() {
         }
         
         updateUIProfile();
-        // Cette fonction est définie plus bas, le moteur JS va la trouver grâce au "hoisting"
+        // C'est ici que ça bloquait : la fonction est définie plus bas maintenant
         updateFriendCount(currentUser.id);
     } catch (error) {
         console.error("Erreur loadUserProfile:", error);
@@ -183,10 +182,10 @@ function loginSuccess() {
     loadAppData();
 }
 
-// 5. FONCTIONS UTILITAIRES (Celles qui manquaient !)
-// --------------------------------------------------
+// 5. FONCTIONS UTILITAIRES (LES MANQUANTES !)
+// -------------------------------------------
 
-// Correction Erreur 1 : updateFriendCount
+// A. Compteur d'amis (Correction Erreur 1)
 async function updateFriendCount(userId) {
     try {
         const { count: c1 } = await supabaseClient
@@ -209,7 +208,7 @@ async function updateFriendCount(userId) {
     }
 }
 
-// Correction Erreur 2 : resetChat
+// B. Reset Chat (Correction Erreur 3)
 function resetChat() {
     activeChatUser = null;
     
@@ -229,18 +228,18 @@ function resetChat() {
     }
 }
 
-// Correction Erreur 3 : setTextAlign
+// C. Alignement Texte (Correction Erreur)
 function setTextAlign(align) {
     currentTextAlign = align;
     drawCanvas();
 }
 
-// Correction Erreur 4 : closeVerseEditor
+// D. Fermer Editeur Verset (Correction Erreur)
 function closeVerseEditor() {
     document.getElementById('verse-editor-modal')?.classList.add('hidden');
 }
 
-// Correction Erreur 5 : changeBibleVersion
+// E. Changer Version Bible (Correction Erreur 2)
 function changeBibleVersion(version) {
     currentBibleVersion = version;
     const reader = document.getElementById('bible-reader');
@@ -249,11 +248,12 @@ function changeBibleVersion(version) {
     }
 }
 
-// Correction Erreur 6 : toggleNotifDropdown
+// F. Notifications (Correction Erreur)
 function toggleNotifDropdown() {
     const dropdown = document.getElementById('notif-dropdown');
     if (dropdown) dropdown.classList.toggle('hidden');
 }
+
 
 // 6. NAVIGATION ET UI
 // -------------------
@@ -274,7 +274,7 @@ function switchView(viewName) {
     if (viewName === 'profile') switchProfileTab('posts');
     if (viewName === 'messages') {
         document.getElementById('msg-badge')?.classList.add('hidden');
-        if (!activeChatUser) resetChat();
+        if (!activeChatUser) resetChat(); 
     }
 }
 
@@ -399,8 +399,13 @@ async function loadBibleChapter(id, name, chapter) {
         content.innerHTML = '<div class="text-center mt-10"><div class="animate-spin w-6 h-6 border-2 border-purple-500 border-t-transparent rounded-full mx-auto"></div></div>';
         
         try {
-            // Note : Si l'API renvoie "Time Out", c'est un problème serveur externe ou de connexion.
-            const res = await fetch(`https://api.getbible.net/v2/${currentBibleVersion}/${id}/${chapter}.json`);
+            // Protection contre l'erreur API Time Out
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 secondes max
+
+            const res = await fetch(`https://api.getbible.net/v2/${currentBibleVersion}/${id}/${chapter}.json`, { signal: controller.signal });
+            clearTimeout(timeoutId);
+
             if(!res.ok) throw new Error("API Error");
             const data = await res.json();
             
@@ -414,10 +419,12 @@ async function loadBibleChapter(id, name, chapter) {
         } catch(e) {
             console.warn("Erreur API Bible:", e);
             content.innerHTML = `
-                <div class="text-center mt-4 px-4">
-                    <p class="text-red-400 mb-2">Impossible de charger le texte.</p>
-                    <button onclick="loadBibleChapter(${id}, '${name}', ${chapter})" class="bg-gray-700 text-xs px-3 py-2 rounded-lg text-white">Réessayer</button>
+                <div class="text-center mt-10 px-4">
+                    <i data-lucide="wifi-off" class="w-8 h-8 text-red-400 mx-auto mb-2"></i>
+                    <p class="text-red-400 mb-2 text-sm">Impossible de charger le texte (Erreur connexion).</p>
+                    <button onclick="loadBibleChapter(${id}, '${name}', ${chapter})" class="bg-gray-700 text-xs px-4 py-2 rounded-lg text-white mt-2 hover:bg-gray-600">Réessayer</button>
                 </div>`;
+            if (typeof lucide !== 'undefined') lucide.createIcons();
         }
     }
 }
@@ -924,4 +931,20 @@ async function renderStoriesList() {
 
 async function uploadStory(input) {
     if(input.files[0]) alert("Upload story simulé (Code à compléter)");
+}
+
+// 14. FAITH AI (Réponse)
+async function askFaithAI() {
+    const input = document.getElementById('ai-bible-input');
+    const area = document.getElementById('ai-response-area');
+    if (!input || !area || !input.value.trim()) return;
+
+    area.classList.remove('hidden');
+    area.innerHTML = '<span class="animate-pulse">Réflexion en cours...</span>';
+    
+    // Simulation (car pas de Backend Function connecté)
+    setTimeout(() => {
+        area.innerHTML = `<span class="text-purple-300">Faith AI:</span> La Bible dit à ce sujet : "Confie-toi en l'Éternel de tout ton cœur..." (Proverbes 3:5)`;
+        input.value = '';
+    }, 1500);
 }
