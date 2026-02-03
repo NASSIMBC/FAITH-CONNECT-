@@ -159,30 +159,32 @@ async function loadAppData() {
 // ==========================================
 // 4. BIBLE (VERSION FINALE & CORRIGÉE)
 // ==========================================
+
 let currentBibleVersion = 'ls1910'; // Langue par défaut
-let currentBookId = 43;
+let currentBookId = 43; 
 let currentBookName = "Jean";
 let currentChapter = 1;
+
 const bibleStructure = {
     AT: [
-        { name: "Genèse", id: 1 }, { name: "Exode", id: 2 }, { name: "Lévitique", id: 3 }, { name: "Nombres", id: 4 },
-        { name: "Deutéronome", id: 5 }, { name: "Josué", id: 6 }, { name: "Juges", id: 7 }, { name: "Ruth", id: 8 },
-        { name: "1 Samuel", id: 9 }, { name: "2 Samuel", id: 10 }, { name: "1 Rois", id: 11 }, { name: "2 Rois", id: 12 },
-        { name: "1 Chroniques", id: 13 }, { name: "2 Chroniques", id: 14 }, { name: "Esdras", id: 15 }, { name: "Néhémie", id: 16 },
-        { name: "Esther", id: 17 }, { name: "Job", id: 18 }, { name: "Psaumes", id: 19 }, { name: "Proverbes", id: 20 },
-        { name: "Ecclésiaste", id: 21 }, { name: "Cantique", id: 22 }, { name: "Ésaïe", id: 23 }, { name: "Jérémie", id: 24 },
-        { name: "Lamentations", id: 25 }, { name: "Ézéchiel", id: 26 }, { name: "Daniel", id: 27 }, { name: "Osée", id: 28 },
-        { name: "Joël", id: 29 }, { name: "Amos", id: 30 }, { name: "Abdias", id: 31 }, { name: "Jonas", id: 32 },
-        { name: "Michée", id: 33 }, { name: "Nahum", id: 34 }, { name: "Habacuc", id: 35 }, { name: "Sophonie", id: 36 },
+        { name: "Genèse", id: 1 }, { name: "Exode", id: 2 }, { name: "Lévitique", id: 3 }, { name: "Nombres", id: 4 }, 
+        { name: "Deutéronome", id: 5 }, { name: "Josué", id: 6 }, { name: "Juges", id: 7 }, { name: "Ruth", id: 8 }, 
+        { name: "1 Samuel", id: 9 }, { name: "2 Samuel", id: 10 }, { name: "1 Rois", id: 11 }, { name: "2 Rois", id: 12 }, 
+        { name: "1 Chroniques", id: 13 }, { name: "2 Chroniques", id: 14 }, { name: "Esdras", id: 15 }, { name: "Néhémie", id: 16 }, 
+        { name: "Esther", id: 17 }, { name: "Job", id: 18 }, { name: "Psaumes", id: 19 }, { name: "Proverbes", id: 20 }, 
+        { name: "Ecclésiaste", id: 21 }, { name: "Cantique", id: 22 }, { name: "Ésaïe", id: 23 }, { name: "Jérémie", id: 24 }, 
+        { name: "Lamentations", id: 25 }, { name: "Ézéchiel", id: 26 }, { name: "Daniel", id: 27 }, { name: "Osée", id: 28 }, 
+        { name: "Joël", id: 29 }, { name: "Amos", id: 30 }, { name: "Abdias", id: 31 }, { name: "Jonas", id: 32 }, 
+        { name: "Michée", id: 33 }, { name: "Nahum", id: 34 }, { name: "Habacuc", id: 35 }, { name: "Sophonie", id: 36 }, 
         { name: "Aggée", id: 37 }, { name: "Zacharie", id: 38 }, { name: "Malachie", id: 39 }
     ],
     NT: [
-        { name: "Matthieu", id: 40 }, { name: "Marc", id: 41 }, { name: "Luc", id: 42 }, { name: "Jean", id: 43 },
-        { name: "Actes", id: 44 }, { name: "Romains", id: 45 }, { name: "1 Corinthiens", id: 46 }, { name: "2 Corinthiens", id: 47 },
-        { name: "Galates", id: 48 }, { name: "Éphésiens", id: 49 }, { name: "Philippiens", id: 50 }, { name: "Colossiens", id: 51 },
-        { name: "1 Thessal.", id: 52 }, { name: "2 Thessal.", id: 53 }, { name: "1 Timothée", id: 54 }, { name: "2 Timothée", id: 55 },
-        { name: "Tite", id: 56 }, { name: "Philémon", id: 57 }, { name: "Hébreux", id: 58 }, { name: "Jacques", id: 59 },
-        { name: "1 Pierre", id: 60 }, { name: "2 Pierre", id: 61 }, { name: "1 Jean", id: 62 }, { name: "2 Jean", id: 63 },
+        { name: "Matthieu", id: 40 }, { name: "Marc", id: 41 }, { name: "Luc", id: 42 }, { name: "Jean", id: 43 }, 
+        { name: "Actes", id: 44 }, { name: "Romains", id: 45 }, { name: "1 Corinthiens", id: 46 }, { name: "2 Corinthiens", id: 47 }, 
+        { name: "Galates", id: 48 }, { name: "Éphésiens", id: 49 }, { name: "Philippiens", id: 50 }, { name: "Colossiens", id: 51 }, 
+        { name: "1 Thessal.", id: 52 }, { name: "2 Thessal.", id: 53 }, { name: "1 Timothée", id: 54 }, { name: "2 Timothée", id: 55 }, 
+        { name: "Tite", id: 56 }, { name: "Philémon", id: 57 }, { name: "Hébreux", id: 58 }, { name: "Jacques", id: 59 }, 
+        { name: "1 Pierre", id: 60 }, { name: "2 Pierre", id: 61 }, { name: "1 Jean", id: 62 }, { name: "2 Jean", id: 63 }, 
         { name: "3 Jean", id: 64 }, { name: "Jude", id: 65 }, { name: "Apocalypse", id: 66 }
     ]
 };
@@ -197,6 +199,7 @@ function showTestament(type) {
     // Sécurité : On s'assure que le lecteur est fermé quand on change de testament
     if (reader) reader.classList.add('hidden');
     if (listContainer) listContainer.classList.remove('hidden');
+
     if(!atBtn || !ntBtn) return;
 
     if(type === 'AT') {
@@ -215,25 +218,17 @@ function showTestament(type) {
         `).join('');
     }
 }
-const bookMap = {
-    1: "Genesis", 2: "Exodus", 3: "Leviticus", 4: "Numbers", 5: "Deuteronomy", 6: "Joshua", 7: "Judges", 8: "Ruth",
-    9: "1 Samuel", 10: "2 Samuel", 11: "1 Kings", 12: "2 Kings", 13: "1 Chronicles", 14: "2 Chronicles", 15: "Ezra",
-    16: "Nehemiah", 17: "Esther", 18: "Job", 19: "Psalms", 20: "Proverbs", 21: "Ecclesiastes", 22: "Song of Solomon",
-    23: "Isaiah", 24: "Jeremiah", 25: "Lamentations", 26: "Ezekiel", 27: "Daniel", 28: "Hosea", 29: "Joel", 30: "Amos",
-    31: "Obadiah", 32: "Jonah", 33: "Micah", 34: "Nahum", 35: "Habakkuk", 36: "Zephaniah", 37: "Haggai", 38: "Zechariah",
-    39: "Malachi", 40: "Matthew", 41: "Mark", 42: "Luke", 43: "John", 44: "Acts", 45: "Romans", 46: "1 Corinthians",
-    47: "2 Corinthians", 48: "Galatians", 49: "Ephesians", 50: "Philippians", 51: "Colossians", 52: "1 Thessalonians",
-    53: "2 Thessalonians", 54: "1 Timothy", 55: "2 Timothy", 56: "Titus", 57: "Philemon", 58: "Hebrews", 59: "James",
-    60: "1 Peter", 61: "2 Peter", 62: "1 John", 63: "2 John", 64: "3 John", 65: "Jude", 66: "Revelation"
-};
+
+// --- 2. CHARGER UN CHAPITRE (LECTURE) ---
 async function loadBibleChapter(id, name, chapter) {
     const reader = document.getElementById('bible-reader');
-    const listContainer = document.getElementById('bible-books-list');
+    const listContainer = document.getElementById('bible-books-list'); // Ajout important
     const content = document.getElementById('reader-content');
     const title = document.getElementById('reader-title');
     
     if(!reader) return;
     
+    // BASCULE D'AFFICHAGE : On cache la liste, on montre le lecteur
     if(listContainer) listContainer.classList.add('hidden');
     reader.classList.remove('hidden');
     
@@ -250,9 +245,8 @@ async function loadBibleChapter(id, name, chapter) {
         </div>`;
 
     try {
-        // Utilisation du bookMap pour obtenir le nom anglais requis par l'API
-        const englishName = bookMap[id] || name;
-        const apiUrl = `https://bible-api.com/${encodeURIComponent(englishName)}+${chapter}?translation=ls1910`;
+        // Utilisation d'un proxy pour éviter les erreurs CORS si nécessaire (optionnel mais recommandé)
+        const apiUrl = `https://api.getbible.net/v2/${currentBibleVersion}/${id}/${chapter}.json`;
         
         const response = await fetch(apiUrl);
         if (!response.ok) throw new Error("Chapitre introuvable");
@@ -260,7 +254,8 @@ async function loadBibleChapter(id, name, chapter) {
         const data = await response.json();
 
         if (data.verses && data.verses.length > 0) {
-            const isArabic = typeof currentBibleVersion !== 'undefined' && currentBibleVersion === 'vandyke';
+            // Gestion RTL (Arabe)
+            const isArabic = currentBibleVersion === 'vandyke';
             const dir = isArabic ? 'rtl' : 'ltr';
             const align = isArabic ? 'text-right' : 'text-justify';
             const font = isArabic ? 'font-sans' : 'font-serif';
@@ -272,10 +267,10 @@ async function loadBibleChapter(id, name, chapter) {
             ).join('');
 
             const prevBtn = chapter > 1 
-                ? `<button onclick="loadBibleChapter(${id}, '${name.replace(/'/g, "\\'")}', ${chapter - 1})" class="flex-1 bg-gray-800 py-3 rounded-xl text-xs font-bold text-gray-300 hover:bg-gray-700 transition-colors">← Précédent</button>` 
+                ? `<button onclick="loadBibleChapter(${id}, '${name}', ${chapter - 1})" class="flex-1 bg-gray-800 py-3 rounded-xl text-xs font-bold text-gray-300 hover:bg-gray-700 transition-colors">← Précédent</button>` 
                 : `<div class="flex-1"></div>`;
             
-            const nextBtn = `<button onclick="loadBibleChapter(${id}, '${name.replace(/'/g, "\\'")}', ${chapter + 1})" class="flex-1 bg-purple-600 py-3 rounded-xl text-xs font-bold text-white shadow-lg hover:bg-purple-500 transition-colors">Suivant →</button>`;
+            const nextBtn = `<button onclick="loadBibleChapter(${id}, '${name}', ${chapter + 1})" class="flex-1 bg-purple-600 py-3 rounded-xl text-xs font-bold text-white shadow-lg hover:bg-purple-500 transition-colors">Suivant →</button>`;
 
             content.innerHTML = `
                 <div class="${font} text-sm px-2 pt-2 pb-20 animate-fade-in">
@@ -289,14 +284,19 @@ async function loadBibleChapter(id, name, chapter) {
             content.scrollTop = 0;
 
         } else {
-            content.innerHTML = `<div class="text-center text-gray-400 mt-20"><p>Fin du livre.</p></div>`;
+            content.innerHTML = `
+                <div class="text-center text-gray-400 mt-20">
+                    <p class="mb-4">Fin du livre.</p>
+                    <button onclick="closeBibleReader()" class="bg-gray-800 px-6 py-2 rounded-full text-xs text-white border border-white/10 hover:bg-gray-700">Retour aux livres</button>
+                </div>`;
         }
     } catch (error) {
-        console.error("Erreur Bible détaillée:", error);
+        console.error("Erreur Bible:", error);
         content.innerHTML = `
             <div class="text-center text-red-400 mt-20 px-6">
-                <p class="text-xs mb-2">Erreur de connexion.</p>
-                <button onclick="loadBibleChapter(${id}, '${name}', ${chapter})" class="bg-red-500/10 text-red-400 px-4 py-2 rounded text-xs">Réessayer</button>
+                <p class="text-xs mb-2">Impossible de charger le texte.</p>
+                <p class="text-[10px] text-gray-600 mb-4 opacity-50">${error.message}</p>
+                <button onclick="loadBibleChapter(${id}, '${name}', ${chapter})" class="bg-red-500/10 text-red-400 px-4 py-2 rounded text-xs hover:bg-red-500/20">Réessayer</button>
             </div>`;
     }
 }
@@ -321,6 +321,7 @@ function changeBibleVersion(version) {
         loadBibleChapter(currentBookId, currentBookName, currentChapter);
     }
 }
+
 
 // ==========================================
 // 5. FAITH AI (HYBRIDE & ROBUSTE)
