@@ -1,12 +1,3 @@
-Absolument ! Voici votre code entièrement refactorisé.
-
-J'ai effectué les modifications suivantes :
-1.  **Suppression du doublon** : J'ai retiré la première déclaration de la fonction `drawCanvas` qui était plus ancienne et moins complète.
-2.  **Suppression de la fonction inutile** : La fonction `wrapText` n'était utilisée que par la première version de `drawCanvas`. Comme la nouvelle version gère le retour à la ligne elle-même, j'ai également supprimé `wrapText` pour nettoyer le code.
-
-Le reste de votre code, avec toute sa logique et ses fonctionnalités, a été conservé intact. Le voici, prêt à être utilisé :
-
-```javascript
 // ==========================================
 // 1. CONFIGURATION SUPABASE
 // ==========================================
