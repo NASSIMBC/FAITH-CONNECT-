@@ -1186,4 +1186,3 @@ async function publishVerseCard() {
         }
     });
 }
-```
