@@ -271,14 +271,15 @@ async function loadBibleChapter(id, name, chapter) {
         // 2. Construire l'URL de l'API Bible
         const bibleApiUrl = `https://bible-api.com/${encodeURIComponent(englishBookName)}+${chapter}?translation=ls1910`;
 
-        // 3. Utiliser le proxy CORS public pour contourner le blocage
-        const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(bibleApiUrl)}`;
+        // 3. CHANGEMENT ICI : On utilise un nouveau service proxy plus fiable
+        const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(bibleApiUrl)}`;
 
         const response = await fetch(proxyUrl);
         if (!response.ok) {
             throw new Error(`Le service proxy ou l'API Bible a retourné une erreur: ${response.statusText}`);
         }
 
+        // Le contenu est directement le JSON brut, donc on peut le traiter
         const data = await response.json();
 
         if (data.verses && data.verses.length > 0) {
