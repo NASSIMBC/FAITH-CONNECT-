@@ -216,6 +216,29 @@ function showTestament(type) {
     }
 }
 
+// AJOUT : "Traducteur" des noms de livres de la Bible
+const bookMap = {
+  "Genèse": "Genesis", "Exode": "Exodus", "Lévitique": "Leviticus", "Nombres": "Numbers",
+  "Deutéronome": "Deuteronomy", "Josué": "Joshua", "Juges": "Judges", "Ruth": "Ruth",
+  "1 Samuel": "1 Samuel", "2 Samuel": "2 Samuel", "1 Rois": "1 Kings", "2 Rois": "2 Kings",
+  "1 Chroniques": "1 Chronicles", "2 Chroniques": "2 Chronicles", "Esdras": "Ezra", "Néhémie": "Nehemiah",
+  "Esther": "Esther", "Job": "Job", "Psaumes": "Psalms", "Proverbes": "Proverbs",
+  "Ecclésiaste": "Ecclesiastes", "Cantique": "Song of Solomon", "Ésaïe": "Isaiah", "Jérémie": "Jeremiah",
+  "Lamentations": "Lamentations", "Ézéchiel": "Ezekiel", "Daniel": "Daniel", "Osée": "Hosea",
+  "Joël": "Joel", "Amos": "Amos", "Abdias": "Obadiah", "Jonas": "Jonah",
+  "Michée": "Micah", "Nahum": "Nahum", "Habacuc": "Habakkuk", "Sophonie": "Zephaniah",
+  "Aggée": "Haggai", "Zacharie": "Zechariah", "Malachie": "Malachi",
+  "Matthieu": "Matthew", "Marc": "Mark", "Luc": "Luke", "Jean": "John",
+  "Actes": "Acts", "Romains": "Romans", "1 Corinthiens": "1 Corinthians", "2 Corinthiens": "2 Corinthians",
+  "Galates": "Galatians", "Éphésiens": "Ephesians", "Philippiens": "Philippians", "Colossiens": "Colossians",
+  "1 Thessal.": "1 Thessalonians", "2 Thessal.": "2 Thessalonians", "1 Timothée": "1 Timothy", "2 Timothée": "2 Timothy",
+  "Tite": "Titus", "Philémon": "Philemon", "Hébreux": "Hebrews", "Jacques": "James",
+  "1 Pierre": "1 Peter", "2 Pierre": "2 Peter", "1 Jean": "1 John", "2 Jean": "2 John",
+  "3 Jean": "3 John", "Jude": "Jude", "Apocalypse": "Revelation"
+};
+
+
+// --- 2. CHARGER UN CHAPITRE (LECTURE) ---
 async function loadBibleChapter(id, name, chapter) {
     const reader = document.getElementById('bible-reader');
     const listContainer = document.getElementById('bible-books-list');
@@ -239,21 +262,21 @@ async function loadBibleChapter(id, name, chapter) {
         </div>`;
 
     try {
-        // CHANGEMENT : On appelle notre propre fonction Supabase
-        const PROXY_URL = `${SUPABASE_URL}/functions/v1/bible-proxy`;
+        // 1. Traduire le nom du livre en anglais
+        const englishBookName = bookMap[name];
+        if (!englishBookName) {
+            throw new Error(`Nom de livre français non trouvé dans le traducteur: ${name}`);
+        }
 
-        const response = await fetch(PROXY_URL, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${SUPABASE_KEY}`
-            },
-            body: JSON.stringify({ bookName: name, chapter: chapter })
-        });
+        // 2. Construire l'URL de l'API Bible
+        const bibleApiUrl = `https://bible-api.com/${encodeURIComponent(englishBookName)}+${chapter}?translation=ls1910`;
 
+        // 3. Utiliser le proxy CORS public pour contourner le blocage
+        const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(bibleApiUrl)}`;
+
+        const response = await fetch(proxyUrl);
         if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.error || "Chapitre introuvable via le proxy.");
+            throw new Error(`Le service proxy ou l'API Bible a retourné une erreur: ${response.statusText}`);
         }
 
         const data = await response.json();
@@ -274,7 +297,6 @@ async function loadBibleChapter(id, name, chapter) {
                 ? `<button onclick="loadBibleChapter(${id}, '${name}', ${chapter - 1})" class="flex-1 bg-gray-800 py-3 rounded-xl text-xs font-bold text-gray-300 hover:bg-gray-700 transition-colors">← Précédent</button>`
                 : `<div class="flex-1"></div>`;
 
-            // On vérifie que la réponse contient bien des versets avant d'afficher "suivant"
             const nextBtn = (data.verses.length > 0)
                 ? `<button onclick="loadBibleChapter(${id}, '${name}', ${chapter + 1})" class="flex-1 bg-purple-600 py-3 rounded-xl text-xs font-bold text-white shadow-lg hover:bg-purple-500 transition-colors">Suivant →</button>`
                 : `<div class="flex-1"></div>`;
