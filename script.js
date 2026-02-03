@@ -265,21 +265,27 @@ async function loadBibleChapter(id, name, chapter) {
         // 1. Traduire le nom du livre en anglais
         const englishBookName = bookMap[name];
         if (!englishBookName) {
-            throw new Error(`Nom de livre français non trouvé dans le traducteur: ${name}`);
+            throw new Error(`Nom de livre non trouvé: ${name}`);
         }
 
         // 2. Construire l'URL de l'API Bible
         const bibleApiUrl = `https://bible-api.com/${encodeURIComponent(englishBookName)}+${chapter}?translation=ls1910`;
 
-        // 3. CHANGEMENT ICI : On utilise un nouveau service proxy plus fiable
-        const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(bibleApiUrl)}`;
+        // 3. CHANGEMENT : On utilise un proxy moderne (cors.sh)
+        const proxyUrl = `https://proxy.cors.sh/${bibleApiUrl}`;
 
-        const response = await fetch(proxyUrl);
+        const response = await fetch(proxyUrl, {
+          headers: {
+            // Ce header est requis par cors.sh pour s'activer
+            'x-cors-api-key': 'temp_1a2f3b4c5d6e7f8a9b0c1d2e3f4a5b6c'
+          }
+        });
+        
+        // 4. AMÉLIORATION : Si la réponse n'est pas "OK", on lève une erreur détaillée
         if (!response.ok) {
-            throw new Error(`Le service proxy ou l'API Bible a retourné une erreur: ${response.statusText}`);
+            throw new Error(`Erreur réseau: ${response.status} ${response.statusText}`);
         }
 
-        // Le contenu est directement le JSON brut, donc on peut le traiter
         const data = await response.json();
 
         if (data.verses && data.verses.length > 0) {
@@ -320,16 +326,16 @@ async function loadBibleChapter(id, name, chapter) {
                 </div>`;
         }
     } catch (error) {
-        console.error("Erreur Bible:", error);
+        // AMÉLIORATION : On affiche maintenant le message d'erreur détaillé
+        console.error("Erreur Bible détaillée:", error);
         content.innerHTML = `
             <div class="text-center text-red-400 mt-20 px-6">
                 <p class="text-xs mb-2">Impossible de charger le texte.</p>
-                <p class="text-[10px] text-gray-600 mb-4 opacity-50">${error.message}</p>
+                <p class="text-[10px] text-gray-600 mb-4 opacity-50">Détail: ${error.message}</p>
                 <button onclick="loadBibleChapter(${id}, '${name}', ${chapter})" class="bg-red-500/10 text-red-400 px-4 py-2 rounded text-xs hover:bg-red-500/20">Réessayer</button>
             </div>`;
     }
 }
-
 
 // --- 3. FONCTION DE FERMETURE (C'est ici que c'était cassé) ---
 function closeBibleReader() {
