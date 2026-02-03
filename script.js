@@ -224,21 +224,15 @@ function showTestament(type) {
 }
 // --- 2. CHARGER UN CHAPITRE (LECTURE) ---
 async function loadBibleChapter(id, name, chapter) {
-    console.log(`Chargement: ${name} Chapitre ${chapter} (Livre ID: ${id})`); // Debug
+    console.log(`Chargement : ${name} ${chapter}`); 
 
     const reader = document.getElementById('bible-reader');
     const listContainer = document.getElementById('bible-books-list');
     const content = document.getElementById('reader-content');
     const title = document.getElementById('reader-title');
     
-    // SÉCURITÉ : Vérifier que les éléments HTML existent
-    if (!reader || !content) {
-        console.error("ERREUR CRITIQUE : Il manque l'élément 'bible-reader' ou 'reader-content' dans ton HTML !");
-        alert("Erreur technique : Élément d'affichage introuvable.");
-        return;
-    }
+    if (!reader || !content) return;
     
-    // BASCULE D'AFFICHAGE
     if(listContainer) listContainer.classList.add('hidden');
     reader.classList.remove('hidden');
     
@@ -248,37 +242,29 @@ async function loadBibleChapter(id, name, chapter) {
 
     if(title) title.innerText = `${name} ${chapter}`;
     
-    // Loader
     content.innerHTML = `
         <div class="flex flex-col h-full items-center justify-center space-y-4">
             <div class="w-8 h-8 border-4 border-purple-500 rounded-full animate-spin border-t-transparent"></div>
-            <p class="text-xs text-gray-500 animate-pulse">Chargement...</p>
+            <p class="text-xs text-gray-500 animate-pulse">Connexion au serveur sacré...</p>
         </div>`;
 
     try {
-        // CORRECTION IMPORTANTE : Utilisation forcée des backticks (`)
-        const apiUrl = `https://api.getbible.net/v2/${currentBibleVersion}/${id}/${chapter}.json`;
+        // Utilisation de Bible-API (Plus stable)
+        // Note : On utilise le nom du livre directement
+        const apiUrl = `https://bible-api.com/${name}+${chapter}?translation=ls1910`;
         
         const response = await fetch(apiUrl);
-        if (!response.ok) throw new Error("Chapitre introuvable (Erreur API)");
+        if (!response.ok) throw new Error("Serveur indisponible");
 
         const data = await response.json();
 
         if (data.verses && data.verses.length > 0) {
-            // Gestion RTL (Arabe) et alignement
-            const isArabic = currentBibleVersion === 'vandyke';
-            const dir = isArabic ? 'rtl' : 'ltr';
-            const align = isArabic ? 'text-right' : 'text-justify';
-            const font = isArabic ? 'font-sans' : 'font-serif';
-
-            // Formatage du texte
             let formattedText = data.verses.map(v => 
-                `<p class="mb-3 leading-relaxed text-gray-200 ${align}" dir="${dir}">
+                `<p class="mb-3 leading-relaxed text-gray-200 text-justify">
                     <sup class="text-purple-400 text-[10px] font-bold mr-1 select-none">${v.verse}</sup>${v.text}
                 </p>`
             ).join('');
 
-            // Boutons Précédent / Suivant
             const prevBtn = chapter > 1 
                 ? `<button onclick="loadBibleChapter(${id}, '${name.replace(/'/g, "\\'")}', ${chapter - 1})" class="flex-1 bg-gray-800 py-3 rounded-xl text-xs font-bold text-gray-300 hover:bg-gray-700 transition-colors">← Précédent</button>` 
                 : `<div class="flex-1"></div>`;
@@ -286,9 +272,9 @@ async function loadBibleChapter(id, name, chapter) {
             const nextBtn = `<button onclick="loadBibleChapter(${id}, '${name.replace(/'/g, "\\'")}', ${chapter + 1})" class="flex-1 bg-purple-600 py-3 rounded-xl text-xs font-bold text-white shadow-lg hover:bg-purple-500 transition-colors">Suivant →</button>`;
 
             content.innerHTML = `
-                <div class="${font} text-sm px-2 pt-2 pb-20 animate-fade-in">
+                <div class="font-serif text-sm px-2 pt-2 pb-20 animate-fade-in">
                     ${formattedText}
-                    <div class="flex justify-between gap-4 mt-8 border-t border-white/10 pt-6" dir="ltr">
+                    <div class="flex justify-between gap-4 mt-8 border-t border-white/10 pt-6">
                         ${prevBtn}
                         ${nextBtn}
                     </div>
@@ -297,19 +283,17 @@ async function loadBibleChapter(id, name, chapter) {
             content.scrollTop = 0;
 
         } else {
-            content.innerHTML = `
-                <div class="text-center text-gray-400 mt-20">
-                    <p class="mb-4">Fin du livre.</p>
-                    <button onclick="closeBibleReader()" class="bg-gray-800 px-6 py-2 rounded-full text-xs text-white border border-white/10 hover:bg-gray-700">Retour aux livres</button>
-                </div>`;
+            throw new Error("Aucun verset trouvé");
         }
     } catch (error) {
         console.error("Erreur Bible:", error);
         content.innerHTML = `
             <div class="text-center text-red-400 mt-20 px-6">
-                <p class="text-xs mb-2">Impossible de charger le texte.</p>
-                <p class="text-[10px] text-gray-600 mb-4 opacity-50">${error.message}</p>
-                <button onclick="loadBibleChapter(${id}, '${name.replace(/'/g, "\\'")}', ${chapter})" class="bg-red-500/10 text-red-400 px-4 py-2 rounded text-xs hover:bg-red-500/20">Réessayer</button>
+                <p class="text-xs mb-2">Oups ! La connexion a échoué.</p>
+                <p class="text-[10px] text-gray-600 mb-4 opacity-50">L'API est peut-être saturée ou ton internet bloque l'accès.</p>
+                <button onclick="loadBibleChapter(${id}, '${name}', ${chapter})" class="bg-purple-500/20 text-purple-400 px-4 py-2 rounded-full text-xs font-bold border border-purple-500/30">
+                    Réessayer
+                </button>
             </div>`;
     }
 }
