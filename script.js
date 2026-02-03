@@ -216,22 +216,21 @@ function showTestament(type) {
     }
 }
 
-// --- 2. CHARGER UN CHAPITRE (LECTURE) ---
 async function loadBibleChapter(id, name, chapter) {
     const reader = document.getElementById('bible-reader');
     const listContainer = document.getElementById('bible-books-list');
     const content = document.getElementById('reader-content');
     const title = document.getElementById('reader-title');
 
-    if(!reader) return;
+    if (!reader) return;
 
-    if(listContainer) listContainer.classList.add('hidden');
+    if (listContainer) listContainer.classList.add('hidden');
     reader.classList.remove('hidden');
 
     currentBookId = id;
     currentBookName = name;
     currentChapter = chapter;
-    if(title) title.innerText = `${name} ${chapter}`;
+    if (title) title.innerText = `${name} ${chapter}`;
 
     content.innerHTML = `
         <div class="flex flex-col h-full items-center justify-center space-y-4">
@@ -240,19 +239,31 @@ async function loadBibleChapter(id, name, chapter) {
         </div>`;
 
     try {
-        // CHANGEMENT DE L'URL POUR UTILISER UNE SOURCE PLUS STABLE
-        const apiUrl = `https://bible-api.com/${encodeURIComponent(name)}+${chapter}?translation=ls1910`;
+        // CHANGEMENT : On appelle notre propre fonction Supabase
+        const PROXY_URL = `${SUPABASE_URL}/functions/v1/bible-proxy`;
 
-        const response = await fetch(apiUrl);
-        if (!response.ok) throw new Error("Chapitre introuvable");
+        const response = await fetch(PROXY_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${SUPABASE_KEY}`
+            },
+            body: JSON.stringify({ bookName: name, chapter: chapter })
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || "Chapitre introuvable via le proxy.");
+        }
+
         const data = await response.json();
 
-        // Bible-API renvoie aussi un tableau 'verses', donc ton code de mapping reste identique
         if (data.verses && data.verses.length > 0) {
             const isArabic = currentBibleVersion === 'vandyke';
             const dir = isArabic ? 'rtl' : 'ltr';
             const align = isArabic ? 'text-right' : 'text-justify';
             const font = isArabic ? 'font-sans' : 'font-serif';
+
             let formattedText = data.verses.map(v =>
                 `<p class="mb-3 leading-relaxed text-gray-200 ${align}" dir="${dir}">
                     <sup class="text-purple-400 text-[10px] font-bold mr-1 select-none">${v.verse}</sup>${v.text}
@@ -263,7 +274,10 @@ async function loadBibleChapter(id, name, chapter) {
                 ? `<button onclick="loadBibleChapter(${id}, '${name}', ${chapter - 1})" class="flex-1 bg-gray-800 py-3 rounded-xl text-xs font-bold text-gray-300 hover:bg-gray-700 transition-colors">← Précédent</button>`
                 : `<div class="flex-1"></div>`;
 
-            const nextBtn = `<button onclick="loadBibleChapter(${id}, '${name}', ${chapter + 1})" class="flex-1 bg-purple-600 py-3 rounded-xl text-xs font-bold text-white shadow-lg hover:bg-purple-500 transition-colors">Suivant →</button>`;
+            // On vérifie que la réponse contient bien des versets avant d'afficher "suivant"
+            const nextBtn = (data.verses.length > 0)
+                ? `<button onclick="loadBibleChapter(${id}, '${name}', ${chapter + 1})" class="flex-1 bg-purple-600 py-3 rounded-xl text-xs font-bold text-white shadow-lg hover:bg-purple-500 transition-colors">Suivant →</button>`
+                : `<div class="flex-1"></div>`;
 
             content.innerHTML = `
                 <div class="${font} text-sm px-2 pt-2 pb-20 animate-fade-in">
@@ -292,6 +306,7 @@ async function loadBibleChapter(id, name, chapter) {
             </div>`;
     }
 }
+
 
 // --- 3. FONCTION DE FERMETURE (C'est ici que c'était cassé) ---
 function closeBibleReader() {
@@ -570,12 +585,25 @@ function startChat(targetProfile) {
 
 function resetChat() {
     activeChatUser = null;
-    document.getElementById('chat-with-name').innerText = "Sélectionnez un ami";
+
+    const chatNameElement = document.getElementById('chat-with-name');
+    if (chatNameElement) {
+        chatNameElement.innerText = "Sélectionnez un ami";
+    }
+
     const container = document.getElementById('chat-history');
-    if(container) container.innerHTML = `<div class="flex flex-col items-center justify-center h-full text-gray-600 italic text-sm"><p>Cliquez sur une discussion</p></div>`;
+    if (container) {
+        container.innerHTML = `<div class="flex flex-col items-center justify-center h-full text-gray-600 italic text-sm"><p>Cliquez sur une discussion</p></div>`;
+    }
+
     const input = document.getElementById('chat-input');
-    if(input) { input.value = ""; input.disabled = true; input.placeholder = "Sélectionnez un ami d'abord"; }
+    if (input) {
+        input.value = "";
+        input.disabled = true;
+        input.placeholder = "Sélectionnez un ami d'abord";
+    }
 }
+
 
 async function fetchMessages() {
     const container = document.getElementById('chat-history');
