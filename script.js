@@ -216,28 +216,6 @@ function showTestament(type) {
     }
 }
 
-// AJOUT : "Traducteur" des noms de livres de la Bible
-const bookMap = {
-  "Genèse": "Genesis", "Exode": "Exodus", "Lévitique": "Leviticus", "Nombres": "Numbers",
-  "Deutéronome": "Deuteronomy", "Josué": "Joshua", "Juges": "Judges", "Ruth": "Ruth",
-  "1 Samuel": "1 Samuel", "2 Samuel": "2 Samuel", "1 Rois": "1 Kings", "2 Rois": "2 Kings",
-  "1 Chroniques": "1 Chronicles", "2 Chroniques": "2 Chronicles", "Esdras": "Ezra", "Néhémie": "Nehemiah",
-  "Esther": "Esther", "Job": "Job", "Psaumes": "Psalms", "Proverbes": "Proverbs",
-  "Ecclésiaste": "Ecclesiastes", "Cantique": "Song of Solomon", "Ésaïe": "Isaiah", "Jérémie": "Jeremiah",
-  "Lamentations": "Lamentations", "Ézéchiel": "Ezekiel", "Daniel": "Daniel", "Osée": "Hosea",
-  "Joël": "Joel", "Amos": "Amos", "Abdias": "Obadiah", "Jonas": "Jonah",
-  "Michée": "Micah", "Nahum": "Nahum", "Habacuc": "Habakkuk", "Sophonie": "Zephaniah",
-  "Aggée": "Haggai", "Zacharie": "Zechariah", "Malachie": "Malachi",
-  "Matthieu": "Matthew", "Marc": "Mark", "Luc": "Luke", "Jean": "John",
-  "Actes": "Acts", "Romains": "Romans", "1 Corinthiens": "1 Corinthians", "2 Corinthiens": "2 Corinthians",
-  "Galates": "Galatians", "Éphésiens": "Ephesians", "Philippiens": "Philippians", "Colossiens": "Colossians",
-  "1 Thessal.": "1 Thessalonians", "2 Thessal.": "2 Thessalonians", "1 Timothée": "1 Timothy", "2 Timothée": "2 Timothy",
-  "Tite": "Titus", "Philémon": "Philemon", "Hébreux": "Hebrews", "Jacques": "James",
-  "1 Pierre": "1 Peter", "2 Pierre": "2 Peter", "1 Jean": "1 John", "2 Jean": "2 John",
-  "3 Jean": "3 John", "Jude": "Jude", "Apocalypse": "Revelation"
-};
-
-
 // --- 2. CHARGER UN CHAPITRE (LECTURE) ---
 async function loadBibleChapter(id, name, chapter) {
     const reader = document.getElementById('bible-reader');
@@ -271,17 +249,17 @@ async function loadBibleChapter(id, name, chapter) {
         // 2. Construire l'URL de l'API Bible
         const bibleApiUrl = `https://bible-api.com/${encodeURIComponent(englishBookName)}+${chapter}?translation=ls1910`;
 
-        // 3. CHANGEMENT : On utilise un proxy moderne (cors.sh)
+        // 3. LA BONNE URL EST CELLE-CI (avec cors.sh)
         const proxyUrl = `https://proxy.cors.sh/${bibleApiUrl}`;
 
+        // 4. On ajoute le header requis par ce service
         const response = await fetch(proxyUrl, {
           headers: {
-            // Ce header est requis par cors.sh pour s'activer
             'x-cors-api-key': 'temp_1a2f3b4c5d6e7f8a9b0c1d2e3f4a5b6c'
           }
         });
         
-        // 4. AMÉLIORATION : Si la réponse n'est pas "OK", on lève une erreur détaillée
+        // 5. On lève une erreur détaillée si ça ne marche pas
         if (!response.ok) {
             throw new Error(`Erreur réseau: ${response.status} ${response.statusText}`);
         }
@@ -289,6 +267,7 @@ async function loadBibleChapter(id, name, chapter) {
         const data = await response.json();
 
         if (data.verses && data.verses.length > 0) {
+            // ... (le reste du code est identique et correct)
             const isArabic = currentBibleVersion === 'vandyke';
             const dir = isArabic ? 'rtl' : 'ltr';
             const align = isArabic ? 'text-right' : 'text-justify';
@@ -326,7 +305,6 @@ async function loadBibleChapter(id, name, chapter) {
                 </div>`;
         }
     } catch (error) {
-        // AMÉLIORATION : On affiche maintenant le message d'erreur détaillé
         console.error("Erreur Bible détaillée:", error);
         content.innerHTML = `
             <div class="text-center text-red-400 mt-20 px-6">
@@ -334,17 +312,6 @@ async function loadBibleChapter(id, name, chapter) {
                 <p class="text-[10px] text-gray-600 mb-4 opacity-50">Détail: ${error.message}</p>
                 <button onclick="loadBibleChapter(${id}, '${name}', ${chapter})" class="bg-red-500/10 text-red-400 px-4 py-2 rounded text-xs hover:bg-red-500/20">Réessayer</button>
             </div>`;
-    }
-}
-
-// --- 3. FONCTION DE FERMETURE (C'est ici que c'était cassé) ---
-function closeBibleReader() {
-    // 1. Cacher le lecteur
-    document.getElementById('bible-reader').classList.add('hidden');
-    // 2. IMPORTANT : Réafficher la liste des livres
-    const listContainer = document.getElementById('bible-books-list');
-    if (listContainer) {
-        listContainer.classList.remove('hidden');
     }
 }
 
