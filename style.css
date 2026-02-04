@@ -26,3 +26,92 @@
 /* Animation slide up pour les commentaires */
 @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
 .animate-slide-up { animation: slideUp 0.3s ease-out; }
+/* --- EFFET DE VERRE (GLASSMORPHISM) --- */
+.premium-card, .glass-input, #search-results-container > div {
+    background: rgba(255, 255, 255, 0.03);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+}
+
+/* --- BARRE DE RECHERCHE ANIMÉE --- */
+.search-input-wrapper input {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.search-input-wrapper input:focus {
+    background: rgba(139, 92, 246, 0.05); /* Teinte violette très légère */
+    border-color: #8b5cf6;
+    box-shadow: 0 0 15px rgba(139, 92, 246, 0.3); /* Glow néon */
+}
+
+/* --- BOUTON AUDIO BIBLE --- */
+.btn-audio-bible {
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+.btn-audio-bible:active {
+    transform: scale(0.95);
+}
+
+.btn-audio-bible.playing {
+    animation: pulse-purple 2s infinite;
+    background: rgba(139, 92, 246, 0.2);
+    color: #a78bfa;
+}
+
+/* --- ANIMATION DE PULSATION --- */
+@keyframes pulse-purple {
+    0% { box-shadow: 0 0 0 0 rgba(139, 92, 246, 0.4); }
+    70% { box-shadow: 0 0 0 10px rgba(139, 92, 246, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(139, 92, 246, 0); }
+}
+
+/* --- SCROLLBAR PERSONNALISÉE (STYLE ÉPURÉ) --- */
+::-webkit-scrollbar {
+    width: 5px;
+}
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+::-webkit-scrollbar-thumb {
+    background: rgba(139, 92, 246, 0.3);
+    border-radius: 10px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: #8b5cf6;
+}
+function toggleBibleAudio() {
+    const btn = event.currentTarget; // Récupère le bouton cliqué
+    const text = document.getElementById('reader-content').innerText;
+    
+    if (!isReading) {
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = 'fr-FR';
+        
+        utterance.onstart = () => {
+            isReading = true;
+            btn.classList.add('playing');
+            btn.innerHTML = '<i data-lucide="square" class="w-5 h-5"></i>'; // Icône Stop
+            lucide.createIcons();
+        };
+
+        utterance.onend = () => {
+            isReading = false;
+            btn.classList.remove('playing');
+            btn.innerHTML = '<i data-lucide="volume-2" class="w-5 h-5"></i>'; // Icône Play
+            lucide.createIcons();
+        };
+
+        speechSynthesis.speak(utterance);
+    } else {
+        speechSynthesis.cancel();
+        isReading = false;
+        btn.classList.remove('playing');
+        btn.innerHTML = '<i data-lucide="volume-2" class="w-5 h-5"></i>';
+        lucide.createIcons();
+    }
+}
