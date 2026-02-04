@@ -1273,30 +1273,71 @@ async function publishVerseCard() {
             btn.disabled = false;
         }
 
-async function searchUsers(query) {
-    if (query.length < 2) return;
-    const { data: profiles, error } = await supabaseClient
-        .from('profiles')
-        .select('id, username, avatar_url, bio')
-        .ilike('username', `%${query}%`)
-        .limit(10);
+        let isBiblePlaying = false;
+function toggleBibleAudio() {
+    const btn = document.querySelector('.btn-audio-bible');
+    const icon = btn.querySelector('i');
+    
+    isBiblePlaying = !isBiblePlaying;
+    
+    if (isBiblePlaying) {
+        btn.classList.add('playing');
+        // Ici, on simule ou on lance un flux audio
+        console.log("Lecture audio activée...");
+        showNotification("Lecture audio démarrée", "info");
+    } else {
+        btn.classList.remove('playing');
+        console.log("Lecture audio arrêtée.");
+    }
+    
+    // Mise à jour de l'icône via Lucide
+    icon.setAttribute('data-lucide', isBiblePlaying ? 'pause' : 'volume-2');
+    lucide.createIcons();
+}
 
+function showNotification(message, type = 'success') {
+    const container = document.getElementById('notification-container');
+    const notif = document.createElement('div');
+    const bgColor = type === 'success' ? 'bg-green-600' : (type === 'error' ? 'bg-red-600' : 'bg-purple-600');
+    
+    notif.className = `${bgColor} text-white px-4 py-3 rounded-xl shadow-lg flex items-center gap-2 animate-view`;
+    notif.innerHTML = `
+        <i data-lucide="${type === 'success' ? 'check-circle' : 'info'}" class="w-4 h-4"></i>
+        <span class="text-sm font-bold">${message}</span>
+    `;
+    
+    container.appendChild(notif);
+    lucide.createIcons();
+
+    setTimeout(() => {
+        notif.style.opacity = '0';
+        setTimeout(() => notif.remove(), 500);
+    }, 3000);
+}
+
+async function searchUsers(query) {
     const container = document.getElementById('search-results-container');
-    container.innerHTML = profiles.map(p => `
-        <div class="flex items-center justify-between p-3 bg-gray-800 rounded-xl mb-2">
-            <div class="flex items-center gap-3">
-                <img src="${p.avatar_url || 'https://ui-avatars.com/api/?name='+p.username}" class="w-10 h-10 rounded-full">
-                <div>
-                    <p class="text-sm font-bold text-white">${p.username}</p>
-                    <p class="text-[10px] text-gray-400">${p.bio || ''}</p>
-                </div>
+    if (!query || query.length < 2) {
+        container.innerHTML = '';
+        return;
+    }
+
+    const { data: users, error } = await supabase
+        .from('profiles')
+        .select('id, username, avatar_url')
+        .ilike('username', `%${query}%`)
+        .limit(5);
+
+    if (error) return;
+
+    container.innerHTML = users.map(user => `
+        <div onclick="viewPublicProfile('${user.id}')" class="flex items-center gap-3 p-3 bg-gray-800 hover:bg-gray-700 cursor-pointer border-b border-white/5 first:rounded-t-xl last:rounded-b-xl">
+            <div class="w-8 h-8 rounded-full bg-purple-600 flex items-center justify-center text-xs font-bold">
+                ${user.avatar_url ? `<img src="${user.avatar_url}" class="w-full h-full rounded-full object-cover">` : user.username.charAt(0)}
             </div>
-            <button onclick="addFriend('${p.id}')" class="p-2 bg-purple-600 rounded-lg text-white">
-                <i data-lucide="user-plus" class="w-4 h-4"></i>
-            </button>
+            <span class="text-sm font-medium text-white">${user.username}</span>
         </div>
     `).join('');
-    lucide.createIcons();
 }
 
     });
