@@ -1,495 +1,733 @@
-
 <!DOCTYPE html>
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FaithCircle - Votre Communauté</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Faith Connect</title>
+    
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#9333ea">
+    
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/3004/3004458.png">
+
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="https://cdn.jsdelivr.net/npm/lucide-static@latest/dist/lucide.min.js"></script>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&family=Lora:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/appwrite@13.0.0"></script> 
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
     
     <style>
-        body {
-            background-color: #0A0A0A;
-            color: #E5E7EB;
-            font-family: 'Inter', sans-serif;
-            overscroll-behavior: none;
-        }
-        .font-serif { font-family: 'Lora', serif; }
-        .hidden { display: none !important; }
-        
-        /* Animation fade */
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        .animate-view { animation: fadeIn 0.3s ease-out forwards; }
-        
-        /* Effet Post Premium (Demande 8) */
-        .post-card-hover {
-            transition: all 0.3s ease;
-            border: 1px solid rgba(255, 255, 255, 0.05);
-        }
-        .post-card-hover:hover {
-            border-color: #9333ea; /* Purple-600 */
-            box-shadow: 0 0 20px rgba(147, 51, 234, 0.15);
-            transform: translateY(-2px);
-        }
+        /* ... (Garde ton CSS tel quel, je ne le répète pas pour ne pas encombrer) ... */
+        /* --- 1. ANIMATIONS & UTILITAIRES --- */
+        .animate-fade-in { animation: fadeIn 0.3s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
-        .premium-card {
-            background-color: #111111;
-            border: 1px solid rgba(255, 255, 255, 0.05);
-            box-shadow: 0 0 15px rgba(192, 132, 252, 0.05);
-        }
-        
-        /* Scrollbar invisible */
         .scrollbar-hide::-webkit-scrollbar { display: none; }
         .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
         
-        /* Story Ring */
-        .story-ring {
-            background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%); 
-            padding: 2px;
-            border-radius: 9999px;
+        .bible-text { font-family: 'Georgia', serif; line-height: 1.8; }
+
+        /* --- 2. EFFET GLASSMORPHISM (Verre Dépoli) --- */
+        .glass-nav {
+            background: rgba(10, 10, 10, 0.7) !important;
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        /* --- 3. EFFET CARTES PREMIUM (Néon & Glow) --- */
+        .premium-card {
+            background: linear-gradient(145deg, rgba(30, 30, 40, 0.6), rgba(20, 20, 30, 0.8)) !important;
+            border: 1px solid rgba(168, 85, 247, 0.15) !important;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+            transition: transform 0.2s;
+        }
+        .premium-card:active {
+            transform: scale(0.98);
+        }
+
+        /* --- 4. ANIMATIONS DE TRANSITION (Slide Up) --- */
+        @keyframes slideUpFade {
+            0% { opacity: 0; transform: translateY(20px) scale(0.98); }
+            100% { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        .animate-view {
+            animation: slideUpFade 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+        }
+
+        /* --- 5. STYLE TIKTOK (REELS) --- */
+        #reels-container {
+            scroll-snap-type: y mandatory;
+            overflow-y: scroll;
+            height: 100dvh;
+            width: 100%;
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            background: black;
+            z-index: 0;
+        }
+
+        .reel-item {
+            scroll-snap-align: start;
+            scroll-snap-stop: always;
+            height: 100dvh;
+            width: 100%;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: black;
+        }
+
+        .reel-iframe {
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            transform: scale(1.35);
+            border: none;
         }
     </style>
 </head>
-<body class="antialiased">
+<body class="bg-gray-900 text-white font-sans antialiased h-[100dvh] w-screen overflow-hidden fixed inset-0"> 
 
-    <div id="login-page" class="flex flex-col items-center justify-center min-h-screen p-6 relative overflow-hidden">
-        <div class="absolute top-[-10%] left-[-10%] w-96 h-96 bg-purple-900/20 rounded-full blur-[100px]"></div>
-        <div class="absolute bottom-[-10%] right-[-10%] w-96 h-96 bg-blue-900/20 rounded-full blur-[100px]"></div>
+    <div id="login-page" class="absolute inset-0 z-[100] bg-gray-900 flex items-center justify-center p-4">
+        <div class="absolute top-20 left-20 w-72 h-72 bg-purple-600 rounded-full mix-blend-multiply filter blur-[100px] opacity-20 animate-pulse"></div>
+        <div class="absolute bottom-20 right-20 w-72 h-72 bg-pink-600 rounded-full mix-blend-multiply filter blur-[100px] opacity-20 animate-pulse delay-700"></div>
 
-        <h1 class="text-5xl font-black text-white mb-2 z-10">Faith<span class="text-purple-500">Circle</span></h1>
-        <p class="text-gray-400 mb-8 z-10">Connectez-vous à votre communauté.</p>
-        
-        <div class="w-full max-w-sm space-y-4 z-10 bg-gray-900/50 p-6 rounded-2xl border border-white/5 backdrop-blur-md">
-            <input type="email" id="login-email" placeholder="Adresse e-mail" class="w-full bg-black/50 border border-gray-700 text-white px-4 py-3 rounded-xl focus:outline-none focus:border-purple-500 transition-all">
-            <input type="password" id="login-password" placeholder="Mot de passe" class="w-full bg-black/50 border border-gray-700 text-white px-4 py-3 rounded-xl focus:outline-none focus:border-purple-500 transition-all">
-            <button onclick="handleLogin()" class="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 rounded-xl transition-all transform hover:scale-[1.02]">Connexion</button>
-            <button onclick="handleSignUp()" class="w-full border border-gray-600 hover:bg-gray-800 text-gray-300 font-bold py-3 rounded-xl transition-colors">Créer un compte</button>
-        </div>
-    </div>
-
-    <div id="main-app" class="hidden">
-        
-        <header class="sticky top-0 z-40 bg-black/80 backdrop-blur-md border-b border-white/5 p-4">
-             <div class="max-w-7xl mx-auto flex justify-between items-center gap-4">
-                 <h1 class="text-xl md:text-2xl font-black text-white cursor-pointer" onclick="switchView('home')">Faith<span class="text-purple-500">Circle</span></h1>
-                 
-                 <div class="flex-1 max-w-md hidden md:block relative">
-                     <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500"></i>
-                     <input type="text" id="global-search" placeholder="Rechercher des personnes, des groupes..." class="w-full bg-gray-900 border border-white/10 rounded-full py-2 pl-10 pr-4 text-sm text-white focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all">
-                 </div>
-
-                 <div class="flex items-center gap-4">
-                    <button class="md:hidden text-gray-400"><i data-lucide="search" class="w-5 h-5"></i></button>
-
-                    <div class="relative">
-                        <button onclick="toggleNotifDropdown()" class="text-gray-400 hover:text-white transition-colors"><i data-lucide="bell"></i></button>
-                        <span id="notif-badge" class="absolute top-0 right-0 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-black hidden"></span>
-                    </div>
-
-                    <button onclick="openSettings()" class="text-gray-400 hover:text-white transition-colors"><i data-lucide="settings"></i></button>
-
-                     <div id="current-user-avatar-small" onclick="switchView('profile')" class="w-9 h-9 rounded-full bg-purple-700 cursor-pointer overflow-hidden border border-white/10"></div>
-                 </div>
-             </div>
-        </header>
-
-        <div id="notif-dropdown" class="hidden absolute top-16 right-4 z-50 w-80 bg-gray-900 border border-white/10 rounded-xl shadow-2xl backdrop-blur-xl">
-            <div class="p-3 border-b border-white/5 font-bold text-sm">Notifications</div>
-            <div id="notif-list" class="max-h-80 overflow-y-auto">
-                <div class="p-8 text-center text-xs text-gray-500">Aucune nouvelle notification 🍃</div>
-            </div>
-        </div>
-        
-        <main class="pb-24 md:pb-8 max-w-7xl mx-auto pt-4">
-            <div id="view-home">
-                 <div id="stories-container" class="px-4 flex items-center space-x-4 overflow-x-auto scrollbar-hide mb-6">
-                    <div class="flex flex-col items-center space-y-1 min-w-[70px] cursor-pointer" onclick="document.getElementById('btn-add-story-input').click()">
-                        <div class="w-16 h-16 rounded-full border-2 border-dashed border-gray-600 flex items-center justify-center bg-gray-900 hover:bg-gray-800 transition-colors">
-                            <i data-lucide="plus" class="text-purple-400"></i>
-                        </div>
-                        <span class="text-xs text-gray-400">Ma Story</span>
-                    </div>
-                    </div>
-                <input type="file" id="btn-add-story-input" class="hidden" onchange="uploadStory(this)" accept="image/*">
-                
-                <div class="grid grid-cols-1 md:grid-cols-12 gap-6 px-4">
-                    <div class="hidden md:block md:col-span-3 lg:col-span-3">
-                        <div class="sticky top-24 space-y-2">
-                             <button onclick="switchView('home')" class="w-full flex items-center gap-3 p-3 rounded-xl bg-purple-600/10 text-purple-400 font-bold"><i data-lucide="home"></i> Accueil</button>
-                             <button onclick="switchView('reels')" class="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-white/5 text-gray-300 transition-colors"><i data-lucide="film"></i> Versets Vidéo</button>
-                             <button onclick="switchView('bible')" class="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-white/5 text-gray-300 transition-colors"><i data-lucide="book-open"></i> Bible IA</button>
-                             <button onclick="switchView('messages')" class="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-white/5 text-gray-300 transition-colors"><i data-lucide="message-circle"></i> Messages</button>
-                             <button onclick="switchView('profile')" class="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-white/5 text-gray-300 transition-colors"><i data-lucide="user"></i> Mon Profil</button>
-                        </div>
-                    </div>
-
-                    <div class="md:col-span-9 lg:col-span-6">
-                        <div class="premium-card p-4 rounded-2xl mb-6">
-                            <div class="flex gap-3">
-                                <div id="post-creator-avatar" class="w-10 h-10 rounded-full bg-gray-700 flex-shrink-0"></div>
-                                <textarea id="new-post-input" class="w-full bg-transparent text-white placeholder-gray-500 focus:outline-none resize-none mt-2" rows="2" placeholder="Quoi de neuf, pèlerin ?"></textarea>
-                            </div>
-                            <div id="image-preview-container" class="hidden mt-2 relative rounded-lg overflow-hidden">
-                                <img id="image-preview" class="w-full object-cover max-h-80">
-                                <button onclick="removeImage()" class="absolute top-2 right-2 bg-black/60 hover:bg-black/80 p-1.5 rounded-full text-white backdrop-blur-sm transition-colors"><i data-lucide="x" class="w-4 h-4"></i></button>
-                            </div>
-                            <div class="flex justify-between items-center mt-4 border-t border-white/5 pt-3">
-                                <div class="flex gap-2">
-                                    <button onclick="document.getElementById('post-image-file').click()" class="text-purple-400 hover:bg-purple-400/10 p-2 rounded-full transition-colors" title="Ajouter une photo"><i data-lucide="image"></i></button>
-                                    <button class="text-blue-400 hover:bg-blue-400/10 p-2 rounded-full transition-colors" title="Ajouter un lieu"><i data-lucide="map-pin"></i></button>
-                                    <button class="text-yellow-400 hover:bg-yellow-400/10 p-2 rounded-full transition-colors" title="Humeur"><i data-lucide="smile"></i></button>
-                                </div>
-                                <input type="file" id="post-image-file" class="hidden" onchange="handleImageSelect(this)" accept="image/*">
-                                <button id="btn-publish" onclick="publishPost()" class="bg-purple-600 hover:bg-purple-500 text-white font-bold px-6 py-2 rounded-full text-sm transition-all shadow-lg shadow-purple-900/20">Publier</button>
-                            </div>
-                        </div>
-                        
-                        <div id="posts-container" class="space-y-6">
-                            </div>
-                    </div>
-                    
-                    <div class="hidden lg:block lg:col-span-3">
-                        <div class="sticky top-24 space-y-6">
-                            
-                            <div class="premium-card p-4 rounded-2xl">
-                                <div class="flex justify-between items-center mb-3">
-                                    <h3 class="font-bold text-white text-sm">Vos Communautés</h3>
-                                    <button onclick="createNewGroup()" class="text-purple-400 hover:text-purple-300"><i data-lucide="plus-circle" class="w-5 h-5"></i></button>
-                                </div>
-                                <div id="groups-list" class="space-y-3">
-                                    <div class="text-xs text-gray-500 italic">Rejoignez ou créez un groupe.</div>
-                                    <div class="flex items-center gap-3 cursor-pointer hover:bg-white/5 p-2 rounded-lg transition-colors">
-                                        <div class="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center font-bold">J</div>
-                                        <div>
-                                            <p class="text-sm font-bold">Jeunesse Chrétienne</p>
-                                            <p class="text-[10px] text-gray-400">120 membres</p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                           <div class="premium-card p-4 rounded-2xl">
-                               <h3 class="font-bold text-white mb-3 text-sm flex items-center gap-2"><i data-lucide="hands-praying" class="w-4 h-4 text-purple-400"></i> Sujets de prière</h3>
-                               <div id="prayers-list" class="space-y-3 max-h-60 overflow-y-auto scrollbar-hide mb-3"></div>
-                               <div class="flex gap-2">
-                                   <input id="prayer-input" placeholder="Je prie pour..." class="flex-1 bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-xs text-white outline-none focus:border-purple-500">
-                                   <button onclick="addPrayer()" class="p-2 bg-purple-600 hover:bg-purple-500 text-white rounded-lg transition-colors"><i data-lucide="send" class="w-4 h-4"></i></button>
-                               </div>
-                           </div>
-                        </div>
-                    </div>
+        <div class="relative z-10 w-full max-w-md bg-gray-800/50 backdrop-blur-xl p-8 rounded-3xl border border-white/10 shadow-2xl">
+            <div class="text-center mb-8">
+                <div class="inline-flex p-3 bg-gradient-to-r from-purple-500 to-pink-500 rounded-2xl mb-4 shadow-lg shadow-purple-500/30">
+                    <i data-lucide="cross" class="w-8 h-8 text-white"></i>
                 </div>
+                <h1 class="text-3xl font-bold text-white mb-2">FAITH CONNECT</h1>
+                <p class="text-gray-400 text-sm">Votre communauté de foi connectée.</p>
             </div>
-
-            <div id="view-reels" class="hidden p-4">
-                 <div id="reels-container" class="masonry-container columns-2 md:columns-3 lg:columns-4 gap-4 space-y-4">
-                     </div>
-            </div>
-
-            <div id="view-bible" class="hidden p-4 space-y-6 max-w-4xl mx-auto">
-                <div class="bg-gradient-to-r from-purple-900/20 to-blue-900/20 border border-white/10 rounded-2xl p-6 text-center">
-                    <h3 class="text-2xl font-serif font-bold text-white mb-2">Faith AI <span class="text-purple-400">Assistant</span></h3>
-                    <p class="text-sm text-gray-400 mb-6">Posez une question théologique ou demandez une explication.</p>
-                    <div class="flex gap-2 max-w-lg mx-auto relative">
-                         <input type="text" id="ai-bible-input" placeholder="Ex: Que dit la Bible sur l'anxiété ?" class="flex-1 bg-gray-900 border border-gray-700 rounded-full px-6 py-3 text-sm text-white focus:outline-none focus:border-purple-500 shadow-lg">
-                         <button onclick="askFaithAI()" class="absolute right-1 top-1 bg-purple-600 hover:bg-purple-500 text-white p-2 rounded-full transition-colors"><i data-lucide="sparkles" class="w-5 h-5"></i></button>
-                    </div>
-                    <div id="ai-response-area" class="mt-6 hidden bg-black/40 p-4 rounded-xl text-left border border-white/5"></div>
-                </div>
-                <div class="premium-card rounded-2xl p-4">
-                    <div class="flex gap-4 border-b border-white/10 pb-4 mb-4">
-                        <button id="btn-at" onclick="showTestament('AT')" class="text-sm font-bold text-white hover:text-purple-400">Ancien Testament</button>
-                        <button id="btn-nt" onclick="showTestament('NT')" class="text-sm font-bold text-gray-400 hover:text-purple-400">Nouveau Testament</button>
-                    </div>
-                    <div id="bible-books-list" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-2"></div>
-                </div>
-            </div>
-
-            <div id="view-messages" class="hidden h-[calc(100vh-8rem)] md:h-[calc(100vh-6rem)]">
-                <div class="premium-card rounded-2xl h-full overflow-hidden flex shadow-2xl">
-                    <div id="conversations-sidebar" class="w-full md:w-80 lg:w-96 border-r border-white/5 bg-gray-900 flex flex-col">
-                        <div class="p-4 border-b border-white/5 flex justify-between items-center">
-                            <h2 class="text-xl font-bold">Messages</h2>
-                            <button class="text-purple-400 hover:bg-purple-400/10 p-2 rounded-full"><i data-lucide="edit"></i></button>
-                        </div>
-                        <div class="p-2">
-                             <input placeholder="Rechercher une conversation..." class="w-full bg-black/30 border border-gray-700 rounded-lg px-3 py-2 text-xs text-white focus:border-purple-500">
-                        </div>
-                        <div id="messages-list" class="flex-1 overflow-y-auto space-y-1 p-2"></div>
-                    </div>
-                    
-                    <div id="chat-detail" class="hidden md:flex flex-1 flex-col bg-black/50 relative">
-                         <div id="chat-header" class="flex items-center justify-between p-4 border-b border-white/5 bg-gray-900/50 backdrop-blur-sm">
-                            <div class="flex items-center gap-3 cursor-pointer" onclick="goToChatProfile()">
-                                <div class="relative">
-                                    <img id="chat-header-avatar" class="w-10 h-10 rounded-full object-cover hidden border border-white/10">
-                                    <div id="chat-header-initials" class="w-10 h-10 rounded-full bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center font-bold text-white">?</div>
-                                    <span class="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-gray-900"></span>
-                                </div>
-                                <div>
-                                     <h3 id="chat-with-name" class="font-bold text-white leading-tight">Sélectionnez un ami</h3>
-                                     <span class="text-xs text-green-400">En ligne</span>
-                                </div>
-                            </div>
-                            <div class="flex items-center gap-2">
-                                <button class="p-2 text-gray-400 hover:text-white"><i data-lucide="phone"></i></button>
-                                <button class="p-2 text-gray-400 hover:text-white"><i data-lucide="video"></i></button>
-                                <button onclick="closeChat()" class="p-2 text-gray-400 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-colors"><i data-lucide="x"></i></button>
-                            </div>
-                         </div>
-                         
-                         <div id="chat-history" class="flex-1 p-4 overflow-y-auto space-y-4"></div>
-                         
-                         <div class="p-4 border-t border-white/5 bg-gray-900/30">
-                             <div class="flex items-end gap-2 bg-gray-900 border border-gray-700 rounded-2xl p-2">
-                                <button class="p-2 text-gray-400 hover:text-purple-400 transition-colors"><i data-lucide="plus-circle"></i></button>
-                                <textarea id="chat-input" placeholder="Écrivez un message..." class="flex-1 bg-transparent text-white text-sm focus:outline-none resize-none py-2 max-h-32 scrollbar-hide" rows="1" disabled></textarea>
-                                <button class="p-2 text-gray-400 hover:text-white transition-colors" title="Envoyer une image"><i data-lucide="image"></i></button>
-                                <button class="p-2 text-gray-400 hover:text-white transition-colors" title="Message vocal"><i data-lucide="mic"></i></button>
-                                <button onclick="sendChatMessage()" class="p-2 bg-purple-600 hover:bg-purple-500 text-white rounded-xl shadow-lg transition-all"><i data-lucide="send-horizontal"></i></button>
-                             </div>
-                         </div>
-                    </div>
-                </div>
-            </div>
-
-            <div id="view-profile" class="hidden">
-                <div class="relative w-full h-48 md:h-64 bg-gray-800 rounded-b-3xl overflow-hidden group">
-                    <img id="profile-cover-img" class="w-full h-full object-cover opacity-80" src="https://images.unsplash.com/photo-1504052434569-70ad5836ab65?w=1200&q=80" alt="Cover">
-                    <button onclick="openEditModal()" class="absolute bottom-4 right-4 bg-black/60 hover:bg-black/80 text-white text-xs px-3 py-1 rounded-full backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity"><i data-lucide="camera" class="w-3 h-3 inline mr-1"></i> Modifier</button>
-                </div>
-
-                <div class="px-4 max-w-4xl mx-auto -mt-16 md:-mt-20 relative z-10">
-                    <div class="flex flex-col md:flex-row items-center md:items-end gap-4 mb-6">
-                         <div class="relative group">
-                            <div id="profile-avatar-big" class="w-32 h-32 md:w-40 md:h-40 rounded-full bg-purple-800 border-4 border-[#0A0A0A] flex items-center justify-center font-bold text-5xl overflow-hidden">
-                                <img id="profile-avatar-img" class="w-full h-full object-cover hidden">
-                            </div>
-                            <button onclick="openEditModal()" class="absolute bottom-2 right-2 bg-purple-600 p-2 rounded-full text-white border-2 border-[#0A0A0A] hover:scale-110 transition-transform"><i data-lucide="edit-2" class="w-4 h-4"></i></button>
-                        </div>
-                        
-                        <div class="text-center md:text-left flex-1">
-                            <h2 id="profile-name" class="text-2xl md:text-3xl font-black text-white">Nom Utilisateur</h2>
-                            <p id="profile-bio" class="text-gray-400 text-sm mt-1 max-w-md">La bio de l'utilisateur apparaîtra ici. Une phrase inspirante ou une description.</p>
-                            
-                            <div class="flex flex-wrap justify-center md:justify-start gap-4 mt-4">
-                                <div class="text-center"><span id="stats-posts-count" class="font-bold text-white block">0</span><span class="text-xs text-gray-500">Posts</span></div>
-                                <div class="text-center"><span id="stats-friends-count" class="font-bold text-white block">0</span><span class="text-xs text-gray-500">Amis</span></div>
-                                <div class="text-center"><span id="stats-amens-count" class="font-bold text-white block">0</span><span class="text-xs text-gray-500">Amens</span></div>
-                            </div>
-                        </div>
-
-                        <div class="flex gap-2 mb-4 md:mb-2">
-                             <button onclick="openEditModal()" class="bg-gray-800 hover:bg-gray-700 border border-white/10 text-white px-6 py-2 rounded-full text-sm font-bold transition-colors">Modifier profil</button>
-                             <button onclick="logout()" class="bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/20 px-4 py-2 rounded-full text-sm font-bold transition-colors"><i data-lucide="log-out" class="w-4 h-4"></i></button>
-                        </div>
-                    </div>
-
-                    <div class="flex border-b border-white/10 mb-6">
-                        <button class="flex-1 py-3 text-sm font-bold text-purple-400 border-b-2 border-purple-400">Mes Posts</button>
-                        <button class="flex-1 py-3 text-sm font-bold text-gray-500 hover:text-white transition-colors">Mes Photos</button>
-                        <button class="flex-1 py-3 text-sm font-bold text-gray-500 hover:text-white transition-colors">Amis</button>
-                    </div>
-
-                    <div id="profile-posts-grid" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div class="text-center col-span-full py-10 text-gray-500 text-sm">Chargement des publications...</div>
-                    </div>
-                </div>
-            </div>
-            
-        </main>
-        
-        <nav class="fixed bottom-0 left-0 right-0 z-40 bg-black/90 backdrop-blur-lg border-t border-white/5 pb-safe flex justify-around md:hidden px-2 py-1">
-            <button onclick="switchView('home')" class="flex flex-col items-center p-2 text-gray-400 hover:text-purple-400 transition-colors"><i data-lucide="home" class="w-6 h-6"></i></button>
-            <button onclick="switchView('reels')" class="flex flex-col items-center p-2 text-gray-400 hover:text-purple-400 transition-colors"><i data-lucide="film" class="w-6 h-6"></i></button>
-            <button onclick="document.getElementById('verse-editor-modal').classList.remove('hidden')" class="flex flex-col items-center -mt-6 p-3 bg-purple-600 rounded-full text-white shadow-[0_0_15px_rgba(147,51,234,0.5)] border-4 border-black"><i data-lucide="plus" class="w-6 h-6"></i></button>
-            <button onclick="switchView('messages')" class="flex flex-col items-center p-2 text-gray-400 hover:text-purple-400 transition-colors relative">
-                <i data-lucide="message-square" class="w-6 h-6"></i>
-                <span id="msg-badge-mobile" class="absolute top-2 right-2 w-2 h-2 bg-purple-500 rounded-full hidden"></span>
-            </button>
-            <button onclick="switchView('profile')" class="flex flex-col items-center p-2 text-gray-400 hover:text-purple-400 transition-colors"><div class="w-6 h-6 rounded-full bg-gray-700 overflow-hidden"><img id="nav-mini-avatar" class="w-full h-full object-cover"></div></button>
-        </nav>
-    </div>
-
-    <div id="edit-profile-modal" class="hidden fixed inset-0 z-[60] bg-black/80 flex items-center justify-center p-4 backdrop-blur-sm animate-view">
-        <div class="bg-gray-900 w-full max-w-md rounded-2xl p-6 space-y-4 relative border border-white/10">
-            <button onclick="closeEditModal()" class="absolute top-4 right-4 text-gray-400 hover:text-white"><i data-lucide="x"></i></button>
-            <h3 class="text-xl font-bold text-center">Modifier le profil</h3>
             
             <div class="space-y-4">
                 <div>
-                    <label class="block text-xs font-bold text-gray-400 mb-1">Photo de couverture</label>
-                    <div class="flex items-center gap-3">
-                        <div class="h-12 w-20 bg-gray-800 rounded overflow-hidden"><img id="preview-cover-edit" class="w-full h-full object-cover opacity-50"></div>
-                        <input type="file" id="edit-cover-input" class="text-xs text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-purple-600 file:text-white hover:file:bg-purple-700" accept="image/*">
-                    </div>
+                    <label class="text-xs text-purple-300 ml-1 mb-1 block font-medium">Email</label>
+                    <input id="login-email" type="email" placeholder="hello@exemple.com" class="w-full px-4 py-3 bg-gray-900/50 border border-white/10 rounded-xl text-white focus:outline-none focus:border-purple-500 transition-all placeholder-gray-600">
+                </div>
+                <div>
+                    <label class="text-xs text-purple-300 ml-1 mb-1 block font-medium">Mot de passe</label>
+                    <input id="login-password" type="password" placeholder="••••••••" class="w-full px-4 py-3 bg-gray-900/50 border border-white/10 rounded-xl text-white focus:outline-none focus:border-purple-500 transition-all placeholder-gray-600">
                 </div>
                 
-                <div>
-                    <label class="block text-xs font-bold text-gray-400 mb-1">Photo de profil</label>
-                    <div class="flex items-center gap-3">
-                        <img id="preview-avatar-edit" class="w-12 h-12 rounded-full object-cover bg-gray-800">
-                        <input type="file" id="edit-avatar-input" class="text-xs text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-purple-600 file:text-white hover:file:bg-purple-700" accept="image/*">
-                    </div>
+                <div class="flex flex-col gap-3 mt-6">
+                    <button onclick="handleLogin()" class="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 rounded-xl transition-all shadow-lg shadow-purple-500/30">
+    Se connecter
+</button>
+                    <button onclick="handleSignUp()" class="w-full py-3.5 bg-transparent border border-white/10 text-gray-300 hover:text-white rounded-xl font-semibold transition-colors">
+                        Créer un compte
+                    </button>
                 </div>
-
-                <div>
-                    <label class="text-xs font-bold text-gray-400">Pseudo</label>
-                    <input id="edit-username" type="text" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 mt-1 text-white focus:border-purple-500 outline-none">
-                </div>
-                <div>
-                    <label class="text-xs font-bold text-gray-400">Bio</label>
-                    <textarea id="edit-bio" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 mt-1 text-white focus:border-purple-500 outline-none resize-none" rows="3"></textarea>
-                </div>
-                <button onclick="saveProfile()" class="w-full bg-purple-600 hover:bg-purple-500 text-white font-bold py-3 rounded-xl transition-all shadow-lg shadow-purple-900/20">Enregistrer les modifications</button>
             </div>
         </div>
     </div>
 
-    <div id="story-viewer" class="hidden fixed inset-0 z-[70] bg-black flex flex-col items-center justify-center">
-        <div class="w-full h-full md:max-w-md md:h-[90vh] md:rounded-2xl relative bg-gray-900 overflow-hidden">
-            <div class="absolute top-2 left-2 right-2 flex gap-1 z-20">
-                <div class="h-1 flex-1 bg-white/30 rounded-full overflow-hidden">
-                    <div id="story-progress" class="h-full bg-white w-0"></div>
-                </div>
+    <div id="main-app" class="hidden h-full w-full flex flex-col relative bg-gray-900">
+        
+        <header class="flex-none h-16 bg-gray-900/95 backdrop-blur-md border-b border-white/5 z-50 px-4 flex items-center justify-between">
+            <div class="flex items-center space-x-2 cursor-pointer" onclick="switchView('home')">
+                <i data-lucide="cross" class="w-6 h-6 text-purple-500"></i>
+                <h1 class="text-lg font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">FAITH CONNECT</h1>
             </div>
             
-            <div class="absolute top-6 left-4 flex items-center gap-2 z-20">
-                <img id="story-viewer-avatar" class="w-8 h-8 rounded-full border border-white/20">
-                <span id="story-viewer-name" class="text-white font-bold text-sm shadow-sm">User</span>
-            </div>
-
-            <button onclick="closeStoryViewer()" class="absolute top-6 right-4 z-30 text-white/80 hover:text-white"><i data-lucide="x" class="w-6 h-6"></i></button>
-
-            <img id="story-viewer-image" class="w-full h-full object-cover">
-            
-            <div class="absolute inset-y-0 left-0 w-1/3 z-10" onclick="prevStory()"></div>
-            <div class="absolute inset-y-0 right-0 w-1/3 z-10" onclick="nextStory()"></div>
-        </div>
-    </div>
-
-    <div id="verse-editor-modal" class="hidden fixed inset-0 z-[60] bg-black/90 flex flex-col items-center justify-center p-2 backdrop-blur-sm">
-        <div class="bg-gray-900 w-full max-w-5xl rounded-2xl p-4 md:p-6 relative flex flex-col md:flex-row gap-6 max-h-[95vh] border border-white/10 shadow-2xl">
-            <button onclick="document.getElementById('verse-editor-modal').classList.add('hidden')" class="absolute top-4 right-4 text-gray-500 hover:text-white z-20"><i data-lucide="x"></i></button>
-            
-            <div class="flex-1 bg-[#0A0A0A] rounded-xl flex items-center justify-center p-4 border border-white/5 relative overflow-hidden">
-                <div class="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10"></div>
-                <canvas id="verse-canvas" width="1080" height="1080" class="max-w-full max-h-[60vh] md:max-h-full shadow-2xl rounded-lg"></canvas>
-            </div>
-
-            <div class="w-full md:w-80 flex-shrink-0 space-y-5 overflow-y-auto pr-2 scrollbar-hide bg-gray-800/50 p-4 rounded-xl">
-                <h3 class="text-lg font-bold text-white flex items-center gap-2"><i data-lucide="palette" class="text-purple-400"></i> Studio Créatif</h3>
-                
-                <div>
-                    <label class="text-xs font-bold text-gray-400 uppercase tracking-wider">Texte</label>
-                    <textarea id="verse-text-input" oninput="drawCanvas()" rows="3" class="w-full bg-black/40 border border-gray-600 rounded-lg px-3 py-2 mt-1 text-sm text-white focus:border-purple-500 transition-colors">"L'Éternel est mon berger..."</textarea>
-                </div>
-
-                <div class="grid grid-cols-2 gap-3">
-                    <div>
-                        <label class="text-xs font-bold text-gray-400">Couleur</label>
-                        <input id="text-color-picker" oninput="drawCanvas()" type="color" value="#FFFFFF" class="w-full h-8 bg-transparent rounded cursor-pointer mt-1">
-                    </div>
-                    <div>
-                         <label class="text-xs font-bold text-gray-400">Taille</label>
-                         <input id="font-size-picker" oninput="drawCanvas()" type="range" min="20" max="100" value="40" class="w-full mt-2 accent-purple-500">
-                    </div>
-                </div>
-
-                <div>
-                     <label class="text-xs font-bold text-gray-400">Police</label>
-                     <select id="font-family-picker" onchange="drawCanvas()" class="w-full bg-black/40 rounded-lg px-2 py-2 border border-gray-600 text-sm mt-1">
-                         <option value="Lora">Serif (Élégant)</option>
-                         <option value="Inter">Sans-Serif (Moderne)</option>
-                         <option value="cursive">Manuscrit</option>
-                     </select>
-                </div>
-
-                <div>
-                     <label class="text-xs font-bold text-gray-400 uppercase tracking-wider">Arrière-plan</label>
-                     <div class="grid grid-cols-4 gap-2 mt-2">
-                         <button onclick="setBackground('color', '#000')" class="w-full h-8 bg-black rounded border border-gray-600"></button>
-                         <button onclick="setBackground('gradient', 'purple')" class="w-full h-8 bg-gradient-to-br from-purple-600 to-blue-600 rounded"></button>
-                         <button onclick="setBackground('gradient', 'sunset')" class="w-full h-8 bg-gradient-to-br from-orange-400 to-red-600 rounded"></button>
-                         <button onclick="document.getElementById('bg-upload-input').click()" class="w-full h-8 bg-gray-700 rounded flex items-center justify-center text-white"><i data-lucide="image" class="w-4 h-4"></i></button>
-                     </div>
-                     <input type="file" id="bg-upload-input" class="hidden" onchange="handleBgUpload(this)" accept="image/*">
-                </div>
-
-                <button id="btn-publish-verse" onclick="publishVerseCard()" class="w-full bg-gradient-to-r from-purple-600 to-purple-800 hover:from-purple-500 hover:to-purple-700 text-white font-bold py-3 rounded-xl shadow-lg transform transition-all hover:scale-[1.02] mt-4">Publier sur mon mur</button>
-            </div>
-        </div>
-    </div>
-    
-    <template id="post-template">
-        <div class="post-card premium-card rounded-2xl p-4 mb-4 post-card-hover relative group">
-            <div class="flex justify-between items-start mb-3">
-                <div class="flex items-center gap-3 cursor-pointer" onclick="openProfile('uid')">
-                    <img class="w-10 h-10 rounded-full object-cover border border-white/10" src="" alt="">
-                    <div>
-                        <h4 class="font-bold text-white text-sm hover:underline">Nom</h4>
-                        <span class="text-xs text-gray-500">Il y a 2h</span>
-                    </div>
-                </div>
+            <div class="flex items-center gap-4">
+                <div id="user-display" class="hidden sm:block text-sm font-medium text-gray-300"></div>
                 <div class="relative">
-                    <button class="text-gray-500 hover:text-white p-1" onclick="togglePostMenu(this)"><i data-lucide="more-horizontal"></i></button>
-                    <div class="post-menu hidden absolute right-0 top-6 w-32 bg-gray-900 border border-white/10 rounded-lg shadow-xl z-10 overflow-hidden">
-                        <button class="w-full text-left px-4 py-2 text-xs hover:bg-white/10 text-white flex gap-2"><i data-lucide="edit-2" class="w-3 h-3"></i> Modifier</button>
-                        <button class="w-full text-left px-4 py-2 text-xs hover:bg-white/10 text-red-400 flex gap-2"><i data-lucide="trash" class="w-3 h-3"></i> Supprimer</button>
-                        <button class="w-full text-left px-4 py-2 text-xs hover:bg-white/10 text-blue-400 flex gap-2"><i data-lucide="share-2" class="w-3 h-3"></i> Partager</button>
+                    <button onclick="toggleNotifDropdown()" class="p-2 rounded-full hover:bg-white/5 transition-colors relative">
+                        <i data-lucide="bell" class="w-5 h-5 text-gray-400"></i>
+                        <span id="notif-badge" class="hidden absolute top-1 right-1 w-2.5 h-2.5 bg-pink-500 rounded-full border border-gray-900"></span>
+                    </button>
+                    <div id="notif-dropdown" class="hidden absolute right-0 mt-3 w-72 bg-gray-800 border border-white/10 rounded-xl shadow-xl z-50 overflow-hidden">
+                        <div id="notif-list" class="max-h-64 overflow-y-auto">
+                            <div class="p-4 text-center text-xs text-gray-500">Rien pour le moment 🍃</div>
+                        </div>
                     </div>
                 </div>
             </div>
-            <p class="text-gray-200 text-sm mb-3 leading-relaxed">Contenu du post...</p>
-            <div class="rounded-xl overflow-hidden mb-3 hidden post-image-container">
-                <img src="" class="w-full h-auto object-cover">
+        </header>
+
+        <div id="main-content" class="flex-1 overflow-y-auto bg-gray-900 relative w-full pb-20">
+            <div class="max-w-4xl mx-auto p-4 min-h-full">
+                
+                <div id="view-home" class="space-y-6 animate-view">
+                    <div class="relative group">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <i data-lucide="search" class="h-5 w-5 text-gray-500 group-focus-within:text-purple-400 transition-colors"></i>
+                        </div>
+                        <input type="text" onkeyup="searchUsers(this.value)" placeholder="Rechercher un ami..." class="block w-full pl-10 pr-3 py-3 border border-white/10 rounded-xl leading-5 bg-gray-800/50 text-gray-300 placeholder-gray-500 focus:outline-none focus:bg-gray-800 focus:border-purple-500/50 transition-all">
+                        <div id="search-results" class="hidden absolute mt-1 w-full bg-gray-800 border border-white/10 rounded-xl shadow-2xl z-50 overflow-hidden max-h-60 overflow-y-auto"></div>
+                    </div>
+
+                    <div class="overflow-x-auto pb-2 scrollbar-hide">
+                        <div id="stories-container" class="flex space-x-4 min-w-max px-1"></div>
+                    </div>
+
+                    <div class="bg-gray-800/30 rounded-2xl p-4 border border-white/5">
+                        <div class="flex gap-3 items-start">
+                            <div id="current-user-avatar-small" class="w-10 h-10 rounded-full bg-gradient-to-tr from-purple-500 to-blue-500 flex items-center justify-center text-xs font-bold text-white shrink-0 overflow-hidden object-cover">
+                                ME
+                            </div>
+                            
+                            <div class="flex-1">
+                                <textarea id="new-post-input" rows="2" placeholder="Exprimez votre foi..." class="w-full bg-transparent border-none text-white focus:ring-0 placeholder-gray-600 text-sm resize-none"></textarea>
+                                
+                                <div id="image-preview-container" class="hidden mt-2 relative w-fit group">
+                                    <img id="image-preview" src="" class="h-24 w-auto rounded-lg border border-white/10 object-cover">
+                                    <button onclick="removeImage()" class="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 shadow-md transition-colors">
+                                        <i data-lucide="x" class="w-3 h-3"></i>
+                                    </button>
+                                </div>
+
+                                <div class="flex justify-between items-center mt-3 border-t border-white/5 pt-3">
+                                    <div class="flex gap-2">
+                                        <label for="post-image-file" class="cursor-pointer text-gray-400 hover:text-purple-400 p-2 rounded-full hover:bg-white/5 transition-colors">
+                                            <i data-lucide="image" class="w-5 h-5"></i>
+                                            <input type="file" id="post-image-file" accept="image/*" class="hidden" onchange="handleImageSelect(this)">
+                                        </label>
+                                    </div>
+                                    
+                                    <button onclick="publishPost()" id="btn-publish" class="px-4 py-1.5 bg-purple-600 rounded-full hover:bg-purple-500 transition-colors shadow-lg shadow-purple-900/20 text-xs font-bold text-white flex items-center gap-2">
+                                        <span>Publier</span>
+                                        <i data-lucide="send" class="w-3 h-3"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-gray-800/40 backdrop-blur-xl rounded-2xl p-4 border border-pink-500/20">
+                        <div class="flex justify-between items-center mb-3">
+                            <h3 class="text-pink-400 font-bold flex items-center gap-2 text-sm">🙏 Mur de Prières</h3>
+                            <span class="text-[10px] bg-pink-500/10 text-pink-300 px-2 py-1 rounded-full border border-pink-500/20">Communauté</span>
+                        </div>
+                        <div class="flex gap-2 mb-4">
+                            <input id="prayer-input" placeholder="Un sujet de prière ?" class="flex-1 bg-gray-900/50 border border-pink-500/20 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-pink-500 placeholder-gray-500 transition-colors">
+                            <button onclick="addPrayer()" class="bg-pink-600 px-4 py-1.5 rounded-xl text-xs font-bold text-white hover:bg-pink-500 transition-colors shadow-lg shadow-pink-900/20">Publier</button>
+                        </div>
+                        <div id="prayers-list" class="flex flex-col space-y-2 max-h-48 overflow-y-auto scrollbar-hide">
+                            <div class="text-center text-xs text-gray-500 py-2">Chargement...</div>
+                        </div>
+                    </div>
+
+                    <div class="bg-gray-800/30 rounded-2xl p-4 border border-blue-500/20">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="text-blue-400 font-bold flex items-center gap-2 text-sm">
+                                🤝 Entraide & Services
+                            </h3>
+                            <button class="text-[10px] bg-blue-500/10 text-blue-300 px-3 py-1.5 rounded-full border border-blue-500/20 hover:bg-blue-500/20 transition-colors" onclick="askForHelp()">
+                                Demander de l'aide
+                            </button>
+                        </div>
+                        <div class="space-y-3" id="help-list"></div>
+                    </div>
+
+                    <div class="space-y-2">
+                        <div class="flex justify-between items-center px-1">
+                            <h3 class="text-white font-bold text-sm flex items-center gap-2">
+                                📅 Prochains Événements
+                            </h3>
+                            <span class="text-[10px] text-gray-500 cursor-pointer hover:text-purple-400">Voir tout</span>
+                        </div>
+                        <div class="flex space-x-3 overflow-x-auto scrollbar-hide pb-2" id="events-list"></div>
+                    </div>
+
+                    <div id="posts-container" class="space-y-4 pb-4"></div>
+                </div>
+
+                <<div id="view-reels" class="hidden h-full flex flex-col relative animate-view pb-20 bg-gray-900">
+    <div class="p-4 shrink-0 flex justify-between items-center bg-gray-900/95 backdrop-blur z-10 sticky top-0">
+        <h2 class="text-xl font-bold text-white flex items-center gap-2">
+            <i data-lucide="image" class="w-6 h-6 text-purple-400"></i> Versets Créatifs
+        </h2>
+        <button onclick="openVerseEditor()" class="bg-gradient-to-r from-purple-600 to-pink-600 px-4 py-2 rounded-full shadow-lg active:scale-95 transition-transform text-sm font-bold text-white flex items-center gap-2">
+            <i data-lucide="plus-circle" class="w-5 h-5"></i> Créer
+        </button>
+    </div>
+
+    <div id="reels-container" class="flex-1 overflow-y-auto p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+        </div>
+</div>
+
+<div id="verse-editor-modal" class="hidden fixed inset-0 z-[200] bg-black/90 backdrop-blur-sm flex flex-col overflow-y-auto pt-safe">
+    <div class="bg-gray-900 min-h-full md:m-6 md:rounded-3xl border border-white/10 flex flex-col">
+        <div class="p-4 border-b border-white/10 flex justify-between items-center shrink-0">
+            <h3 class="font-bold text-white">Créer une Carte Verset</h3>
+            <button onclick="closeVerseEditor()" class="p-2 hover:bg-white/10 rounded-full"><i data-lucide="x" class="w-6 h-6 text-gray-400"></i></button>
+        </div>
+
+        <div class="flex-1 p-4 flex flex-col md:flex-row gap-6">
+            <div class="flex-1 flex items-center justify-center bg-black/50 rounded-2xl p-4 border border-white/5">
+                <canvas id="verse-canvas" width="600" height="600" class="w-full h-auto max-w-md shadow-2xl rounded-xl border border-white/10"></canvas>
             </div>
-            <div class="flex items-center justify-between border-t border-white/5 pt-3">
-                <button class="flex items-center gap-2 text-gray-400 hover:text-purple-400 transition-colors text-xs font-bold"><i data-lucide="heart" class="w-4 h-4"></i> Amen <span class="count">0</span></button>
-                <button class="flex items-center gap-2 text-gray-400 hover:text-blue-400 transition-colors text-xs font-bold"><i data-lucide="message-circle" class="w-4 h-4"></i> Commenter</button>
-                <button class="flex items-center gap-2 text-gray-400 hover:text-green-400 transition-colors text-xs font-bold"><i data-lucide="share" class="w-4 h-4"></i> Partager</button>
+
+            <div class="flex-1 space-y-5 max-w-md mx-auto w-full">
+                
+                <div>
+                    <label class="text-xs font-bold text-purple-300 mb-2 block">1. Votre Verset ou Pensée</label>
+                    <textarea id="verse-text-input" oninput="drawCanvas()" rows="4" placeholder="L'Éternel est mon berger..." class="w-full bg-gray-800 border border-white/10 rounded-xl p-3 text-white focus:border-purple-500 outline-none resize-none"></textarea>
+                </div>
+
+                 <div>
+                    <label class="text-xs font-bold text-purple-300 mb-2 block">2. Image de fond</label>
+                    <div class="flex gap-2 overflow-x-auto pb-2 scrollbar-hide" id="background-options">
+                        <button onclick="setBackground('color', '#1f2937')" class="w-12 h-12 rounded-lg bg-gray-800 border-2 border-white/20 hover:border-purple-500 shrink-0"></button>
+                        <button onclick="setBackground('color', '#4c1d95')" class="w-12 h-12 rounded-lg bg-purple-800 border-2 border-white/20 hover:border-purple-500 shrink-0"></button>
+                        <button onclick="setBackground('color', '#831843')" class="w-12 h-12 rounded-lg bg-pink-800 border-2 border-white/20 hover:border-purple-500 shrink-0"></button>
+                        <button onclick="setBackground('color', '#0f172a')" class="w-12 h-12 rounded-lg bg-slate-900 border-2 border-white/20 hover:border-purple-500 shrink-0"></button>
+                        <label class="w-12 h-12 rounded-lg bg-gray-700 border-2 border-white/20 hover:border-purple-500 shrink-0 flex items-center justify-center cursor-pointer">
+                            <i data-lucide="image-plus" class="w-6 h-6 text-gray-300"></i>
+                            <input type="file" id="bg-image-upload" accept="image/*" class="hidden" onchange="handleBgUpload(this)">
+                        </label>
+                    </div>
+                </div>
+
+               <div class="space-y-4">
+    
+    <div>
+        <label class="text-xs font-bold text-purple-300 mb-2 block flex justify-between">
+            <span>A. Apparence du Texte</span>
+        </label>
+        
+        <div class="flex gap-2 mb-2">
+            <div class="relative w-10 h-10 overflow-hidden rounded-xl border border-white/10 shrink-0">
+                 <input type="color" id="text-color-picker" value="#ffffff" onchange="drawCanvas()" class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[150%] h-[150%] cursor-pointer bg-transparent border-0 p-0">
+            </div>
+            
+            <select id="font-size-picker" onchange="drawCanvas()" class="flex-1 bg-gray-800 text-white rounded-xl px-2 text-xs border border-white/10 outline-none focus:border-purple-500 transition-colors">
+                <option value="30">Taille : Petit</option>
+                <option value="40" selected>Taille : Moyen</option>
+                <option value="60">Taille : Grand</option>
+                <option value="80">Taille : XXL</option>
+            </select>
+
+            <select id="font-family-picker" onchange="drawCanvas()" class="flex-1 bg-gray-800 text-white rounded-xl px-2 text-xs border border-white/10 outline-none focus:border-purple-500 transition-colors w-24">
+                <option value="Arial, sans-serif" font-family: Arial">Arial</option>
+                <option value="'Times New Roman', serif" style="font-family: 'Times New Roman'">Times</option>
+                <option value="'Courier New', monospace" style="font-family: 'Courier New'">Courier</option>
+                <option value="Georgia, serif" style="font-family: Georgia">Georgia</option>
+                <option value="Verdana, sans-serif" style="font-family: Verdana">Verdana</option>
+                <option value="Impact, sans-serif" style="font-family: Impact">Impact</option>
+                <option value="'Comic Sans MS', cursive" style="font-family: 'Comic Sans MS'">Comic</option>
+                <option value="'Trebuchet MS', sans-serif" style="font-family: 'Trebuchet MS'">Trebuchet</option>
+                <option value="'Arial Black', sans-serif" style="font-family: 'Arial Black'">Arial Black</option>
+                <option value="'Palatino Linotype', serif" style="font-family: 'Palatino Linotype'">Palatino</option>
+            </select>
+        </div>
+
+        <div class="flex justify-between items-center gap-3 bg-gray-800/50 p-1.5 rounded-xl border border-white/5">
+            <div class="flex gap-1 bg-gray-900 rounded-lg p-1 shrink-0">
+                <button onclick="setTextAlign('left')" class="p-1 hover:bg-white/10 rounded text-gray-400 hover:text-white transition-colors"><i data-lucide="align-left" class="w-4 h-4"></i></button>
+                <button onclick="setTextAlign('center')" class="p-1 hover:bg-white/10 rounded text-gray-400 hover:text-white transition-colors"><i data-lucide="align-center" class="w-4 h-4"></i></button>
+                <button onclick="setTextAlign('right')" class="p-1 hover:bg-white/10 rounded text-gray-400 hover:text-white transition-colors"><i data-lucide="align-right" class="w-4 h-4"></i></button>
+            </div>
+            
+            <div class="flex items-center gap-2 flex-1 px-2">
+                <i data-lucide="rows" class="w-3 h-3 text-gray-500 shrink-0"></i>
+                <input type="range" id="line-height-slider" min="1.0" max="2.5" step="0.1" value="1.4" oninput="drawCanvas()" class="w-full h-1 bg-gray-600 rounded-lg appearance-none cursor-pointer accent-purple-500">
             </div>
         </div>
-    </template>
+    </div>
 
-    <script src="script.js"></script>
+    <div>
+        <label class="text-xs font-bold text-purple-300 mb-2 block">B. Effets de Texte</label>
+        <div class="bg-gray-800/50 p-2 rounded-xl border border-white/5 space-y-2">
+             <div class="flex items-center justify-between">
+                <span class="text-xs text-gray-400 flex items-center gap-1"><i data-lucide="type" class="w-3 h-3"></i> Contour</span>
+                <div class="flex items-center gap-2">
+                    <input type="color" id="stroke-color-picker" value="#000000" onchange="drawCanvas()" class="h-6 w-6 rounded cursor-pointer bg-transparent border-0 p-0">
+                    <input type="range" id="stroke-width-slider" min="0" max="8" step="0.5" value="0" oninput="drawCanvas()" class="w-24 h-1 bg-gray-600 rounded-lg appearance-none cursor-pointer accent-purple-500">
+                </div>
+            </div>
+        </div>
+    </div>
 
-    <script>
-        // Initialisation simple pour l'UI
-        document.addEventListener('DOMContentLoaded', () => {
-            // S'assurer que les icônes sont rendues au chargement
-            if (typeof lucide !== 'undefined') {
-                lucide.createIcons();
-            }
+    <div>
+        <label class="text-xs font-bold text-purple-300 mb-2 block">C. Filtres d'Arrière-plan</label>
+        <div class="bg-gray-800/50 p-3 rounded-xl border border-white/5 space-y-3">
+            <div class="flex items-center gap-2">
+                <i data-lucide="sun" class="w-3 h-3 text-gray-500 shrink-0"></i>
+                <input type="range" id="overlay-slider" min="0" max="0.9" step="0.1" value="0.3" oninput="drawCanvas()" class="w-full h-1 bg-gray-600 rounded-lg appearance-none cursor-pointer accent-purple-500">
+                <i data-lucide="moon" class="w-3 h-3 text-gray-500 shrink-0"></i>
+            </div>
+             <div class="flex items-center gap-2 text-xs text-gray-400">
+                <span class="w-16 shrink-0">Flou</span>
+                <input type="range" id="blur-slider" min="0" max="20" step="1" value="0" oninput="drawCanvas()" class="w-full h-1 bg-gray-600 rounded-lg appearance-none cursor-pointer accent-purple-500">
+            </div>
+             <div class="flex items-center gap-2 text-xs text-gray-400">
+                <span class="w-16 shrink-0">N&B</span>
+                <input type="range" id="grayscale-slider" min="0" max="100" step="1" value="0" oninput="drawCanvas()" class="w-full h-1 bg-gray-600 rounded-lg appearance-none cursor-pointer accent-purple-500">
+            </div>
+        </div>
+    </div>
+</div>
+                 
+                 <button id="btn-publish-verse" onclick="publishVerseCard()" class="w-full py-4 bg-gradient-to-r from-purple-600 to-pink-600 rounded-xl text-white font-bold shadow-lg text-lg mt-4 hover:from-purple-500 hover:to-pink-500 transition-all flex items-center justify-center gap-2">
+                    <i data-lucide="sparkles" class="w-5 h-5"></i> Créer & Publier
+                </button>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+                <div id="reel-comments-modal" class="hidden fixed inset-0 z-[120] bg-black/50 backdrop-blur-sm flex flex-col justify-end">
+                    <div class="bg-gray-900 rounded-t-3xl border-t border-white/10 h-[60vh] flex flex-col pb-safe animate-slide-up">
+                        <div class="p-4 border-b border-white/5 flex justify-between items-center">
+                            <h3 class="font-bold text-white">Commentaires</h3>
+                            <button onclick="document.getElementById('reel-comments-modal').classList.add('hidden')" class="p-2"><i data-lucide="x" class="w-5 h-5 text-gray-400"></i></button>
+                        </div>
+                        <div id="reel-comments-list" class="flex-1 overflow-y-auto p-4 space-y-4"></div>
+                        <div class="p-4 border-t border-white/5 flex gap-2 bg-gray-900">
+                            <input id="reel-comment-input" type="text" placeholder="Ajouter un commentaire..." class="flex-1 bg-gray-800 rounded-full px-4 py-2 text-sm text-white focus:outline-none">
+                            <button onclick="sendReelComment()" class="text-purple-500 font-bold text-sm px-2">Envoyer</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="view-bible" class="hidden h-full flex flex-col relative animate-view pb-4">
+                    <div class="text-center pt-4 pb-2 shrink-0">
+                        <h2 class="text-xl font-bold text-white tracking-widest uppercase flex items-center justify-center gap-2">
+                            <i data-lucide="book" class="w-5 h-5 text-purple-400"></i> Sainte Bible
+                        </h2>
+                    </div>
+
+                    <div class="px-4 mb-4 flex justify-center">
+                        <select onchange="changeBibleVersion(this.value)" class="bg-gray-800 text-white text-xs rounded-full px-4 py-1.5 border border-white/10 outline-none focus:border-purple-500 cursor-pointer appearance-none text-center hover:bg-gray-700 transition-colors">
+    <option value="ls1910" selected>🇫🇷 Français (Louis Segond)</option>
+    <option value="kjv">🇬🇧 English (King James)</option>
+    <option value="rv1960">🇪🇸 Español (Reina Valera)</option>
+    <option value="vandyke">🇸🇦 Arabic (Van Dyke)</option>
+    <option value="luther1912">🇩🇪 Deutsch (Luther)</option>
+    <option value="almeida">🇧🇷 Português (Almeida)</option>
+    <option value="kab">♓ Tamazight (Kabyle)</option>
+</select>
+                    </div>
+
+                    <div class="flex justify-center gap-4 mb-4 px-4 shrink-0">
+                        <button onclick="showTestament('AT')" id="btn-at" class="flex-1 py-2 bg-purple-600 text-white rounded-xl text-xs font-bold transition-colors shadow-lg">Ancien Testament</button>
+                        <button onclick="showTestament('NT')" id="btn-nt" class="flex-1 py-2 bg-gray-800 text-gray-400 rounded-xl text-xs font-bold hover:bg-gray-700 transition-colors">Nouveau Testament</button>
+                    </div>
+
+                    <div class="flex-1 overflow-y-auto px-4 pb-20 relative">
+                        <div id="bible-books-list" class="grid grid-cols-2 gap-3 mb-6"></div>
+
+                        <div id="bible-reader" class="hidden bg-gray-800/90 backdrop-blur-xl absolute inset-0 z-20 flex flex-col p-4 m-2 rounded-2xl border border-white/10 shadow-2xl">
+                            <div class="flex justify-between items-center mb-4 border-b border-white/10 pb-2">
+                                <h3 id="reader-title" class="text-lg font-bold text-purple-400">Lecture</h3>
+                                <button onclick="closeBibleReader()" class="p-1 bg-gray-700 rounded-full hover:bg-gray-600"><i data-lucide="x" class="w-5 h-5 text-white"></i></button>
+                            </div>
+                            <div id="reader-content" class="flex-1 overflow-y-auto bible-text text-sm text-gray-200 leading-7 pr-2"></div>
+                        </div>
+                    </div>
+
+                    <div class="mt-auto mx-4 mb-2 bg-gradient-to-r from-gray-800 to-gray-900 border border-purple-500/30 rounded-2xl p-4 shadow-2xl relative overflow-hidden group">
+                        <div class="absolute -right-4 -top-4 w-20 h-20 bg-purple-500/20 rounded-full blur-xl"></div>
+                        <div class="flex items-center justify-between mb-3">
+                            <div class="flex items-center gap-2">
+                                <div class="w-8 h-8 rounded-full bg-gradient-to-tr from-purple-500 to-pink-500 flex items-center justify-center">
+                                    <i data-lucide="sparkles" class="w-4 h-4 text-white"></i>
+                                </div>
+                                <div>
+                                    <h4 class="font-bold text-sm text-white">Faith AI</h4>
+                                    <p class="text-[10px] text-gray-400">Posez une question sur la Bible</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="ai-response-area" class="text-xs text-gray-300 italic mb-3 hidden bg-black/20 p-2 rounded-lg border border-white/5 max-h-24 overflow-y-auto"></div>
+                        <div class="flex gap-2">
+                            <input id="ai-bible-input" type="text" placeholder="Ex: Qui est Jésus ?" class="flex-1 bg-gray-900 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-purple-500">
+                            <button onclick="askFaithAI()" class="bg-purple-600 px-3 py-2 rounded-xl text-white hover:bg-purple-500 transition-colors">
+                                <i data-lucide="send" class="w-4 h-4"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="view-messages" class="hidden absolute top-16 bottom-16 left-0 right-0 bg-gray-900 z-40 flex flex-col md:flex-row animate-view">
+                    <div id="conversations-sidebar" class="w-full md:w-80 border-r border-white/5 bg-gray-900 md:bg-gray-900/50 h-full flex flex-col">
+                        <div class="p-4 border-b border-white/5 space-y-3">
+                            <div class="flex justify-between items-center">
+                                <h2 class="font-bold text-white text-lg">Discussions</h2>
+                                <button class="p-2 hover:bg-white/5 rounded-full"><i data-lucide="edit" class="w-4 h-4 text-purple-400"></i></button>
+                            </div>
+                            <div class="relative">
+                                <i data-lucide="search" class="absolute left-3 top-2.5 w-4 h-4 text-gray-500"></i>
+                                <input type="text" placeholder="Chercher une conversation..." class="w-full bg-gray-800 rounded-xl pl-9 pr-4 py-2 text-xs text-white focus:outline-none focus:ring-1 focus:ring-purple-500/50">
+                            </div>
+                        </div>
+                        <div id="messages-list" class="flex-1 overflow-y-auto p-2 space-y-1"></div>
+                    </div>
+                    <div id="chat-detail" class="hidden md:flex flex-1 flex flex-col h-full bg-gray-900 relative">
+                        <div class="h-16 border-b border-white/5 flex items-center px-4 bg-gray-900/95 backdrop-blur shrink-0 z-10 justify-between">
+                            <div class="flex items-center gap-3">
+                                <button onclick="document.getElementById('chat-detail').classList.add('hidden'); document.getElementById('conversations-sidebar').classList.remove('hidden');" class="md:hidden p-1 -ml-2 text-gray-400">
+                                    <i data-lucide="chevron-left" class="w-6 h-6"></i>
+                                </button>
+                                <div class="relative">
+                                    <div class="w-10 h-10 rounded-full bg-gray-700 overflow-hidden">
+                                        <img id="chat-header-avatar" src="" class="w-full h-full object-cover hidden">
+                                        <div id="chat-header-initials" class="w-full h-full flex items-center justify-center font-bold text-white text-xs">?</div>
+                                    </div>
+                                    <span class="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 border-2 border-gray-900 rounded-full"></span>
+                                </div>
+                                <div>
+                                    <h3 id="chat-with-name" class="font-bold text-white text-sm truncate leading-tight">Sélectionnez un ami</h3>
+                                    <p class="text-[10px] text-green-400 font-medium">En ligne</p>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <button class="p-2 hover:bg-white/5 rounded-full text-gray-400 hover:text-purple-400 transition-colors"><i data-lucide="phone" class="w-5 h-5"></i></button>
+                                <button class="p-2 hover:bg-white/5 rounded-full text-gray-400 hover:text-purple-400 transition-colors"><i data-lucide="video" class="w-5 h-5"></i></button>
+                                <button class="p-2 hover:bg-white/5 rounded-full text-gray-400"><i data-lucide="more-vertical" class="w-5 h-5"></i></button>
+                            </div>
+                        </div>
+                        <div id="chat-history" class="flex-1 overflow-y-auto p-4 space-y-4 min-h-0 bg-gray-900/50"></div>
+                        <div class="shrink-0 p-3 bg-gray-900 border-t border-white/5">
+                            <div class="flex gap-2 items-end bg-gray-800/50 p-2 rounded-[1.5rem] border border-white/5">
+                                <button class="p-2 hover:bg-white/10 rounded-full text-gray-400 transition-colors"><i data-lucide="plus" class="w-5 h-5"></i></button>
+                                <textarea id="chat-input" rows="1" placeholder="Votre message..." disabled class="flex-1 bg-transparent border-none text-white px-2 py-2.5 focus:ring-0 text-sm resize-none max-h-24"></textarea>
+                                <button class="p-2 hover:bg-white/10 rounded-full text-gray-400 hover:text-purple-400 transition-colors"><i data-lucide="image" class="w-5 h-5"></i></button>
+                                <button onclick="sendChatMessage()" class="p-2 bg-purple-600 hover:bg-purple-500 rounded-full text-white shadow-lg transition-transform active:scale-90"><i data-lucide="send" class="w-4 h-4 ml-0.5"></i></button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+               <div id="view-profile" class="hidden h-full flex flex-col relative animate-view bg-[#0f172a] overflow-y-auto pb-24">
+    
+    <div class="relative shrink-0">
+        <div class="h-40 w-full bg-gradient-to-b from-fuchsia-900 via-purple-900 to-[#0f172a]">
+            <div class="flex justify-between items-start p-6 pt-8">
+                <div class="flex items-center gap-2">
+                    <span class="font-bold text-white tracking-widest text-lg">FAITH CONNECT</span>
+                </div>
+                <button class="p-2 bg-white/10 rounded-full backdrop-blur-md hover:bg-white/20 transition-colors">
+                    <i data-lucide="settings" class="w-5 h-5 text-white"></i>
+                </button>
+            </div>
+        </div>
+
+        <div class="absolute -bottom-14 left-1/2 transform -translate-x-1/2 flex flex-col items-center w-full">
+            <div class="relative group">
+                <div class="w-28 h-28 rounded-full p-1 bg-gradient-to-tr from-fuchsia-500 to-purple-600 shadow-2xl shadow-purple-900/50">
+                    <div id="profile-avatar-big" class="w-full h-full rounded-full bg-gray-900 flex items-center justify-center border-4 border-[#0f172a] overflow-hidden">
+                        <span class="text-3xl font-bold text-white">U</span> 
+                    </div>
+                </div>
+                <div class="absolute bottom-2 right-2 bg-green-500 w-5 h-5 rounded-full border-4 border-[#0f172a]"></div>
+            </div>
             
-            // Lancer sur la page de connexion par défaut
-            document.getElementById('login-page').classList.remove('hidden');
-            document.getElementById('main-app').classList.add('hidden');
-        });
+            <div class="mt-3 text-center">
+                <h2 id="profile-name" class="text-2xl font-bold text-white">Utilisateur</h2>
+                <p id="profile-email" class="text-sm text-purple-400 font-medium">@utilisateur</p>
+            </div>
+        </div>
+    </div>
 
-        // Fonction helper pour basculer les vues (aussi dans script.js mais utile ici pour le HTML)
-        function switchView(viewName) {
-            // Cacher toutes les vues
-            ['home', 'reels', 'bible', 'messages', 'profile'].forEach(v => {
-                document.getElementById('view-' + v).classList.add('hidden');
+    <div class="mt-16 px-5 flex flex-col flex-1">
+        
+        <div class="text-center mb-6">
+            <p id="profile-bio" class="text-sm text-gray-300 leading-relaxed mb-4 line-clamp-2">
+                Partageant la foi, un verset à la fois. Passionné par la Bible et la communauté.
+            </p>
+
+            <div class="inline-flex items-center gap-2 bg-gray-800/50 px-4 py-1.5 rounded-full border border-white/5 backdrop-blur-sm cursor-pointer hover:bg-gray-800 transition-colors" onclick="updateMyStatus()">
+                <span id="status-emoji-display">👋</span>
+                <span id="status-text-display" class="text-xs text-gray-300">Ajouter un statut...</span>
+            </div>
+        </div>
+
+        <div class="flex justify-between items-center bg-white/5 rounded-2xl p-4 mb-8 border border-white/5 backdrop-blur-sm shadow-lg">
+            <div class="flex flex-col items-center flex-1">
+                <span class="text-lg font-bold text-white">12</span>
+                <span class="text-[10px] uppercase text-gray-400 tracking-wide font-medium">Posts</span>
+            </div>
+            <div class="w-px h-8 bg-white/10"></div>
+            <div class="flex flex-col items-center flex-1">
+                <span id="stats-friends-count" class="text-lg font-bold text-white">58</span>
+                <span class="text-[10px] uppercase text-gray-400 tracking-wide font-medium">Amis</span>
+            </div>
+            <div class="w-px h-8 bg-white/10"></div>
+            <div class="flex flex-col items-center flex-1">
+                <span class="text-lg font-bold text-white">24</span>
+                <span class="text-[10px] uppercase text-gray-400 tracking-wide font-medium">Prières</span>
+            </div>
+        </div>
+
+        <div class="flex gap-3 mb-8">
+            <button onclick="openEditModal()" class="flex-1 bg-white text-gray-900 py-3 rounded-xl font-bold text-sm hover:bg-gray-200 transition-colors shadow-lg">
+                Éditer Profil
+            </button>
+            <button class="flex-1 bg-gradient-to-r from-fuchsia-600 to-purple-600 text-white py-3 rounded-xl font-bold text-sm shadow-lg shadow-purple-500/20 hover:opacity-90 transition-opacity">
+                Partager
+            </button>
+        </div>
+
+        <div class="flex border-b border-white/10 mb-6">
+            <button onclick="switchProfileTab('posts')" id="tab-btn-posts" class="flex-1 pb-3 text-sm font-bold text-white border-b-2 border-purple-500 transition-colors">
+                Posts
+            </button>
+            <button onclick="switchProfileTab('prieres')" id="tab-btn-prieres" class="flex-1 pb-3 text-sm font-medium text-gray-400 hover:text-white transition-colors">
+                Prières
+            </button>
+            <button onclick="switchProfileTab('amis')" id="tab-btn-amis" class="flex-1 pb-3 text-sm font-medium text-gray-400 hover:text-white transition-colors">
+                Amis
+            </button>
+        </div>
+
+        <div id="profile-content-posts" class="animate-fade-in space-y-6">
+            
+            <div>
+                <h3 class="text-white font-bold text-base mb-4 flex items-center gap-2">
+                    <i data-lucide="target" class="w-4 h-4 text-purple-400"></i> Objectifs Personnels
+                </h3>
+
+                <div class="space-y-3">
+                    <div class="bg-[#1e293b]/50 rounded-2xl p-4 flex gap-4 items-center border border-white/5">
+                        <div class="w-10 h-10 rounded-xl bg-amber-900/30 flex items-center justify-center shrink-0">
+                            <i data-lucide="book-open" class="w-5 h-5 text-amber-500"></i>
+                        </div>
+                        <div class="flex-1">
+                            <div class="flex justify-between mb-1">
+                                <h4 class="font-bold text-white text-xs">Lire la Bible</h4>
+                                <span class="text-[10px] text-gray-400">40%</span>
+                            </div>
+                            <div class="h-1.5 w-full bg-gray-700 rounded-full overflow-hidden">
+                                <div class="h-full bg-amber-500 w-[40%] rounded-full"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-[#1e293b]/50 rounded-2xl p-4 flex gap-4 items-center border border-white/5">
+                        <div class="w-10 h-10 rounded-xl bg-blue-900/30 flex items-center justify-center shrink-0">
+                            <i data-lucide="heart" class="w-5 h-5 text-blue-400"></i>
+                        </div>
+                        <div class="flex-1">
+                            <div class="flex justify-between mb-1">
+                                <h4 class="font-bold text-white text-xs">Prier</h4>
+                                <span class="text-[10px] text-gray-400">60%</span>
+                            </div>
+                            <div class="h-1.5 w-full bg-gray-700 rounded-full overflow-hidden">
+                                <div class="h-full bg-blue-500 w-[60%] rounded-full"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div>
+                <h3 class="text-white font-bold text-base mb-4">Mes Publications</h3>
+                <div class="grid grid-cols-2 gap-3">
+                    <div class="aspect-[4/5] rounded-xl bg-gray-800 overflow-hidden relative group cursor-pointer border border-white/5">
+                        <img src="https://source.unsplash.com/random/400x500/?church" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500">
+                        <div class="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent flex items-end p-3">
+                            <p class="text-[10px] text-white font-medium line-clamp-2">L'Éternel est mon berger...</p>
+                        </div>
+                    </div>
+                    <div class="aspect-[4/5] rounded-xl bg-gradient-to-br from-purple-900 to-indigo-900 p-4 flex items-center justify-center text-center border border-white/5">
+                        <p class="text-xs font-bold text-white uppercase tracking-wider leading-relaxed">Gloire au tout puissant<br><span class="text-purple-300">Amen</span></p>
+                    </div>
+                    <div class="aspect-[4/5] rounded-xl bg-gray-800 overflow-hidden relative group cursor-pointer border border-white/5">
+                        <img src="https://source.unsplash.com/random/400x500/?bible" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500">
+                    </div>
+                    <div class="aspect-[4/5] rounded-xl bg-gray-800 overflow-hidden relative group cursor-pointer border border-white/5">
+                        <img src="https://source.unsplash.com/random/400x500/?cross" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="profile-content-prieres" class="hidden animate-fade-in text-center py-10">
+            <div class="w-16 h-16 bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-4">
+                <i data-lucide="feather" class="w-8 h-8 text-gray-500"></i>
+            </div>
+            <p class="text-gray-400 text-sm">Aucune prière partagée.</p>
+        </div>
+
+        <div id="profile-content-amis" class="hidden animate-fade-in">
+             <div class="flex items-center justify-between mb-4">
+                <h3 class="text-white font-bold">Mes Amis</h3>
+                <span id="profile-req-badge" class="bg-pink-500 text-white text-[10px] px-2 py-0.5 rounded-full hidden">0 demandes</span>
+             </div>
+             <div id="profile-social-list" class="space-y-3 min-h-[150px]">
+                 </div>
+        </div>
+
+    </div>
+</div>
+
+    <div id="notification-container" class="fixed top-20 right-4 z-[100] flex flex-col gap-2 pointer-events-none w-72"></div>
+    <audio id="notif-sound" src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3" preload="auto"></audio>
+    
+    <input type="file" id="btn-add-story-input" accept="image/*" class="hidden" onchange="uploadStory(this)">
+
+    <div id="story-viewer" class="hidden fixed inset-0 z-[200] bg-black flex flex-col">
+        <div class="absolute top-0 left-0 right-0 p-4 z-20 bg-gradient-to-b from-black/80 to-transparent">
+            <div class="h-1 bg-gray-600 rounded-full mb-3 overflow-hidden">
+                <div id="story-progress" class="h-full bg-white w-0"></div>
+            </div>
+            <div class="flex justify-between items-center">
+                <div class="flex items-center gap-3">
+                    <img id="story-viewer-avatar" src="" class="w-8 h-8 rounded-full border border-white">
+                    <span id="story-viewer-name" class="font-bold text-sm text-white">Nom</span>
+                    <span id="story-viewer-time" class="text-xs text-gray-300">Il y a 2h</span>
+                </div>
+                <button onclick="closeStoryViewer()" class="text-white"><i data-lucide="x" class="w-8 h-8"></i></button>
+            </div>
+        </div>
+        <div class="flex-1 flex items-center justify-center relative">
+            <img id="story-viewer-image" src="" class="max-h-full max-w-full object-contain">
+        </div>
+        <div id="story-delete-btn-container" class="absolute bottom-10 right-4 z-20"></div>
+    </div>
+<nav id="bottom-nav" class="fixed bottom-6 left-4 right-4 h-20 z-50 rounded-[40px] border border-white/10 bg-[#0f172a]/60 backdrop-blur-2xl shadow-[0_8px_32px_rgba(0,0,0,0.5)] flex justify-between items-center px-2 relative">
+    
+    <div id="nav-indicator" class="absolute top-1/2 -translate-y-1/2 w-14 h-14 bg-gradient-to-tr from-purple-600 to-fuchsia-500 rounded-full shadow-[0_4px_20px_rgba(168,85,247,0.6)] transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] pointer-events-none"></div>
+
+    <button onclick="switchView('home')" id="nav-btn-home" class="nav-item relative w-16 h-full flex flex-col items-center justify-center rounded-full text-white z-10 transition-colors duration-300">
+        <i data-lucide="home" class="w-6 h-6 transition-transform duration-300"></i>
+    </button>
+    
+    <button onclick="switchView('reels')" id="nav-btn-reels" class="nav-item relative w-16 h-full flex flex-col items-center justify-center rounded-full text-white/50 hover:text-white/80 z-10 transition-colors duration-300">
+        <i data-lucide="video" class="w-6 h-6 transition-transform duration-300"></i>
+    </button>
+    
+    <button onclick="switchView('bible')" id="nav-btn-bible" class="nav-item relative w-16 h-full flex flex-col items-center justify-center rounded-full text-white/50 hover:text-white/80 z-10 transition-colors duration-300">
+        <i data-lucide="book-open" class="w-6 h-6 transition-transform duration-300"></i>
+    </button>
+    
+    <button onclick="switchView('messages')" id="nav-btn-messages" class="nav-item relative w-16 h-full flex flex-col items-center justify-center rounded-full text-white/50 hover:text-white/80 z-10 transition-colors duration-300">
+        <div class="relative">
+            <i data-lucide="message-circle" class="w-6 h-6 transition-transform duration-300"></i>
+            <span id="msg-badge" class="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full border border-gray-900 hidden"></span>
+        </div>
+    </button>
+    
+    <button onclick="switchView('profile')" id="nav-btn-profile" class="nav-item relative w-16 h-full flex flex-col items-center justify-center rounded-full text-white/50 hover:text-white/80 z-10 transition-colors duration-300">
+        <i data-lucide="user" class="w-6 h-6 transition-transform duration-300"></i>
+    </button>
+
+</nav>
+                    
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(reg => console.log('App installable !', reg.scope))
+                    .catch(err => console.log('Echec SW:', err));
             });
-            // Afficher la demandée
-            const target = document.getElementById('view-' + viewName);
-            if(target) {
-                target.classList.remove('hidden');
-                target.classList.add('animate-view');
-            }
-            // Update UI Mobile nav active state
-            if (typeof lucide !== 'undefined') lucide.createIcons();
         }
     </script>
+    
+    <script src="script.js"></script>
+
 </body>
 </html>
