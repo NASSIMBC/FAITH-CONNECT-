@@ -4,16 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>FaithCircle - Votre Communauté</title>
-    <!-- TailwindCSS pour le style -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Supabase & Lucide Icons -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/lucide-static@latest/dist/lucide.min.js"></script>
-    <!-- Polices Google pour un design moderne -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&family=Lora:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
-    <!-- Styles CSS personnalisés -->
     <style>
         body {
             background-color: #0A0A0A;
@@ -36,7 +32,22 @@
             background-color: #111111;
             border: 1px solid rgba(255, 255, 255, 0.05);
             box-shadow: 0 0 15px rgba(192, 132, 252, 0.05);
+            transition: all 0.3s ease;
         }
+
+        /* NOUVEAUTÉ : Styles Premium & Néon */
+        .premium-card:hover { border-color: rgba(167, 139, 250, 0.2); }
+        .btn-audio-bible.playing {
+            animation: pulse-purple 2s infinite;
+            background: rgba(139, 92, 246, 0.2);
+            color: #a78bfa;
+        }
+        @keyframes pulse-purple {
+            0% { box-shadow: 0 0 0 0 rgba(139, 92, 246, 0.4); }
+            70% { box-shadow: 0 0 0 10px rgba(139, 92, 246, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(139, 92, 246, 0); }
+        }
+
         /* Scrollbar customisée */
         .scrollbar-hide::-webkit-scrollbar { display: none; }
         .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
@@ -44,7 +55,6 @@
 </head>
 <body class="antialiased">
 
-    <!-- =========== PAGE DE CONNEXION =========== -->
     <div id="login-page" class="flex flex-col items-center justify-center min-h-screen p-6">
         <h1 class="text-4xl font-black text-white mb-2">Faith<span class="text-purple-400">Circle</span></h1>
         <p class="text-gray-400 mb-8">Connectez-vous à votre communauté.</p>
@@ -56,10 +66,8 @@
         </div>
     </div>
 
-    <!-- =========== APPLICATION PRINCIPALE =========== -->
     <div id="main-app" class="hidden">
         
-        <!-- Header Principal (Mobile) -->
         <header class="sticky top-0 z-40 bg-black/80 backdrop-blur-sm border-b border-white/5 md:hidden p-4 flex justify-between items-center">
              <h1 class="text-xl font-bold text-white">Faith<span class="text-purple-400">Circle</span></h1>
              <div class="flex items-center gap-4">
@@ -71,7 +79,6 @@
              </div>
         </header>
 
-        <!-- Dropdown Notifications -->
         <div id="notif-dropdown" class="hidden absolute top-16 right-4 z-50 w-64 bg-gray-900 border border-white/10 rounded-lg shadow-2xl">
             <div id="notif-list" class="max-h-80 overflow-y-auto">
                 <div class="p-4 text-center text-xs text-gray-500">🍃</div>
@@ -79,21 +86,22 @@
         </div>
         
         <main class="pb-24 md:pb-4">
-            <!-- VUE HOME -->
             <div id="view-home">
-                 <!-- Stories -->
-                <div id="stories-container" class="p-4 flex items-center space-x-4 overflow-x-auto scrollbar-hide border-b border-white/5">
-                    <!-- Contenu généré par JS -->
-                </div>
+                 <div id="stories-container" class="p-4 flex items-center space-x-4 overflow-x-auto scrollbar-hide border-b border-white/5">
+                    </div>
                 <input type="file" id="btn-add-story-input" class="hidden" onchange="uploadStory(this)" accept="image/*">
                 
                 <div class="grid grid-cols-1 md:grid-cols-12 gap-6 p-4">
-                    <!-- Colonne Principale (Posts) -->
                     <div class="md:col-span-8 lg:col-span-6 md:col-start-3 lg:col-start-4">
-                        <!-- Créateur de post -->
+                        
+                        <div class="mb-6 relative group">
+                            <i data-lucide="search" class="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 group-focus-within:text-purple-400"></i>
+                            <input type="text" oninput="searchUsers(this.value)" placeholder="Rechercher un membre..." class="w-full bg-gray-900/50 border border-white/5 rounded-2xl py-3 pl-12 pr-4 text-sm text-white focus:border-purple-500 outline-none transition-all">
+                            <div id="search-results-container" class="absolute top-full left-0 right-0 z-30 mt-2 space-y-2"></div>
+                        </div>
+
                         <div class="premium-card p-4 mb-6">
                             <textarea id="new-post-input" class="w-full bg-transparent text-white placeholder-gray-500 focus:outline-none resize-none" rows="3" placeholder="Partagez une pensée, une prière..."></textarea>
-                            <!-- Aperçu image -->
                             <div id="image-preview-container" class="hidden mt-2 relative">
                                 <img id="image-preview" class="rounded-lg max-h-60 w-auto">
                                 <button onclick="removeImage()" class="absolute top-2 right-2 bg-black/50 p-1.5 rounded-full text-white"><i data-lucide="x" class="w-4 h-4"></i></button>
@@ -105,17 +113,13 @@
                             </div>
                         </div>
                         
-                        <!-- Feed de Posts -->
                         <div id="posts-container">
-                            <!-- Contenu généré par JS -->
-                        </div>
+                            </div>
                     </div>
                     
-                    <!-- Colonne Droite (Entraide, Evénements) -->
                     <div class="hidden lg:block lg:col-span-3">
                         <div class="sticky top-4 space-y-6">
-                           <!-- Prières -->
-                            <div>
+                           <div>
                                 <h3 class="font-bold text-white mb-3">Mur de prière</h3>
                                 <div id="prayers-list" class="space-y-2 max-h-60 overflow-y-auto scrollbar-hide"></div>
                                 <div class="flex gap-2 mt-2">
@@ -123,7 +127,6 @@
                                     <button onclick="addPrayer()" class="p-2 bg-purple-600/20 text-purple-300 rounded-lg"><i data-lucide="send" class="w-4 h-4"></i></button>
                                 </div>
                             </div>
-                            <!-- Entraide -->
                             <div>
                                <div class="flex justify-between items-center mb-3">
                                  <h3 class="font-bold text-white">Entraide</h3>
@@ -136,16 +139,12 @@
                 </div>
             </div>
 
-            <!-- VUE REELS -->
             <div id="view-reels" class="hidden p-4">
                  <div id="reels-container" class="masonry-container" style="column-count: 2; column-gap: 1rem; md:column-count: 3; lg:column-count: 4;">
-                     <!-- Contenu généré par JS -->
-                 </div>
+                     </div>
             </div>
 
-            <!-- VUE BIBLE -->
             <div id="view-bible" class="hidden p-4 space-y-6">
-                <!-- Faith AI -->
                 <div class="bg-gray-900 border border-white/10 rounded-2xl p-4">
                     <h3 class="text-lg font-bold text-white mb-2 flex items-center gap-2"><i data-lucide="sparkles" class="text-purple-400"></i> Faith AI</h3>
                     <p class="text-xs text-gray-400 mb-4">Posez une question sur un passage ou un thème biblique.</p>
@@ -156,41 +155,34 @@
                     <div id="ai-response-area" class="mt-4 hidden"></div>
                 </div>
 
-                <!-- Lecteur Bible -->
                 <div class="bg-gray-900 border border-white/10 rounded-2xl p-4">
-                    <!-- Tabs AT/NT -->
                     <div class="flex gap-2 mb-4">
                         <button id="btn-at" onclick="showTestament('AT')">Ancien Testament</button>
                         <button id="btn-nt" onclick="showTestament('NT')">Nouveau Testament</button>
+                        <button onclick="toggleBibleAudio()" class="btn-audio-bible ml-auto p-2 bg-gray-800 rounded-lg text-purple-400 transition-all border border-purple-500/20">
+                            <i data-lucide="volume-2" class="w-5 h-5"></i>
+                        </button>
                     </div>
                     
-                    <!-- Liste des livres -->
                     <div id="bible-books-list" class="grid grid-cols-2 md:grid-cols-4 gap-2">
-                        <!-- Contenu généré par JS -->
-                    </div>
+                        </div>
 
-                    <!-- Lecteur de chapitre -->
                     <div id="bible-reader" class="hidden">
                         <div class="flex justify-between items-center mb-4">
                            <button onclick="closeBibleReader()" class="p-2 text-gray-400 hover:text-white"><i data-lucide="arrow-left"></i></button>
                            <h2 id="reader-title" class="font-bold text-lg text-white"></h2>
-                           <div></div> <!-- Spacer -->
-                        </div>
+                           <div></div> </div>
                         <div id="reader-content" class="max-h-[60vh] overflow-y-auto scrollbar-hide"></div>
                     </div>
                 </div>
             </div>
 
-            <!-- VUE MESSAGES -->
             <div id="view-messages" class="hidden md:grid md:grid-cols-12 h-[calc(100vh-6rem)] md:h-screen">
-                <!-- Sidebar Conversations -->
                 <div id="conversations-sidebar" class="md:col-span-4 lg:col-span-3 border-r border-white/5 p-2 h-full overflow-y-auto scrollbar-hide">
                     <h2 class="text-2xl font-bold p-4">Messages</h2>
                     <div id="messages-list" class="space-y-1">
-                        <!-- Contenu généré par JS -->
-                    </div>
+                        </div>
                 </div>
-                <!-- Fenêtre de Chat -->
                 <div id="chat-detail" class="col-span-12 md:col-span-8 lg:col-span-9 flex flex-col h-full bg-black">
                      <div id="chat-header" class="flex items-center gap-3 p-3 border-b border-white/5">
                         <div class="relative w-10 h-10">
@@ -200,8 +192,7 @@
                          <h3 id="chat-with-name" class="font-bold text-white">Sélectionnez un ami</h3>
                      </div>
                      <div id="chat-history" class="flex-1 p-4 overflow-y-auto scrollbar-hide">
-                        <!-- Contenu généré par JS -->
-                     </div>
+                        </div>
                      <div class="p-4 border-t border-white/5">
                          <div class="flex items-center gap-2">
                             <input id="chat-input" placeholder="Votre message..." class="flex-1 bg-gray-900 border border-gray-700 rounded-full px-5 py-3 text-sm text-white focus:outline-none focus:border-purple-500" disabled>
@@ -211,9 +202,7 @@
                 </div>
             </div>
 
-            <!-- VUE PROFIL -->
             <div id="view-profile" class="hidden p-4 space-y-6">
-                <!-- Header Profil -->
                 <div class="flex flex-col items-center">
                     <div id="profile-avatar-big" class="w-24 h-24 rounded-full bg-purple-800 flex items-center justify-center font-bold text-4xl mb-4 border-4 border-gray-800"></div>
                     <h2 id="profile-name" class="text-2xl font-bold"></h2>
@@ -224,7 +213,6 @@
                         <button onclick="logout()" class="text-red-400 hover:underline text-xs font-bold">Déconnexion</button>
                     </div>
                 </div>
-                <!-- Stats -->
                 <div class="grid grid-cols-3 gap-4 text-center">
                     <div>
                         <p id="stats-posts-count" class="text-xl font-bold">0</p>
@@ -240,7 +228,6 @@
                     </div>
                 </div>
 
-                <!-- Contenu Social (Amis, Demandes) -->
                 <div class="bg-gray-900/50 rounded-2xl p-4">
                     <div class="flex border-b border-white/10 mb-4">
                         <button id="tab-friends" onclick="switchProfileTab('friends')" class="flex-1 pb-2 text-sm font-bold">Amis</button>
@@ -250,17 +237,14 @@
                         </button>
                     </div>
                     <div id="profile-social-list" class="space-y-2 max-h-96 overflow-y-auto scrollbar-hide">
-                        <!-- Contenu généré par JS -->
-                    </div>
+                        </div>
                 </div>
             </div>
             
             <div id="view-public-profile" class="hidden">
-                <!-- Pourrait être développé plus tard -->
-            </div>
+                </div>
         </main>
         
-        <!-- Barre de Navigation (Mobile) -->
         <nav class="fixed bottom-0 left-0 right-0 z-40 bg-black/80 backdrop-blur-sm border-t border-white/5 p-2 flex justify-around md:hidden">
             <button id="nav-home" onclick="switchView('home')" class="flex flex-col items-center w-16 p-2 rounded-lg"><i data-lucide="home"></i><span class="text-xs">Accueil</span></button>
             <button id="nav-reels" onclick="switchView('reels')" class="flex flex-col items-center w-16 p-2 rounded-lg"><i data-lucide="film"></i><span class="text-xs">Versets</span></button>
@@ -270,9 +254,6 @@
         </nav>
     </div>
 
-    <!-- =========== MODALS & OVERLAYS =========== -->
-    <!-- ... (le reste des modales ne change pas) ... -->
-    <!-- Modal: Modification du Profil -->
     <div id="edit-profile-modal" class="hidden fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
         <div class="bg-gray-900 w-full max-w-md rounded-2xl p-6 space-y-4 relative">
             <button onclick="closeEditModal()" class="absolute top-4 right-4 text-gray-500 hover:text-white"><i data-lucide="x"></i></button>
@@ -294,10 +275,8 @@
         </div>
     </div>
     
-    <!-- Modal: Visionneuse de Story -->
     <div id="story-viewer" class="hidden fixed inset-0 z-50 bg-black flex flex-col items-center justify-center">
         <div class="w-full max-w-md h-full relative">
-            <!-- Header Story -->
             <div class="absolute top-0 left-0 right-0 p-4 z-10 bg-gradient-to-b from-black/70 to-transparent">
                 <div class="h-1 w-full bg-white/20 rounded-full overflow-hidden mb-2">
                     <div id="story-progress" class="h-1 bg-white"></div>
@@ -308,31 +287,25 @@
                     <button onclick="closeStoryViewer()" class="text-white ml-auto"><i data-lucide="x"></i></button>
                 </div>
             </div>
-            <!-- Image Story -->
             <img id="story-viewer-image" class="w-full h-full object-contain">
-             <!-- Bouton Supprimer -->
-            <div id="story-delete-btn-container" class="absolute bottom-5 left-1/2 -translate-x-1/2 z-10"></div>
+             <div id="story-delete-btn-container" class="absolute bottom-5 left-1/2 -translate-x-1/2 z-10"></div>
         </div>
     </div>
-    <!-- Modal: Éditeur de Verset -->
+
     <div id="verse-editor-modal" class="hidden fixed inset-0 z-50 bg-black/80 flex flex-col items-center justify-center p-4">
         <div class="bg-gray-900 w-full max-w-4xl rounded-2xl p-2 md:p-6 relative flex flex-col md:flex-row gap-6 max-h-[90vh]">
             <button onclick="closeVerseEditor()" class="absolute top-4 right-4 text-gray-500 hover:text-white z-10"><i data-lucide="x"></i></button>
             
-            <!-- Zone Canvas -->
             <div class="flex-1 flex flex-col items-center justify-center bg-black rounded-lg p-2">
                 <canvas id="verse-canvas" width="500" height="500" class="w-full h-auto object-contain rounded-md"></canvas>
             </div>
-            <!-- Panneau de Contrôles -->
             <div class="w-full md:w-72 flex-shrink-0 space-y-4 overflow-y-auto pr-2 scrollbar-hide">
                 <h3 class="text-lg font-bold text-white">Créateur de Verset</h3>
-                <!-- Texte -->
                 <div>
                     <label class="text-xs font-bold text-gray-400">Texte du verset</label>
                     <textarea id="verse-text-input" oninput="drawCanvas()" rows="4" class="w-full bg-gray-800 border-gray-700 rounded-lg px-3 py-2 mt-1 text-sm">"Car Dieu a tant aimé le monde qu'il a donné son Fils unique..." (Jean 3:16)</textarea>
                 </div>
-                <!-- Style Texte -->
-                 <div class="grid grid-cols-2 gap-4">
+                <div class="grid grid-cols-2 gap-4">
                     <div>
                         <label class="text-xs font-bold text-gray-400">Couleur</label>
                         <input id="text-color-picker" oninput="drawCanvas()" type="color" value="#FFFFFF" class="w-full h-10 bg-gray-800 rounded-lg p-1 border border-gray-700">
@@ -354,7 +327,23 @@
                     <label class="text-xs font-bold text-gray-400">Interligne</label>
                     <input id="line-height-slider" oninput="drawCanvas()" type="range" min="1.0" max="2.5" step="0.1" value="1.5" class="w-full">
                 </div>
-                <!-- Fond -->
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="text-xs font-bold text-gray-400">Flou fond</label>
+                        <input id="blur-slider" oninput="drawCanvas()" type="range" min="0" max="10" value="0" class="w-full">
+                    </div>
+                    <div>
+                        <label class="text-xs font-bold text-gray-400">Grisaille</label>
+                        <input id="grayscale-slider" oninput="drawCanvas()" type="range" min="0" max="100" value="0" class="w-full">
+                    </div>
+                </div>
+                <div>
+                    <label class="text-xs font-bold text-gray-400">Contour Texte</label>
+                    <div class="flex gap-2">
+                        <input id="stroke-color-picker" oninput="drawCanvas()" type="color" value="#000000" class="w-10 h-10 bg-gray-800 rounded-lg p-1 border border-gray-700">
+                        <input id="stroke-width-slider" oninput="drawCanvas()" type="range" min="0" max="10" value="0" class="flex-1">
+                    </div>
+                </div>
                 <div>
                      <label class="text-xs font-bold text-gray-400">Arrière-plan</label>
                      <div class="flex gap-2 mt-1">
@@ -364,22 +353,20 @@
                      </div>
                 </div>
                 
-                 <!-- Filtres -->
-                <div>
+                 <div>
                     <label class="text-xs font-bold text-gray-400">Filtre Sombre</label>
                     <input id="overlay-slider" oninput="drawCanvas()" type="range" min="0" max="0.9" step="0.05" value="0.3" class="w-full">
                 </div>
                  
-                <!-- Action -->
                 <button id="btn-publish-verse" onclick="publishVerseCard()" class="w-full bg-purple-600 text-white font-bold py-3 rounded-lg">Publier la carte</button>
             </div>
         </div>
     </div>
-    <!-- Notification Audio (cachée) -->
+
+    <div id="notification-container" class="fixed top-5 right-5 z-[100] w-72 pointer-events-none space-y-2"></div>
+
     <audio id="notif-sound" src="https://example.com/notification.mp3" preload="auto"></audio>
-    <div id="notification-container" class="fixed top-20 right-4 z-50 w-72 space-y-2"></div>
     
-    <!-- VOTRE SCRIPT JS -->
     <script src="script.js"></script>
 
     <script>
