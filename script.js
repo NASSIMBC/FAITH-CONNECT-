@@ -681,20 +681,44 @@ async function publishPost() {
     } catch (error) { alert("Erreur : " + error.message); } finally { btn.innerHTML = 'Publier'; btn.disabled = false; }
 }
 
-async function fetchPosts() {
+let currentPostsPage = 0; // Ajout pour la pagination
+const postsPerPage = 10;
+
+async function fetchPosts(append = false) {
     const container = document.getElementById('posts-container');
     if(!container) return;
+    
+    // Reset de la page si on ne fait pas un "Charger plus"
+    if (!append) {
+        currentPostsPage = 0;
+        container.innerHTML = '<div class="text-center py-10"><div class="animate-spin inline-block w-6 h-6 border-[3px] border-current border-t-transparent text-purple-500 rounded-full" role="status"></div></div>';
+    }
+
     try {
         const friendIds = await getFriendIds();
-        const { data: posts, error: postError } = await supabaseClient.from('posts').select('*, profiles:user_id(avatar_url)').in('user_id', friendIds).order('created_at', { ascending: false });
+        
+        // Calcul des limites pour la pagination
+        const from = currentPostsPage * postsPerPage;
+        const to = from + postsPerPage - 1;
+
+        const { data: posts, error: postError } = await supabaseClient
+            .from('posts')
+            .select('*, profiles:user_id(avatar_url)')
+            .in('user_id', friendIds)
+            .order('created_at', { ascending: false })
+            .range(from, to); // Pagination ajoutée ici
+
         if (postError) throw postError;
+        
         const { data: allLikes } = await supabaseClient.from('likes').select('post_id, user_id');
 
-        container.innerHTML = '';
-        if (!posts || posts.length === 0) {
+        if (!append) container.innerHTML = '';
+        
+        if ((!posts || posts.length === 0) && !append) {
             container.innerHTML = `<div class="text-center py-10 px-4 animate-view"><p class="text-gray-500 italic">Aucune publication... 🍃</p></div>`;
             return;
         }
+
         posts.forEach(post => {
             const isMyPost = post.user_id === currentUser.id;
             const date = new Date(post.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
@@ -704,12 +728,16 @@ async function fetchPosts() {
             const isAmened = postLikes.some(l => l.user_id === currentUser.id);
             const amenColor = isAmened ? 'text-pink-500 font-bold' : 'text-gray-400 hover:text-pink-400';
             const amenIconClass = isAmened ? 'fill-pink-500 text-pink-500' : 'text-gray-400';
+            
             // DESIGN PREMIUM (NEON & GLOW)
             container.insertAdjacentHTML('beforeend', `
                 <div class="premium-card rounded-2xl p-4 mb-5 animate-view" id="post-${post.id}">
                     <div class="flex justify-between items-start mb-3">
                         <div class="flex items-center space-x-3">${avatarHtml}<div><h3 class="font-bold text-white text-sm tracking-wide">${post.user_name}</h3><p class="text-[10px] text-gray-500">${date}</p></div></div>
-                        ${isMyPost ? `<button onclick="deletePost('${post.id}')" class="text-gray-600 hover:text-red-500 transition-colors"><i data-lucide="trash-2" class="w-4 h-4"></i></button>` : ''}
+                        <div class="flex gap-2">
+                             <button onclick="sharePost('${post.id}', '${post.content.substring(0,20)}...')" class="text-gray-600 hover:text-blue-400 transition-colors"><i data-lucide="share-2" class="w-4 h-4"></i></button>
+                             ${isMyPost ? `<button onclick="deletePost('${post.id}')" class="text-gray-600 hover:text-red-500 transition-colors"><i data-lucide="trash-2" class="w-4 h-4"></i></button>` : ''}
+                        </div>
                     </div>
                     <p class="text-gray-200 text-sm leading-relaxed whitespace-pre-wrap font-light">${post.content}</p>
                     ${post.image_url ? `<div class="mt-3 rounded-xl overflow-hidden border border-white/5 shadow-2xl"><img src="${post.image_url}" class="w-full max-h-96 object-cover"></div>` : ''}
@@ -728,8 +756,31 @@ async function fetchPosts() {
                     </div>
                 </div>`);
         });
+
+        // Ajout d'un bouton "Charger plus" s'il y a potentiellement d'autres posts
+        if (posts.length === postsPerPage) {
+            const loadMoreBtn = `<button id="btn-load-more" onclick="loadMorePosts()" class="w-full py-4 text-gray-500 text-xs hover:text-white transition-colors">Afficher plus de publications...</button>`;
+            const oldBtn = document.getElementById('btn-load-more');
+            if(oldBtn) oldBtn.remove();
+            container.insertAdjacentHTML('beforeend', loadMoreBtn);
+        }
+
         if(typeof lucide !== 'undefined') lucide.createIcons();
     } catch (err) { console.error("Erreur fetchPosts:", err); }
+}
+
+// Fonctions support pour les améliorations
+function loadMorePosts() {
+    currentPostsPage++;
+    fetchPosts(true);
+}
+
+function sharePost(id, text) {
+    if (navigator.share) {
+        navigator.share({ title: 'Post sur Faith', text: text, url: window.location.href });
+    } else {
+        alert("Lien copié !");
+    }
 }
 
 async function deletePost(id) {
@@ -1015,25 +1066,34 @@ function drawCanvas() {
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
 
-    // --- 1. RÉCUPÉRATION DE TOUTES LES VALEURS DES INPUTS ---
-    const text = document.getElementById('verse-text-input').value;
+    // --- 1. RÉCUPÉRATION SÉCURISÉE DES VALEURS ---
+    // On utilise l'opérateur ?. et || pour éviter les erreurs "null" si un élément manque dans le HTML
+    const text = document.getElementById('verse-text-input')?.value || "";
+    
     // Texte Basic
-    const color = document.getElementById('text-color-picker').value;
-    const fontSize = parseInt(document.getElementById('font-size-picker').value);
-    const fontFamily = document.getElementById('font-family-picker').value;
-    const lineHeightMultiplier = parseFloat(document.getElementById('line-height-slider').value);
+    const color = document.getElementById('text-color-picker')?.value || "#ffffff";
+    const fontSize = parseInt(document.getElementById('font-size-picker')?.value) || 30;
+    const fontFamily = document.getElementById('font-family-picker')?.value || "sans-serif";
+    const lineHeightMultiplier = parseFloat(document.getElementById('line-height-slider')?.value) || 1.2;
+    
     // Texte Effets
-    const strokeColor = document.getElementById('stroke-color-picker').value;
-    const strokeWidth = parseFloat(document.getElementById('stroke-width-slider').value);
+    const strokeColor = document.getElementById('stroke-color-picker')?.value || "#000000";
+    const strokeWidth = parseFloat(document.getElementById('stroke-width-slider')?.value) || 0;
+    
     // Fond Filtres
-    const overlayOpacity = document.getElementById('overlay-slider').value;
-    const blurAmount = document.getElementById('blur-slider').value;
-    const grayscaleAmount = document.getElementById('grayscale-slider').value;
+    const overlayOpacity = document.getElementById('overlay-slider')?.value || 0.4;
+    const blurAmount = document.getElementById('blur-slider')?.value || 0;
+    const grayscaleAmount = document.getElementById('grayscale-slider')?.value || 0;
 
     // --- 2. DESSIN DU FOND AVEC FILTRES ---
-    ctx.clearRect(0, 0, canvas.width, canvas.height); // Nettoyage
-    // Application des filtres CSS sur le contexte avant de dessiner l'image
+    ctx.clearRect(0, 0, canvas.width, canvas.height); 
+    
+    // Amélioration du lissage d'image
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+
     ctx.filter = `blur(${blurAmount}px) grayscale(${grayscaleAmount}%)`;
+    
     if (currentBgType === 'color') {
         ctx.fillStyle = currentBgValue;
         ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -1044,7 +1104,6 @@ function drawCanvas() {
         ctx.drawImage(uploadedBgImage, x, y, uploadedBgImage.width * scale, uploadedBgImage.height * scale);
     }
 
-    // Réinitialiser les filtres pour ne pas affecter le texte et l'overlay
     ctx.filter = 'none';
 
     // --- 3. DESSIN DU FILTRE SOMBRE (OVERLAY) ---
@@ -1058,55 +1117,56 @@ function drawCanvas() {
         ctx.textAlign = currentTextAlign;
         ctx.textBaseline = 'middle';
 
-        // Configuration du contour (Stroke)
         if (strokeWidth > 0) {
             ctx.strokeStyle = strokeColor;
             ctx.lineWidth = strokeWidth;
-            ctx.lineJoin = 'round'; // Coins arrondis pour le contour
+            ctx.lineJoin = 'round';
         }
-        // Ombre portée standard (peut être améliorée plus tard)
+        
         ctx.shadowColor = "rgba(0, 0, 0, 0.5)";
-        ctx.shadowBlur = 4;
+        ctx.shadowBlur = 6; // Augmenté pour un look plus premium
         ctx.shadowOffsetX = 2;
         ctx.shadowOffsetY = 2;
 
-        // Calcul du retour à la ligne (Word Wrap)
-        const maxWidth = canvas.width - 60; // Marge
-        const words = text.split(' ');
+        // --- AMÉLIORATION DU WORD WRAP (Prend en compte les retours à la ligne manuels) ---
+        const maxWidth = canvas.width - 80; 
+        const paragraphs = text.split('\n'); // Support des touches "Entrée"
         let lines = [];
-        let currentLine = words[0];
-        for (let i = 1; i < words.length; i++) {
-            let testLine = currentLine + ' ' + words[i];
-            let metrics = ctx.measureText(testLine);
-            if (metrics.width > maxWidth) {
-                lines.push(currentLine);
-                currentLine = words[i];
-            } else {
-                currentLine = testLine;
-            }
-        }
-        lines.push(currentLine);
 
-        // Dessin ligne par ligne avec interligne variable
-        const lineHeight = fontSize * lineHeightMultiplier; // Utilisation du nouveau multiplicateur
+        paragraphs.forEach(paragraph => {
+            const words = paragraph.split(' ');
+            let currentLine = words[0];
+
+            for (let i = 1; i < words.length; i++) {
+                let testLine = currentLine + ' ' + words[i];
+                let metrics = ctx.measureText(testLine);
+                if (metrics.width > maxWidth && currentLine !== "") {
+                    lines.push(currentLine);
+                    currentLine = words[i];
+                } else {
+                    currentLine = testLine;
+                }
+            }
+            lines.push(currentLine);
+        });
+
+        const lineHeight = fontSize * lineHeightMultiplier;
         const totalHeight = lines.length * lineHeight;
         let startY = (canvas.height - totalHeight) / 2 + (lineHeight / 2);
+        
         let startX = canvas.width / 2;
-        if (currentTextAlign === 'left') startX = 30;
-        if (currentTextAlign === 'right') startX = canvas.width - 30;
+        if (currentTextAlign === 'left') startX = 40;
+        if (currentTextAlign === 'right') startX = canvas.width - 40;
 
         lines.forEach((line, i) => {
             let yPos = startY + (i * lineHeight);
-            // Dessiner le contour d'abord si activé
             if (strokeWidth > 0) {
-                ctx.strokeText(line, startX, yPos);
+                ctx.strokeText(line.trim(), startX, yPos);
             }
-            // Dessiner le remplissage du texte ensuite
-            ctx.fillText(line, startX, yPos);
+            ctx.fillText(line.trim(), startX, yPos);
         });
     }
 
-    // Reset shadow
     ctx.shadowColor = "transparent";
 }
 
@@ -1212,5 +1272,32 @@ async function publishVerseCard() {
             btn.innerHTML = originalText;
             btn.disabled = false;
         }
+
+async function searchUsers(query) {
+    if (query.length < 2) return;
+    const { data: profiles, error } = await supabaseClient
+        .from('profiles')
+        .select('id, username, avatar_url, bio')
+        .ilike('username', `%${query}%`)
+        .limit(10);
+
+    const container = document.getElementById('search-results-container');
+    container.innerHTML = profiles.map(p => `
+        <div class="flex items-center justify-between p-3 bg-gray-800 rounded-xl mb-2">
+            <div class="flex items-center gap-3">
+                <img src="${p.avatar_url || 'https://ui-avatars.com/api/?name='+p.username}" class="w-10 h-10 rounded-full">
+                <div>
+                    <p class="text-sm font-bold text-white">${p.username}</p>
+                    <p class="text-[10px] text-gray-400">${p.bio || ''}</p>
+                </div>
+            </div>
+            <button onclick="addFriend('${p.id}')" class="p-2 bg-purple-600 rounded-lg text-white">
+                <i data-lucide="user-plus" class="w-4 h-4"></i>
+            </button>
+        </div>
+    `).join('');
+    lucide.createIcons();
+}
+
     });
 }
