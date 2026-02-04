@@ -11,15 +11,23 @@
     <!-- Supabase -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     
-    <!-- NOUVEAU: Heroicons pour des icônes plus modernes -->
-    <script type="module" src="https://cdn.jsdelivr.net/npm/heroicons@2.1.3/24/outline/index.min.js"></script>
-    <script type="module" src="https://cdn.jsdelivr.net/npm/heroicons@2.1.3/24/solid/index.min.js"></script>
+    <!-- NOUVEAU: Heroicons pour un design plus moderne -->
     <script>
-        // Configuration pour utiliser Heroicons avec des balises <i>
-        const heroicons = { createIcons: () => {} }; // Simule l'ancienne structure pour éviter des erreurs
-        document.addEventListener('DOMContentLoaded', () => {
-            // Cette fonction n'est plus nécessaire avec la nouvelle méthode d'icônes
-        });
+      // Petit script pour utiliser les Heroicons facilement avec des balises personnalisées
+      // Exemple: <i-o-home></i-o-home> (outline) ou <i-s-home></i-s-home> (solid)
+      const iconSets = { o: 'outline', s: 'solid' };
+      Object.keys(iconSets).forEach(prefix => {
+        const type = iconSets[prefix];
+        fetch(`https://cdn.jsdelivr.net/npm/heroicons@2.1.3/24/${type}/index.json`)
+          .then(response => response.json())
+          .then(data => {
+            Object.keys(data).forEach(name => {
+              customElements.define(`i-${prefix}-${name}`, class extends HTMLElement {
+                connectedCallback() { this.innerHTML = data[name]; }
+              });
+            });
+          });
+      });
     </script>
     
     <!-- Polices Google -->
@@ -29,23 +37,17 @@
 
     <!-- Styles CSS personnalisés -->
     <style>
-        body {
-            background-color: #0A0A0A;
-            color: #E5E7EB;
-            font-family: 'Inter', sans-serif;
-            overscroll-behavior: none;
-        }
+        body { background-color: #0A0A0A; color: #E5E7EB; font-family: 'Inter', sans-serif; }
         .font-serif { font-family: 'Lora', serif; }
         .hidden { display: none !important; }
         
-        /* Animation de fondu */
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(10px); }
             to { opacity: 1; transform: translateY(0); }
         }
         .animate-view { animation: fadeIn 0.3s ease-out forwards; }
         
-        /* NOUVEAU: Style des posts amélioré */
+        /* AMÉLIORATION: Style des posts avec effet de survol */
         .post-card {
             background-color: #111111;
             border: 1px solid rgba(255, 255, 255, 0.05);
@@ -53,10 +55,9 @@
         }
         .post-card:hover {
             border-color: rgba(192, 132, 252, 0.5);
-            box-shadow: 0 0 20px rgba(192, 132, 252, 0.1);
+            box-shadow: 0 0 25px rgba(192, 132, 252, 0.1);
         }
         
-        /* Scrollbar customisée */
         .scrollbar-hide::-webkit-scrollbar { display: none; }
         .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
     </style>
@@ -78,21 +79,16 @@
     <!-- =========== APPLICATION PRINCIPALE =========== -->
     <div id="main-app" class="hidden">
         
-        <!-- Header Principal -->
         <header class="sticky top-0 z-40 bg-black/80 backdrop-blur-sm border-b border-white/5 p-4 flex justify-between items-center">
              <h1 class="text-xl font-bold text-white">Faith<span class="text-purple-400">Circle</span></h1>
              
-             <!-- NOUVEAU: Barre de recherche (visible sur bureau) -->
              <div class="hidden md:flex items-center relative">
                 <i-o-magnifying-glass class="w-5 h-5 text-gray-500 absolute left-3"></i-o-magnifying-glass>
                 <input type="search" id="main-search-bar" placeholder="Rechercher..." class="bg-gray-800 border border-gray-700 rounded-full pl-10 pr-4 py-2 text-sm focus:outline-none focus:border-purple-500 w-72">
              </div>
 
              <div class="flex items-center gap-4">
-                <!-- NOUVEAU: Icône Paramètres -->
-                <button onclick="switchView('settings')" class="text-gray-400 hover:text-white">
-                    <i-o-cog-6-tooth class="w-6 h-6"></i-o-cog-6-tooth>
-                </button>
+                <button onclick="switchView('settings')" class="text-gray-400 hover:text-white"><i-o-cog-6-tooth class="w-6 h-6"></i-o-cog-6-tooth></button>
                 <div class="relative">
                     <button onclick="toggleNotifDropdown()" class="text-gray-400 hover:text-white"><i-o-bell class="w-6 h-6"></i-o-bell></button>
                     <span id="notif-badge" class="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[10px] flex items-center justify-center rounded-full hidden"></span>
@@ -101,28 +97,24 @@
              </div>
         </header>
 
-        <!-- Dropdown Notifications -->
         <div id="notif-dropdown" class="hidden absolute top-16 right-4 z-50 w-72 bg-gray-900 border border-white/10 rounded-lg shadow-2xl">
-            <div class="p-3 font-bold border-b border-white/10">Notifications</div>
-            <div id="notif-list" class="max-h-80 overflow-y-auto">
-                <div class="p-4 text-center text-xs text-gray-500">Aucune nouvelle notification</div>
+            <div class="p-3 font-bold border-b border-white/10 flex justify-between items-center">
+                <span>Notifications</span>
+                <button onclick="toggleNotifDropdown()" class="text-gray-400 hover:text-white"><i-o-x-mark class="w-5 h-5"></i-o-x-mark></button>
             </div>
+            <div id="notif-list" class="max-h-80 overflow-y-auto"><div class="p-4 text-center text-xs text-gray-500">Aucune nouvelle notification</div></div>
         </div>
         
         <main class="pb-24 md:pb-4">
-            <!-- VUE HOME -->
+            <!-- VUES PRINCIPALES -->
             <div id="view-home">
                 <div class="p-4 flex items-center space-x-4 overflow-x-auto scrollbar-hide border-b border-white/5" id="stories-container"></div>
                 <input type="file" id="btn-add-story-input" class="hidden" onchange="uploadStory(this)" accept="image/*">
-                
                 <div class="grid grid-cols-1 md:grid-cols-12 gap-6 p-4">
                     <div class="md:col-span-8 lg:col-span-6 md:col-start-3 lg:col-start-4">
                         <div class="post-card p-4 mb-6">
-                            <textarea id="new-post-input" class="w-full bg-transparent text-white placeholder-gray-500 focus:outline-none resize-none" rows="3" placeholder="Partagez une pensée, une prière..."></textarea>
-                            <div id="image-preview-container" class="hidden mt-2 relative">
-                                <img id="image-preview" class="rounded-lg max-h-60 w-auto">
-                                <button onclick="removeImage()" class="absolute top-2 right-2 bg-black/50 p-1.5 rounded-full text-white"><i-o-x-mark class="w-4 h-4"></i-o-x-mark></button>
-                            </div>
+                            <textarea id="new-post-input" class="w-full bg-transparent text-white placeholder-gray-500 focus:outline-none resize-none" rows="3" placeholder="Partagez une pensée..."></textarea>
+                            <div id="image-preview-container" class="hidden mt-2 relative"><img id="image-preview" class="rounded-lg max-h-60 w-auto"><button onclick="removeImage()" class="absolute top-2 right-2 bg-black/50 p-1.5 rounded-full text-white"><i-o-x-mark class="w-4 h-4"></i-o-x-mark></button></div>
                             <div class="flex justify-between items-center mt-3">
                                 <div class="flex gap-2">
                                     <input type="file" id="post-image-file" class="hidden" onchange="handleImageSelect(this)" accept="image/*">
@@ -137,17 +129,9 @@
                     <div class="hidden lg:block lg:col-span-3">
                          <div class="sticky top-20 space-y-6">
                             <div>
-                                <div class="flex justify-between items-center mb-3">
-                                    <h3 class="font-bold text-white">Créer</h3>
-                                </div>
-                                <button class="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-gray-800">
-                                    <i-o-users class="w-5 h-5 text-purple-400"></i-o-users>
-                                    <span class="text-sm">Créer un groupe</span>
-                                </button>
-                                 <button class="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-gray-800">
-                                    <i-o-flag class="w-5 h-5 text-purple-400"></i-o-flag>
-                                    <span class="text-sm">Créer une page</span>
-                                </button>
+                                <h3 class="font-bold text-white mb-3">Raccourcis</h3>
+                                <button onclick="switchView('groups')" class="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-gray-800"><i-o-users class="w-5 h-5 text-purple-400"></i-o-users><span class="text-sm">Groupes</span></button>
+                                 <button class="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-gray-800"><i-o-flag class="w-5 h-5 text-purple-400"></i-o-flag><span class="text-sm">Pages</span></button>
                             </div>
                             <div>
                                 <h3 class="font-bold text-white mb-3">Mur de prière</h3>
@@ -162,138 +146,85 @@
                 </div>
             </div>
             
-            <!-- VUE GROUPES (NOUVEAU) -->
-             <div id="view-groups" class="hidden p-4">
-                <h2 class="text-2xl font-bold mb-4">Groupes</h2>
-                <p class="text-gray-400">Cette fonctionnalité est en cours de développement.</p>
+            <div id="view-groups" class="hidden p-4 max-w-4xl mx-auto">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl font-bold">Groupes</h2>
+                    <button onclick="openCreateGroupModal()" class="bg-purple-600 text-white font-bold px-4 py-2 rounded-lg text-sm">Créer un groupe</button>
+                </div>
+                <p class="text-gray-400">Fonctionnalité en cours de développement.</p>
             </div>
 
-            <!-- VUE REELS -->
-            <div id="view-reels" class="hidden p-4">
-                 <div id="reels-container" style="column-count: 2; column-gap: 1rem; md:column-count: 3; lg:column-count: 4;"></div>
-            </div>
+            <div id="view-reels" class="hidden p-4"><div id="reels-container" style="column-count: 2; column-gap: 1rem; md:column-count: 3; lg:column-count: 4;"></div></div>
 
-            <!-- VUE BIBLE -->
-            <div id="view-bible" class="hidden p-4 space-y-6">
+            <div id="view-bible" class="hidden p-4 space-y-6 max-w-4xl mx-auto">
                 <div class="bg-gray-900 border border-white/10 rounded-2xl p-4">
                     <h3 class="text-lg font-bold text-white mb-2 flex items-center gap-2"><i-s-sparkles class="text-purple-400 w-5 h-5"></i-s-sparkles> Faith AI</h3>
-                    <p class="text-xs text-gray-400 mb-4">Posez une question sur un passage ou un thème biblique.</p>
-                    <div class="flex gap-2">
-                         <input type="text" id="ai-bible-input" placeholder="Ex: Explique-moi Jean 3:16" class="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-sm text-white focus:outline-none focus:border-purple-500">
-                         <button onclick="askFaithAI()" class="bg-purple-600 text-white px-4 rounded-lg font-bold"><i-o-paper-airplane class="w-5 h-5"></i-o-paper-airplane></button>
-                    </div>
+                    <div class="flex gap-2"><input type="text" id="ai-bible-input" placeholder="Ex: Explique-moi Jean 3:16" class="flex-1 bg-gray-800 rounded-lg px-4 py-2 text-sm"><button onclick="askFaithAI()" class="bg-purple-600 px-4 rounded-lg"><i-o-paper-airplane class="w-5 h-5"></i-o-paper-airplane></button></div>
                     <div id="ai-response-area" class="mt-4 hidden"></div>
                 </div>
                 <div class="bg-gray-900 border border-white/10 rounded-2xl p-4">
-                    <div class="flex gap-2 mb-4">
-                        <button id="btn-at" onclick="showTestament('AT')">Ancien Testament</button>
-                        <button id="btn-nt" onclick="showTestament('NT')">Nouveau Testament</button>
-                    </div>
+                    <div class="flex gap-2 mb-4"><button id="btn-at" onclick="showTestament('AT')">Ancien Testament</button><button id="btn-nt" onclick="showTestament('NT')">Nouveau Testament</button></div>
                     <div id="bible-books-list" class="grid grid-cols-2 md:grid-cols-4 gap-2"></div>
                     <div id="bible-reader" class="hidden">
-                        <div class="flex justify-between items-center mb-4">
-                           <button onclick="closeBibleReader()" class="p-2 text-gray-400 hover:text-white"><i-o-arrow-left class="w-5 h-5"></i-o-arrow-left></button>
-                           <h2 id="reader-title" class="font-bold text-lg text-white"></h2>
-                           <div></div>
-                        </div>
+                        <div class="flex justify-between items-center mb-4"><button onclick="closeBibleReader()" class="p-2"><i-o-arrow-left class="w-5 h-5"></i-o-arrow-left></button><h2 id="reader-title" class="font-bold"></h2><div></div></div>
                         <div id="reader-content" class="max-h-[60vh] overflow-y-auto scrollbar-hide"></div>
                     </div>
                 </div>
             </div>
 
-            <!-- VUE MESSAGES -->
             <div id="view-messages" class="hidden md:grid md:grid-cols-12 h-[calc(100vh-10rem)] md:h-[calc(100vh-4.5rem)]">
-                <div id="conversations-sidebar" class="md:col-span-4 lg:col-span-3 border-r border-white/5 p-2 h-full overflow-y-auto scrollbar-hide">
-                    <h2 class="text-2xl font-bold p-4">Messages</h2>
-                    <div id="messages-list" class="space-y-1"></div>
-                </div>
+                <div id="conversations-sidebar" class="md:col-span-4 lg:col-span-3 border-r border-white/5 p-2 h-full overflow-y-auto scrollbar-hide"><h2 class="text-2xl font-bold p-4">Messages</h2><div id="messages-list" class="space-y-1"></div></div>
                 <div id="chat-detail" class="col-span-12 md:col-span-8 lg:col-span-9 flex flex-col h-full bg-black">
                      <div id="chat-header" class="flex items-center justify-between gap-3 p-3 border-b border-white/5">
-                        <div class="flex items-center gap-3">
-                            <div class="relative w-10 h-10">
-                                <img id="chat-header-avatar" class="w-10 h-10 rounded-full object-cover hidden">
-                                <div id="chat-header-initials" class="w-10 h-10 rounded-full bg-purple-600 flex items-center justify-center font-bold text-white"></div>
-                            </div>
-                             <h3 id="chat-with-name" class="font-bold text-white">Sélectionnez un ami</h3>
-                        </div>
-                        <!-- NOUVEAU: Croix pour fermer la discussion sur mobile -->
+                        <div class="flex items-center gap-3"><div class="relative w-10 h-10"><img id="chat-header-avatar" class="w-10 h-10 rounded-full object-cover hidden"><div id="chat-header-initials" class="w-10 h-10 rounded-full bg-purple-600 flex items-center justify-center font-bold"></div></div><h3 id="chat-with-name" class="font-bold"></h3></div>
                         <button onclick="resetChat()" class="p-2 text-gray-400 hover:text-white md:hidden"><i-o-x-mark class="w-6 h-6"></i-o-x-mark></button>
                      </div>
                      <div id="chat-history" class="flex-1 p-4 overflow-y-auto scrollbar-hide"></div>
                      <div class="p-4 border-t border-white/5 bg-gray-900">
-                         <div class="flex items-center gap-2">
-                            <!-- NOUVEAU: Icônes pour messagerie complète -->
-                            <button class="text-gray-400 hover:text-purple-400"><i-o-paper-clip class="w-6 h-6"></i-o-paper-clip></button>
-                            <button class="text-gray-400 hover:text-purple-400"><i-o-face-smile class="w-6 h-6"></i-o-face-smile></button>
-                            <input id="chat-input" placeholder="Votre message..." class="flex-1 bg-gray-800 border border-gray-700 rounded-full px-5 py-3 text-sm text-white focus:outline-none focus:border-purple-500" disabled>
-                            <button onclick="sendChatMessage()" class="bg-purple-600 w-12 h-12 flex items-center justify-center rounded-full text-white"><i-o-paper-airplane class="w-6 h-6"></i-o-paper-airplane></button>
-                         </div>
+                         <div class="flex items-center gap-2"><button class="text-gray-400 hover:text-purple-400"><i-o-paper-clip class="w-6 h-6"></i-o-paper-clip></button><button class="text-gray-400 hover:text-purple-400"><i-o-face-smile class="w-6 h-6"></i-o-face-smile></button><input id="chat-input" placeholder="Votre message..." class="flex-1 bg-gray-800 border-gray-700 rounded-full px-5 py-3 text-sm focus:outline-none focus:border-purple-500" disabled><button onclick="sendChatMessage()" class="bg-purple-600 w-12 h-12 flex items-center justify-center rounded-full"><i-o-paper-airplane class="w-6 h-6"></i-o-paper-airplane></button></div>
                      </div>
                 </div>
             </div>
 
-            <!-- VUE PROFIL (NOUVEAU DESIGN) -->
             <div id="view-profile" class="hidden">
-                <div class="relative h-48 md:h-64 bg-gray-800">
-                    <img id="profile-cover-photo" class="w-full h-full object-cover">
-                    <button class="absolute bottom-4 right-4 bg-black/50 text-white text-xs font-bold py-1 px-3 rounded-lg hover:bg-black/80">
-                        <i-o-camera class="w-4 h-4 inline-block mr-1"></i-o-camera> Modifier
-                    </button>
-                </div>
-                <div class="p-4">
-                    <div class="relative flex flex-col items-center -mt-20">
-                         <div id="profile-avatar-big" class="w-28 h-28 rounded-full bg-purple-800 flex items-center justify-center font-bold text-4xl border-4 border-black"></div>
-                         <h2 id="profile-name" class="text-2xl font-bold mt-2"></h2>
-                         <p id="profile-email" class="text-sm text-gray-500"></p>
-                         <p id="profile-bio" class="text-center text-sm text-gray-400 mt-2 max-w-md"></p>
-                         <div class="flex items-center gap-4 mt-4">
-                             <button onclick="openEditModal()" class="bg-gray-800 hover:bg-gray-700 text-white text-xs font-bold py-2 px-4 rounded-full">Modifier le profil</button>
-                             <button onclick="logout()" class="text-red-400 hover:underline text-xs font-bold">Déconnexion</button>
+                <div class="relative h-48 md:h-64 bg-gray-800"><img id="profile-cover-photo" class="w-full h-full object-cover"><button onclick="document.getElementById('cover-photo-input').click()" class="absolute bottom-4 right-4 bg-black/50 text-white text-xs font-bold py-1 px-3 rounded-lg hover:bg-black/80"><i-o-camera class="w-4 h-4 inline-block mr-1"></i-o-camera> Modifier</button></div>
+                <div class="p-4 max-w-4xl mx-auto">
+                    <div class="relative flex flex-col md:flex-row items-center md:items-end -mt-20 md:-mt-16">
+                         <div id="profile-avatar-big" class="w-32 h-32 rounded-full bg-purple-800 flex items-center justify-center font-bold text-5xl border-4 border-black"></div>
+                         <div class="md:ml-6 mt-2 text-center md:text-left">
+                            <h2 id="profile-name" class="text-2xl font-bold"></h2><p id="profile-email" class="text-sm text-gray-500"></p>
                          </div>
+                         <div class="flex items-center gap-4 mt-4 md:ml-auto"><button onclick="openEditModal()" class="bg-gray-800 hover:bg-gray-700 font-bold py-2 px-4 rounded-full">Modifier le profil</button></div>
                     </div>
+                    <p id="profile-bio" class="text-center md:text-left text-sm text-gray-400 mt-4 max-w-2xl"></p>
                     <div class="grid grid-cols-3 gap-4 text-center my-6 p-4 bg-gray-900/50 rounded-2xl">
                          <div><p id="stats-posts-count" class="text-xl font-bold">0</p><p class="text-xs text-gray-500">Publications</p></div>
                          <div><p id="stats-friends-count" class="text-xl font-bold">0</p><p class="text-xs text-gray-500">Amis</p></div>
                          <div><p id="stats-amens-count" class="text-xl font-bold">0</p><p class="text-xs text-gray-500">Amens</p></div>
                     </div>
                     <div>
-                         <div class="flex border-b border-white/10 mb-4">
-                             <button class="flex-1 pb-2 text-sm font-bold text-purple-400 border-b-2 border-purple-400">Publications</button>
-                             <button id="tab-friends" onclick="switchProfileTab('friends')" class="flex-1 pb-2 text-sm font-bold text-gray-500">Amis</button>
-                             <button id="tab-requests" onclick="switchProfileTab('requests')" class="flex-1 pb-2 text-sm font-bold relative">Demandes</button>
-                         </div>
-                         <div id="profile-posts-container" class="space-y-4">
-                            <!-- Les publications de l'utilisateur seront chargées ici -->
-                         </div>
+                         <div class="flex border-b border-white/10 mb-4"><button id="profile-tab-posts" onclick="switchProfileContent('posts')" class="flex-1 pb-3 font-bold text-purple-400 border-b-2 border-purple-400">Publications</button><button id="profile-tab-friends" onclick="switchProfileContent('friends')" class="flex-1 pb-3 font-bold text-gray-500">Amis</button><button id="profile-tab-requests" onclick="switchProfileContent('requests')" class="flex-1 pb-3 font-bold relative text-gray-500">Demandes<span id="profile-req-badge" class="absolute top-0 right-4 w-5 h-5 bg-red-500 text-[10px] flex items-center justify-center rounded-full hidden"></span></button></div>
+                         <div id="profile-posts-container" class="space-y-4"></div>
                          <div id="profile-social-list" class="hidden space-y-2"></div>
                     </div>
                 </div>
             </div>
             
-            <!-- VUE PARAMÈTRES (NOUVEAU) -->
             <div id="view-settings" class="hidden p-4 md:p-8 max-w-4xl mx-auto">
                 <h2 class="text-3xl font-bold mb-6">Paramètres</h2>
                 <div class="space-y-8">
                     <div>
                         <h3 class="text-lg font-bold border-b border-gray-700 pb-2 mb-4">Compte</h3>
-                        <div class="flex justify-between items-center">
-                            <p>Déconnexion</p>
-                            <button onclick="logout()" class="bg-red-600/20 text-red-300 font-bold text-xs px-4 py-2 rounded-lg">Se déconnecter</button>
-                        </div>
+                        <div class="flex justify-between items-center"><p>Déconnexion</p><button onclick="logout()" class="bg-red-600/20 text-red-300 font-bold text-xs px-4 py-2 rounded-lg">Se déconnecter</button></div>
                     </div>
                     <div>
                         <h3 class="text-lg font-bold border-b border-gray-700 pb-2 mb-4">Thème</h3>
-                        <div class="flex justify-between items-center">
-                            <p>Mode Sombre</p>
-                            <span class="text-xs bg-purple-600 text-white font-bold py-1 px-3 rounded-full">Activé</span>
-                        </div>
+                        <div class="flex justify-between items-center"><p>Mode Sombre</p><span class="text-xs bg-purple-600 text-white font-bold py-1 px-3 rounded-full">Activé</span></div>
                     </div>
                 </div>
             </div>
-
         </main>
         
-        <!-- Barre de Navigation (Mobile) -->
         <nav class="fixed bottom-0 left-0 right-0 z-40 bg-black/80 backdrop-blur-sm border-t border-white/5 p-2 flex justify-around md:hidden">
             <button id="nav-home" onclick="switchView('home')" class="flex flex-col items-center w-16 p-2 rounded-lg"><i-s-home class="w-6 h-6"></i-s-home><span class="text-xs">Accueil</span></button>
             <button id="nav-groups" onclick="switchView('groups')" class="flex flex-col items-center w-16 p-2 rounded-lg"><i-o-users class="w-6 h-6"></i-o-users><span class="text-xs">Groupes</span></button>
@@ -310,94 +241,48 @@
             <h3 class="text-lg font-bold">Modifier le profil</h3>
             <div class="flex flex-col items-center">
                 <img id="edit-avatar-preview" class="w-24 h-24 rounded-full object-cover mb-2">
-                <input type="file" id="edit-avatar-input" class="hidden" onchange="handleAvatarPreview(this)" accept="image/*">
-                <button onclick="document.getElementById('edit-avatar-input').click()" class="text-xs text-purple-400 font-bold">Changer la photo</button>
+                <input type="file" id="avatar-photo-input" class="hidden" onchange="handleAvatarPreview(this)" accept="image/*">
+                <input type="file" id="cover-photo-input" class="hidden" onchange="handleCoverPreview(this)" accept="image/*">
+                <button onclick="document.getElementById('avatar-photo-input').click()" class="text-xs text-purple-400 font-bold">Changer la photo de profil</button>
             </div>
-            <div>
-                <label class="text-xs font-bold text-gray-400">Pseudo</label>
-                <input id="edit-username" type="text" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 mt-1">
-            </div>
-            <div>
-                <label class="text-xs font-bold text-gray-400">Bio</label>
-                <textarea id="edit-bio" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 mt-1" rows="3"></textarea>
-            </div>
+            <div><label class="text-xs font-bold text-gray-400">Pseudo</label><input id="edit-username" type="text" class="w-full bg-gray-800 rounded-lg px-3 py-2 mt-1"></div>
+            <div><label class="text-xs font-bold text-gray-400">Bio</label><textarea id="edit-bio" class="w-full bg-gray-800 rounded-lg px-3 py-2 mt-1" rows="3"></textarea></div>
             <button onclick="saveProfile()" class="w-full bg-purple-600 hover:bg-purple-500 text-white font-bold py-2 rounded-lg">Enregistrer</button>
         </div>
     </div>
     
     <div id="story-viewer" class="hidden fixed inset-0 z-50 bg-black flex flex-col items-center justify-center">
-        <!-- Contenu de la visionneuse de story -->
+        <!-- JS remplira ce contenu -->
     </div>
 
-    <!-- NOUVEAU : Modal/Éditeur de Verset (Canvas) complété -->
     <div id="verse-editor-modal" class="hidden fixed inset-0 z-50 bg-black/80 flex flex-col items-center justify-center p-4">
         <div class="bg-gray-900 w-full max-w-4xl rounded-2xl p-2 md:p-6 relative flex flex-col md:flex-row gap-6 max-h-[90vh]">
-            <button onclick="closeVerseEditor()" class="absolute top-4 right-4 text-gray-500 hover:text-white z-10"><i-o-x-mark class="w-6 h-6"></i-o-x-mark></button>
-            <div class="flex-1 flex flex-col items-center justify-center bg-black rounded-lg p-2">
-                <canvas id="verse-canvas" width="500" height="500" class="w-full h-auto object-contain rounded-md"></canvas>
-            </div>
-            <div class="w-full md:w-72 flex-shrink-0 space-y-4 overflow-y-auto pr-2 scrollbar-hide">
-                <h3 class="text-lg font-bold text-white">Créateur de Verset</h3>
-                <div>
-                    <label class="text-xs font-bold text-gray-400">Texte du verset</label>
-                    <textarea id="verse-text-input" oninput="drawCanvas()" rows="3" class="w-full bg-gray-800 border-gray-700 rounded-lg px-3 py-2 mt-1 text-sm">"Car Dieu a tant aimé le monde..."</textarea>
-                </div>
+            <button onclick="closeVerseEditor()" class="absolute top-4 right-4 text-gray-500 z-10"><i-o-x-mark class="w-6 h-6"></i-o-x-mark></button>
+            <div class="flex-1 flex items-center justify-center bg-black rounded-lg p-2"><canvas id="verse-canvas" width="500" height="500" class="w-full h-auto object-contain"></canvas></div>
+            <div class="w-full md:w-72 flex-shrink-0 space-y-3 overflow-y-auto pr-2 scrollbar-hide">
+                <h3 class="text-lg font-bold">Créateur de Verset</h3>
+                <div><label class="text-xs font-bold text-gray-400">Texte</label><textarea id="verse-text-input" oninput="drawCanvas()" rows="3" class="w-full bg-gray-800 rounded-lg px-3 py-2 mt-1 text-sm">"Car Dieu a tant aimé le monde..."</textarea></div>
                  <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="text-xs font-bold text-gray-400">Couleur</label>
-                        <input id="text-color-picker" oninput="drawCanvas()" type="color" value="#FFFFFF" class="w-full h-10 bg-gray-800 rounded-lg p-1 border border-gray-700 cursor-pointer">
-                    </div>
-                    <div>
-                        <label class="text-xs font-bold text-gray-400">Taille</label>
-                        <input id="font-size-picker" oninput="drawCanvas()" type="number" value="40" class="w-full h-10 bg-gray-800 rounded-lg px-2 border border-gray-700">
-                    </div>
+                    <div><label class="text-xs font-bold text-gray-400">Couleur</label><input id="text-color-picker" oninput="drawCanvas()" type="color" value="#FFFFFF" class="w-full h-10 bg-gray-800 rounded-lg p-1 cursor-pointer"></div>
+                    <div><label class="text-xs font-bold text-gray-400">Taille</label><input id="font-size-picker" oninput="drawCanvas()" type="number" value="40" class="w-full h-10 bg-gray-800 rounded-lg px-2"></div>
                 </div>
-                <div>
-                    <label class="text-xs font-bold text-gray-400">Police</label>
-                    <select id="font-family-picker" onchange="drawCanvas()" class="w-full bg-gray-800 rounded-lg px-2 py-2.5 border border-gray-700 text-sm">
-                        <option value="Lora">Lora (Serif)</option>
-                        <option value="Inter">Inter (Sans-Serif)</option>
-                    </select>
-                </div>
-                 <div>
-                    <label class="text-xs font-bold text-gray-400">Interligne: <span id="line-height-value">1.5</span></label>
-                    <input id="line-height-slider" oninput="drawCanvas(); document.getElementById('line-height-value').innerText = this.value" type="range" min="1.0" max="2.5" step="0.1" value="1.5" class="w-full">
-                </div>
-                <div>
-                     <label class="text-xs font-bold text-gray-400">Arrière-plan</label>
-                     <div class="flex gap-2 mt-1">
-                        <input onchange="setBackground('color', this.value)" type="color" value="#1f2937" class="w-10 h-10 bg-gray-800 rounded-lg p-1 border border-gray-700 cursor-pointer">
-                        <input type="file" id="bg-upload-input" class="hidden" onchange="handleBgUpload(this)" accept="image/*">
-                        <button onclick="document.getElementById('bg-upload-input').click()" class="flex-1 bg-gray-800 text-xs font-bold rounded-lg border border-gray-700">Image</button>
-                     </div>
-                </div>
-                 <div>
-                    <label class="text-xs font-bold text-gray-400">Filtre Sombre: <span id="overlay-value">0.3</span></label>
-                    <input id="overlay-slider" oninput="drawCanvas(); document.getElementById('overlay-value').innerText = this.value" type="range" min="0" max="0.9" step="0.05" value="0.3" class="w-full">
-                </div>
-                <!-- NOUVEAU: Ajout des sliders manquants -->
-                <div>
-                    <label class="text-xs font-bold text-gray-400">Contour: <span id="stroke-width-value">0</span>px</label>
-                    <input id="stroke-width-slider" oninput="drawCanvas(); document.getElementById('stroke-width-value').innerText = this.value" type="range" min="0" max="10" step="0.5" value="0" class="w-full">
-                </div>
-                <div>
-                    <label class="text-xs font-bold text-gray-400">Flou de l'arrière-plan: <span id="blur-value">0</span>px</label>
-                    <input id="blur-slider" oninput="drawCanvas(); document.getElementById('blur-value').innerText = this.value" type="range" min="0" max="20" step="1" value="0" class="w-full">
-                </div>
+                <div><label class="text-xs font-bold text-gray-400">Police</label><select id="font-family-picker" onchange="drawCanvas()" class="w-full bg-gray-800 rounded-lg px-2 py-2.5 text-sm"><option value="Lora">Lora</option><option value="Inter">Inter</option></select></div>
+                <div><label class="text-xs font-bold text-gray-400">Interligne: <span id="line-height-value">1.5</span></label><input id="line-height-slider" oninput="drawCanvas(); document.getElementById('line-height-value').innerText = this.value" type="range" min="1.0" max="2.5" step="0.1" value="1.5" class="w-full"></div>
+                <div><label class="text-xs font-bold text-gray-400">Filtre Sombre: <span id="overlay-value">0.3</span></label><input id="overlay-slider" oninput="drawCanvas(); document.getElementById('overlay-value').innerText = this.value" type="range" min="0" max="0.9" step="0.05" value="0.3" class="w-full"></div>
+                <div><label class="text-xs font-bold text-gray-400">Contour: <span id="stroke-width-value">0</span>px</label><input id="stroke-width-slider" oninput="drawCanvas(); document.getElementById('stroke-width-value').innerText = this.value" type="range" min="0" max="10" step="0.5" value="0" class="w-full"></div>
+                <div><label class="text-xs font-bold text-gray-400">Flou Arrière-plan: <span id="blur-value">0</span>px</label><input id="blur-slider" oninput="drawCanvas(); document.getElementById('blur-value').innerText = this.value" type="range" min="0" max="20" step="1" value="0" class="w-full"></div>
+                <div class="flex gap-2"><label class="text-xs font-bold text-gray-400">Arrière-plan</label><input onchange="setBackground('color', this.value)" type="color" value="#1f2937" class="w-10 h-10 bg-gray-800 rounded-lg p-1 cursor-pointer"><input type="file" id="bg-upload-input" class="hidden" onchange="handleBgUpload(this)" accept="image/*"><button onclick="document.getElementById('bg-upload-input').click()" class="flex-1 bg-gray-800 text-xs font-bold rounded-lg">Image</button></div>
                 <button id="btn-publish-verse" onclick="publishVerseCard()" class="w-full bg-purple-600 text-white font-bold py-3 rounded-lg">Publier la carte</button>
             </div>
         </div>
     </div>
-
-    <audio id="notif-sound" src="https://example.com/notification.mp3" preload="auto"></audio>
+    
+    <audio id="notif-sound" src="https://assets.mixkit.co/sfx/preview/mixkit-software-interface-start-2574.mp3" preload="auto"></audio>
     <div id="notification-container" class="fixed top-20 right-4 z-50 w-72 space-y-2"></div>
     
     <script src="script.js"></script>
     <script>
-        // Initialisation de l'UI au chargement
-        document.addEventListener('DOMContentLoaded', () => {
-            switchView('home');
-        });
+        document.addEventListener('DOMContentLoaded', () => { switchView('home'); });
     </script>
 </body>
 </html>
