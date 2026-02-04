@@ -1,49 +1,170 @@
 // ==========================================
-// FAITH CONNECT - VERSION CORRIGÉE & OPTIMISÉE
-// ==========================================
-
-// ==========================================
-// 1. CONFIGURATION SUPABASE & APPWRITE
+// 1. CONFIGURATION SUPABASE
 // ==========================================
 const SUPABASE_URL = 'https://uduajuxobmywmkjnawjn.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVkdWFqdXhvYm15d21ram5hd2puIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc0NjUyMTUsImV4cCI6MjA4MzA0MTIxNX0.Vn1DpT9l9N7sVb3kVUPRqr141hGvM74vkZULJe59YUU';
 
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-const client = new Appwrite.Client();
-client
-    .setEndpoint('https://fra.cloud.appwrite.io/v1')
-    .setProject('696018ca0000881fb8a2');
-
-const storage = new Appwrite.Storage(client);
-const APPWRITE_BUCKET_ID = 'reels-videos';
-
 // ==========================================
-// 2. VARIABLES GLOBALES
+// 2. GESTION UTILISATEUR & AUTH
 // ==========================================
 let currentUser = null;
 let userProfile = null;
-let activeChatUser = null;
-let selectedImageFile = null;
-let selectedAvatarFile = null;
-let realtimeChannel = null;
+let activeChatUser = null; 
+let selectedImageFile = null;        
+let selectedAvatarFile = null;      
 
-// Canvas Variables (FIX: Déclaration manquante)
-let canvas = null;
-let ctx = null;
-let currentTextAlign = 'center';
-let currentBgType = 'color'; 
-let currentBgValue = '#1f2937'; 
-let uploadedBgImage = null;
+document.addEventListener('DOMContentLoaded', checkSession);
 
-// Story Timer
-let currentStoryTimer = null;
+// --- GESTION TOUCHE ENTRÉE ---
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+        if (document.activeElement.id === 'chat-input') {
+            e.preventDefault();
+            sendChatMessage();
+        }
+        if (document.activeElement.id.startsWith('input-comment-')) {
+            e.preventDefault();
+            const postId = document.activeElement.id.replace('input-comment-', '');
+            sendComment(postId);
+        }
+        if (document.activeElement.id === 'reel-comment-input') {
+            e.preventDefault();
+            sendReelComment();
+        }
+        // NOUVEAU : Touche Entrée pour l'IA
+        if (document.activeElement.id === 'ai-bible-input') {
+            e.preventDefault();
+            askFaithAI();
+        }
+    }
+});
 
-// Canvas Debounce Timer
-let drawCanvasTimer = null;
+async function checkSession() {
+    const { data: { session } } = await supabaseClient.auth.getSession();
+    if (session) {
+        currentUser = session.user;
+        await loadUserProfile();
+        loginSuccess();
+    } else {
+        document.getElementById('login-page').classList.remove('hidden');
+    }
+}
 
-// Bible Variables
-let currentBibleVersion = 'ls1910';
+async function loadUserProfile() {
+    let { data } = await supabaseClient.from('profiles').select('*').eq('id', currentUser.id).single();
+    if (!data) {
+        const namePart = currentUser.email.split('@')[0];
+        const newProfile = { 
+            id: currentUser.id, email: currentUser.email, username: namePart, bio: "Nouveau membre", status_text: "Nouveau ici !", status_emoji: "👋"
+        };
+        await supabaseClient.from('profiles').insert([newProfile]);
+        userProfile = newProfile;
+    } else {
+        userProfile = data;
+    }
+    updateUIProfile();
+    updateFriendCount(currentUser.id);
+}
+
+function loginSuccess() {
+    document.getElementById('login-page').classList.add('hidden');
+    document.getElementById('main-app').classList.remove('hidden');
+    loadAppData();
+}
+
+async function handleSignUp() {
+    const email = document.getElementById('login-email').value;
+    const password = document.getElementById('login-password').value;
+    const { error } = await supabaseClient.auth.signUp({ email, password });
+    if (error) alert(error.message); else alert("Compte créé ! Vérifiez vos emails.");
+}
+
+async function handleLogin() {
+    const email = document.getElementById('login-email').value;
+    const password = document.getElementById('login-password').value;
+    const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
+    if (error) alert(error.message); else location.reload();
+}
+
+async function logout() { await supabaseClient.auth.signOut(); location.reload(); }
+
+// ==========================================
+// 3. NAVIGATION & UI (DESIGN PREMIUM + ANIMATIONS)
+// ==========================================
+
+function switchView(viewName) {
+    // 1. Cacher toutes les vues et reset les styles
+    ['home', 'reels', 'bible', 'messages', 'profile', 'public-profile'].forEach(v => {
+        const el = document.getElementById('view-' + v);
+        if(el) {
+            el.classList.add('hidden');
+            el.classList.remove('animate-view'); // Reset l'animation
+        }
+        const btn = document.getElementById('nav-' + v);
+        if(btn) { 
+            btn.classList.remove('text-purple-400', 'scale-110'); // Reset l'effet de zoom
+            btn.classList.add('text-gray-500'); 
+        }
+    });
+
+    // 2. Afficher la nouvelle vue avec Animation
+    const target = document.getElementById('view-' + viewName);
+    if(target) {
+        target.classList.remove('hidden');
+        void target.offsetWidth; // Force le navigateur à relancer l'animation
+        target.classList.add('animate-view');
+    }
+    
+    // 3. Activer le bouton du menu
+    const activeBtn = document.getElementById('nav-' + viewName);
+    if(activeBtn) { 
+        activeBtn.classList.remove('text-gray-500'); 
+        activeBtn.classList.add('text-purple-400', 'scale-110', 'transition-transform', 'duration-200'); 
+    }
+
+    // Logiques spécifiques inchangées
+    const reelsContainer = document.getElementById('reels-container');
+    if (viewName === 'reels') {
+        fetchReels(); 
+    } else {
+        if(reelsContainer) reelsContainer.innerHTML = '';
+    }
+
+    if (viewName === 'bible') {
+        showTestament('NT'); 
+    }
+
+    if (viewName === 'messages') {
+        const badge = document.getElementById('msg-badge');
+        if(badge) badge.classList.add('hidden');
+        if(!activeChatUser) resetChat();
+    }
+    if (viewName === 'profile') switchProfileTab('friends'); 
+    if(viewName !== 'messages' && viewName !== 'public-profile') activeChatUser = null;
+}
+
+async function loadAppData() {
+    await Promise.all([
+        fetchPosts(),
+        renderStoriesList(),
+        fetchPrayers(),
+        fetchHelpRequests(), 
+        fetchEvents(),
+        loadConversations(),
+        fetchNotifications()
+    ]);
+    resetChat();
+    subscribeToRealtime();
+    if(typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+// ==========================================
+// 4. BIBLE (VERSION FINALE & CORRIGÉE)
+// ==========================================
+
+let currentBibleVersion = 'ls1910'; // Langue par défaut
 let currentBookId = 43; 
 let currentBookName = "Jean";
 let currentChapter = 1;
@@ -72,334 +193,20 @@ const bibleStructure = {
     ]
 };
 
-// ==========================================
-// 3. INITIALISATION DOM
-// ==========================================
-document.addEventListener('DOMContentLoaded', async () => {
-    console.log("Faith Connect : Démarrage...");
-
-    // Initialiser Canvas
-    const canvasElement = document.getElementById('verse-canvas');
-    if (canvasElement) {
-        canvas = canvasElement;
-        ctx = canvas.getContext('2d');
-        await document.fonts.ready;
-        setTimeout(() => drawCanvas(), 100);
-    }
-
-    // Initialiser Bible
-    if (typeof showTestament === "function") {
-        showTestament('AT');
-    }
-
-    // Initialiser Navigation
-    if (document.getElementById('bottom-nav')) {
-        updateNavAnimation('home');
-    }
-
-    // Vérifier session
-    await checkSession();
-});
-
-// ==========================================
-// 4. GESTION TOUCHE ENTRÉE
-// ==========================================
-document.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-        const activeId = document.activeElement.id;
-        
-        if (activeId === 'chat-input') {
-            e.preventDefault();
-            sendChatMessage();
-        } else if (activeId.startsWith('input-comment-')) {
-            e.preventDefault();
-            const postId = activeId.replace('input-comment-', '');
-            sendComment(postId);
-        } else if (activeId === 'reel-comment-input') {
-            e.preventDefault();
-            sendReelComment();
-        } else if (activeId === 'ai-bible-input') {
-            e.preventDefault();
-            askFaithAI();
-        }
-    }
-});
-
-// ==========================================
-// 5. AUTHENTIFICATION (CORRIGÉ)
-// ==========================================
-async function checkSession() {
-    try {
-        const { data: { session } } = await supabaseClient.auth.getSession();
-        if (session) {
-            currentUser = session.user;
-            await loadUserProfile();
-            loginSuccess();
-        } else {
-            const loginPage = document.getElementById('login-page');
-            if (loginPage) loginPage.classList.remove('hidden');
-        }
-    } catch (error) {
-        console.error("Erreur checkSession:", error);
-    }
-}
-
-async function loadUserProfile() {
-    try {
-        let { data } = await supabaseClient
-            .from('profiles')
-            .select('*')
-            .eq('id', currentUser.id)
-            .single();
-        
-        if (!data) {
-            const namePart = currentUser.email.split('@')[0];
-            const newProfile = { 
-                id: currentUser.id, 
-                email: currentUser.email, 
-                username: namePart, 
-                bio: "Nouveau membre", 
-                status_text: "Nouveau ici !", 
-                status_emoji: "👋"
-            };
-            await supabaseClient.from('profiles').insert([newProfile]);
-            userProfile = newProfile;
-        } else {
-            userProfile = data;
-        }
-        
-        updateUIProfile();
-        updateFriendCount(currentUser.id);
-    } catch (error) {
-        console.error("Erreur loadUserProfile:", error);
-    }
-}
-
-async function handleLogin() {
-    const emailInput = document.getElementById('login-email');
-    const passwordInput = document.getElementById('login-password');
-
-    if (!emailInput || !passwordInput) {
-        console.error("Erreur : Champs login introuvables");
-        return;
-    }
-
-    const email = emailInput.value.trim();
-    const password = passwordInput.value.trim();
-
-    // Validation
-    if (!email || !password) {
-        alert("⚠️ Email et mot de passe requis");
-        return;
-    }
-
-    if (!email.includes('@')) {
-        alert("⚠️ Email invalide");
-        return;
-    }
-
-    try {
-        const { error } = await supabaseClient.auth.signInWithPassword({ 
-            email, 
-            password 
-        });
-
-        if (error) {
-            if (error.message.includes('Invalid login')) {
-                alert("❌ Email ou mot de passe incorrect");
-            } else {
-                alert("❌ Erreur : " + error.message);
-            }
-        } else {
-            location.reload();
-        }
-    } catch (err) {
-        console.error("Erreur handleLogin:", err);
-        alert("❌ Problème de connexion");
-    }
-}
-
-async function handleSignUp() {
-    const emailInput = document.getElementById('login-email');
-    const passwordInput = document.getElementById('login-password');
-    
-    if (!emailInput || !passwordInput) return;
-    
-    const email = emailInput.value.trim();
-    const password = passwordInput.value.trim();
-    
-    if (!email || !password) {
-        alert("⚠️ Remplissez tous les champs");
-        return;
-    }
-    
-    if (password.length < 6) {
-        alert("⚠️ Le mot de passe doit contenir au moins 6 caractères");
-        return;
-    }
-    
-    try {
-        const { error } = await supabaseClient.auth.signUp({ email, password });
-        if (error) {
-            alert("❌ " + error.message);
-        } else {
-            alert("✅ Compte créé ! Vérifiez vos emails");
-        }
-    } catch (err) {
-        console.error("Erreur signup:", err);
-    }
-}
-
-async function handleLogout() {
-    try {
-        // Nettoyer l'abonnement Realtime
-        if (realtimeChannel) {
-            await supabaseClient.removeChannel(realtimeChannel);
-            realtimeChannel = null;
-        }
-        
-        // Nettoyer le timer des stories
-        if (currentStoryTimer) {
-            clearTimeout(currentStoryTimer);
-            currentStoryTimer = null;
-        }
-        
-        await supabaseClient.auth.signOut();
-        location.reload();
-    } catch (error) {
-        console.error("Erreur logout:", error);
-    }
-}
-
-function loginSuccess() {
-    const loginPage = document.getElementById('login-page');
-    const mainApp = document.getElementById('main-app');
-    
-    if (loginPage) loginPage.classList.add('hidden');
-    if (mainApp) mainApp.classList.remove('hidden');
-    
-    loadAppData();
-}
-
-// ==========================================
-// 6. NAVIGATION & UI
-// ==========================================
-function switchView(viewName) {
-    // Nettoyer le timer des stories
-    if (currentStoryTimer) {
-        clearTimeout(currentStoryTimer);
-        currentStoryTimer = null;
-    }
-
-    // Cacher toutes les vues
-    const views = document.querySelectorAll('[id^="view-"]');
-    views.forEach(view => view.classList.add('hidden'));
-
-    // Afficher la nouvelle vue
-    const target = document.getElementById('view-' + viewName);
-    if (target) {
-        target.classList.remove('hidden');
-        void target.offsetWidth;
-        target.classList.add('animate-view');
-    }
-
-    // Mettre à jour la navigation
-    if (typeof updateNavAnimation === "function") {
-        updateNavAnimation(viewName);
-    }
-
-    // Logiques spécifiques
-    const reelsContainer = document.getElementById('reels-container');
-    if (viewName === 'reels') {
-        fetchReels(); 
-    } else {
-        if (reelsContainer) reelsContainer.innerHTML = '';
-    }
-
-    if (viewName === 'bible') {
-        showTestament('AT'); 
-    }
-
-    if (viewName === 'messages') {
-        const badge = document.getElementById('msg-badge');
-        if (badge) badge.classList.add('hidden');
-        if (!activeChatUser) resetChat();
-    }
-
-    if (viewName === 'profile') {
-        switchProfileTab('amis'); 
-    }
-
-    if (viewName !== 'messages' && viewName !== 'public-profile') {
-        activeChatUser = null;
-    }
-}
-
-async function loadAppData() {
-    try {
-        await Promise.all([
-            fetchPosts(),
-            renderStoriesList(),
-            fetchPrayers(),
-            fetchHelpRequests(), 
-            fetchEvents(),
-            loadConversations(),
-            fetchNotifications()
-        ]);
-        resetChat();
-        subscribeToRealtime();
-        if (typeof lucide !== 'undefined') lucide.createIcons();
-    } catch (error) {
-        console.error("Erreur loadAppData:", error);
-    }
-}
-
-function updateNavAnimation(activeViewName) {
-    const buttons = ['home', 'reels', 'bible', 'messages', 'profile'];
-    const indicator = document.getElementById('nav-indicator');
-    
-    if (!indicator) return;
-
-    buttons.forEach(view => {
-        const btn = document.getElementById(`nav-btn-${view}`);
-        if (!btn) return;
-
-        const icon = btn.querySelector('i');
-        
-        if (view === activeViewName) {
-            btn.classList.remove('text-white/50');
-            btn.classList.add('text-white');
-            
-            const btnRect = btn.getBoundingClientRect();
-            const navRect = document.getElementById('bottom-nav').getBoundingClientRect();
-            const offsetLeft = btnRect.left - navRect.left + (btnRect.width / 2) - 28; 
-            
-            indicator.style.transform = `translateX(${offsetLeft}px)`;
-            
-            if (icon) icon.style.transform = "translateY(-2px) scale(1.1)";
-        } else {
-            btn.classList.add('text-white/50');
-            btn.classList.remove('text-white');
-            if (icon) icon.style.transform = "translateY(0) scale(1)";
-        }
-    });
-}
-
-// ==========================================
-// 7. BIBLE
-// ==========================================
+// --- 1. AFFICHER LA LISTE DES LIVRES ---
 function showTestament(type) {
     const atBtn = document.getElementById('btn-at');
     const ntBtn = document.getElementById('btn-nt');
     const listContainer = document.getElementById('bible-books-list');
     const reader = document.getElementById('bible-reader');
 
+    // Sécurité : On s'assure que le lecteur est fermé quand on change de testament
     if (reader) reader.classList.add('hidden');
     if (listContainer) listContainer.classList.remove('hidden');
 
-    if (!atBtn || !ntBtn) return;
+    if(!atBtn || !ntBtn) return;
 
-    if (type === 'AT') {
+    if(type === 'AT') {
         atBtn.className = "flex-1 py-2 bg-purple-600 text-white rounded-xl text-xs font-bold transition-colors shadow-lg";
         ntBtn.className = "flex-1 py-2 bg-gray-800 text-gray-400 rounded-xl text-xs font-bold hover:bg-gray-700 transition-colors";
     } else {
@@ -407,7 +214,7 @@ function showTestament(type) {
         atBtn.className = "flex-1 py-2 bg-gray-800 text-gray-400 rounded-xl text-xs font-bold hover:bg-gray-700 transition-colors";
     }
 
-    if (listContainer) {
+    if(listContainer) {
         listContainer.innerHTML = bibleStructure[type].map(book => `
             <button onclick="loadBibleChapter(${book.id}, '${book.name}', 1)" class="p-3 bg-gray-800 border border-white/5 rounded-xl hover:bg-gray-700 transition-all text-left group active:scale-95 animate-fade-in">
                 <span class="font-bold text-white group-hover:text-purple-400 text-sm transition-colors">${book.name}</span>
@@ -416,22 +223,24 @@ function showTestament(type) {
     }
 }
 
+// --- 2. CHARGER UN CHAPITRE (LECTURE) ---
 async function loadBibleChapter(id, name, chapter) {
     const reader = document.getElementById('bible-reader');
-    const listContainer = document.getElementById('bible-books-list');
+    const listContainer = document.getElementById('bible-books-list'); // Ajout important
     const content = document.getElementById('reader-content');
     const title = document.getElementById('reader-title');
     
-    if (!reader) return;
+    if(!reader) return;
     
-    if (listContainer) listContainer.classList.add('hidden');
+    // BASCULE D'AFFICHAGE : On cache la liste, on montre le lecteur
+    if(listContainer) listContainer.classList.add('hidden');
     reader.classList.remove('hidden');
     
     currentBookId = id;
     currentBookName = name;
     currentChapter = chapter;
 
-    if (title) title.innerText = `${name} ${chapter}`;
+    if(title) title.innerText = `${name} ${chapter}`;
     
     content.innerHTML = `
         <div class="flex flex-col h-full items-center justify-center space-y-4">
@@ -440,14 +249,16 @@ async function loadBibleChapter(id, name, chapter) {
         </div>`;
 
     try {
+        // Utilisation d'un proxy pour éviter les erreurs CORS si nécessaire (optionnel mais recommandé)
         const apiUrl = `https://api.getbible.net/v2/${currentBibleVersion}/${id}/${chapter}.json`;
-        const response = await fetch(apiUrl);
         
+        const response = await fetch(apiUrl);
         if (!response.ok) throw new Error("Chapitre introuvable");
 
         const data = await response.json();
 
         if (data.verses && data.verses.length > 0) {
+            // Gestion RTL (Arabe)
             const isArabic = currentBibleVersion === 'vandyke';
             const dir = isArabic ? 'rtl' : 'ltr';
             const align = isArabic ? 'text-right' : 'text-justify';
@@ -475,6 +286,7 @@ async function loadBibleChapter(id, name, chapter) {
                 </div>
             `;
             content.scrollTop = 0;
+
         } else {
             content.innerHTML = `
                 <div class="text-center text-gray-400 mt-20">
@@ -493,42 +305,43 @@ async function loadBibleChapter(id, name, chapter) {
     }
 }
 
+// --- 3. FONCTION DE FERMETURE (C'est ici que c'était cassé) ---
 function closeBibleReader() {
-    const reader = document.getElementById('bible-reader');
+    // 1. Cacher le lecteur
+    document.getElementById('bible-reader').classList.add('hidden');
+    // 2. IMPORTANT : Réafficher la liste des livres
     const listContainer = document.getElementById('bible-books-list');
-    
-    if (reader) reader.classList.add('hidden');
-    if (listContainer) listContainer.classList.remove('hidden');
+    if (listContainer) {
+        listContainer.classList.remove('hidden');
+    }
 }
 
+// --- 4. CHANGEMENT DE LANGUE ---
 function changeBibleVersion(version) {
     currentBibleVersion = version;
     const reader = document.getElementById('bible-reader');
-    
+    // Si on est déjà en train de lire, on recharge la page dans la nouvelle langue
     if (reader && !reader.classList.contains('hidden')) {
         loadBibleChapter(currentBookId, currentBookName, currentChapter);
     }
 }
 
 // ==========================================
-// 8. FAITH AI (CORRIGÉ)
+// 5. FAITH AI (HYBRIDE & ROBUSTE)
 // ==========================================
+
 async function askFaithAI() {
     const input = document.getElementById('ai-bible-input');
     const area = document.getElementById('ai-response-area');
-    
-    if (!input || !area) return;
-    
     const question = input.value.trim();
+    
+    // Ton URL Supabase correcte
     const FUNCTION_URL = 'https://uduajuxobmywmkjnawjn.supabase.co/functions/v1/faith-ai';
 
-    if (!question) return;
+    if(!question) return;
     
     area.classList.remove('hidden');
-    area.innerHTML = `<div class="flex items-center gap-2 text-purple-300 text-xs animate-pulse">
-        <div class="w-4 h-4 border-2 border-purple-400 border-t-transparent rounded-full animate-spin"></div>
-        Faith AI réfléchit...
-    </div>`;
+    area.innerHTML = `<div class="flex items-center gap-2 text-purple-300 text-xs animate-pulse">Faith AI réfléchit...</div>`;
     input.value = '';
 
     try {
@@ -536,845 +349,372 @@ async function askFaithAI() {
             method: 'POST',
             headers: { 
                 'Content-Type': 'application/json',
-                'apikey': SUPABASE_KEY
+                // C'EST ICI LA CORRECTION DE L'ERREUR 401 :
+                'Authorization': `Bearer ${SUPABASE_KEY}` 
             },
-            body: JSON.stringify({ question })
+            body: JSON.stringify({ question: question })
         });
-
-        if (!response.ok) {
-            throw new Error(`Erreur ${response.status}`);
-        }
 
         const data = await response.json();
 
         if (data.error) throw new Error(data.error);
 
-        area.innerHTML = `
-            <div class="bg-gray-800/50 border-l-4 border-purple-500 pl-3 py-2 rounded-r-lg shadow-lg">
-                <p class="text-[10px] text-gray-500 mb-1">QUESTION : "${question}"</p>
-                <p class="text-white text-sm font-serif leading-relaxed text-justify">${data.answer}</p>
-            </div>`;
+        // Affichage de la réponse
+        area.innerHTML = `<div class="bg-gray-800/50 border-l-4 border-purple-500 pl-3 py-2 rounded-r-lg shadow-lg"><p class="text-[10px] text-gray-500 mb-1">QUESTION : "${question}"</p><p class="text-white text-sm font-serif leading-relaxed text-justify">${data.answer}</p></div>`;
+
     } catch (error) {
         console.error("Erreur Faith AI:", error);
-        area.innerHTML = `
-            <div class="text-red-400 text-xs">
-                ❌ ${error.message === 'Failed to fetch' 
-                    ? 'Impossible de joindre le serveur' 
-                    : error.message}
-            </div>`;
+        area.innerHTML = `<div class="text-red-400 text-xs">Erreur : ${error.message}</div>`;
     }
 }
 
 // ==========================================
-// 9. PROFIL
+// 5. PROFIL
 // ==========================================
+
 async function updateMyStatus() {
     const text = prompt("Ton humeur actuelle ?");
     if (text === null) return; 
-    
     const emoji = prompt("Un emoji ?", "💻");
-    
-    try {
-        const { error } = await supabaseClient
-            .from('profiles')
-            .update({ 
-                status_text: text, 
-                status_emoji: emoji || "👋", 
-                status_updated_at: new Date().toISOString() 
-            })
-            .eq('id', currentUser.id);
-        
-        if (error) throw error;
-        
-        userProfile.status_text = text; 
-        userProfile.status_emoji = emoji || "👋"; 
-        updateUIProfile();
-    } catch (error) {
-        console.error("Erreur updateStatus:", error);
-        alert("❌ Erreur : " + error.message);
-    }
+    const { error } = await supabaseClient.from('profiles').update({ status_text: text, status_emoji: emoji || "👋", status_updated_at: new Date().toISOString() }).eq('id', currentUser.id);
+    if (error) alert("Erreur : " + error.message);
+    else { userProfile.status_text = text; userProfile.status_emoji = emoji || "👋"; updateUIProfile(); }
 }
 
 function updateUIProfile() {
-    if (!userProfile) return;
-    
     const initials = userProfile.username ? userProfile.username.substring(0, 2).toUpperCase() : "??";
-    
-    document.querySelectorAll('#user-display, #profile-name').forEach(el => {
-        if (el) el.innerText = userProfile.username;
-    });
-    
-    const profileEmail = document.getElementById('profile-email');
-    if (profileEmail) profileEmail.innerText = "@" + userProfile.username;
-    
+    document.querySelectorAll('#user-display, #profile-name').forEach(el => el.innerText = userProfile.username);
+    if(document.getElementById('profile-email')) document.getElementById('profile-email').innerText = "@" + userProfile.username;
     const textDisplay = document.getElementById('status-text-display');
     const emojiDisplay = document.getElementById('status-emoji-display');
-    
-    if (textDisplay) textDisplay.innerText = userProfile.status_text || "Ajouter un statut...";
-    if (emojiDisplay) emojiDisplay.innerText = userProfile.status_emoji || "👋";
-    
+    if (textDisplay && emojiDisplay) {
+        textDisplay.innerText = userProfile.status_text || "Ajouter un statut...";
+        emojiDisplay.innerText = userProfile.status_emoji || "👋";
+    }
     const avatarElements = ['current-user-avatar-small', 'profile-avatar-big'];
     avatarElements.forEach(id => {
         const el = document.getElementById(id);
-        if (!el) return;
-        
+        if(!el) return;
         if (userProfile.avatar_url) {
             el.innerHTML = `<img src="${userProfile.avatar_url}" class="w-full h-full object-cover rounded-full">`;
+            el.innerText = ""; 
         } else {
-            el.innerHTML = "";
-            el.innerText = initials;
+            el.innerHTML = ""; el.innerText = initials;
         }
     });
 }
 
-function openEditModal() {
-    const modal = document.getElementById('edit-profile-modal');
-    if (!modal || !userProfile) return;
-    
-    modal.classList.remove('hidden');
-    
-    const usernameInput = document.getElementById('edit-username');
-    const bioInput = document.getElementById('edit-bio');
+function openEditModal() { 
+    document.getElementById('edit-profile-modal').classList.remove('hidden'); 
+    document.getElementById('edit-username').value = userProfile.username; 
+    document.getElementById('edit-bio').value = userProfile.bio; 
     const preview = document.getElementById('edit-avatar-preview');
-    
-    if (usernameInput) usernameInput.value = userProfile.username;
-    if (bioInput) bioInput.value = userProfile.bio;
-    
-    if (preview) {
-        if (userProfile.avatar_url) {
-            preview.src = userProfile.avatar_url;
-        } else {
-            preview.src = `https://ui-avatars.com/api/?name=${userProfile.username}&background=random`;
-        }
-    }
-    
+    if (userProfile.avatar_url) preview.src = userProfile.avatar_url;
+    else preview.src = "https://ui-avatars.com/api/?name=" + userProfile.username + "&background=random";
     selectedAvatarFile = null;
 }
 
-function closeEditModal() {
-    const modal = document.getElementById('edit-profile-modal');
-    if (modal) modal.classList.add('hidden');
-}
+function closeEditModal() { document.getElementById('edit-profile-modal').classList.add('hidden'); }
 
 function handleAvatarPreview(input) {
-    if (!input.files || !input.files[0]) return;
-    
-    selectedAvatarFile = input.files[0];
-    const reader = new FileReader();
-    
-    reader.onload = function(e) {
-        const preview = document.getElementById('edit-avatar-preview');
-        if (preview) preview.src = e.target.result;
-    };
-    
-    reader.readAsDataURL(input.files[0]);
+    if (input.files && input.files[0]) {
+        selectedAvatarFile = input.files[0];
+        const reader = new FileReader();
+        reader.onload = function(e) { document.getElementById('edit-avatar-preview').src = e.target.result; }
+        reader.readAsDataURL(input.files[0]);
+    }
 }
 
 async function saveProfile() {
-    const newUsername = document.getElementById('edit-username')?.value;
-    const newBio = document.getElementById('edit-bio')?.value;
+    const newUsername = document.getElementById('edit-username').value;
+    const newBio = document.getElementById('edit-bio').value;
     const btn = document.querySelector('#edit-profile-modal button:last-child');
-    
-    if (!newUsername || !newUsername.trim()) {
-        alert("⚠️ Pseudo requis");
-        return;
-    }
-    
-    if (btn) {
-        btn.innerText = "Sauvegarde...";
-        btn.disabled = true;
-    }
-    
+    if (!newUsername.trim()) return alert("Pseudo requis");
+    btn.innerText = "Sauvegarde..."; btn.disabled = true;
     try {
         let finalAvatarUrl = userProfile.avatar_url; 
-        
         if (selectedAvatarFile) {
             const fileExt = selectedAvatarFile.name.split('.').pop();
             const fileName = `${currentUser.id}/${Date.now()}.${fileExt}`;
-            
-            const { error: uploadError } = await supabaseClient.storage
-                .from('avatars')
-                .upload(fileName, selectedAvatarFile);
-            
+            const { error: uploadError } = await supabaseClient.storage.from('avatars').upload(fileName, selectedAvatarFile);
             if (uploadError) throw uploadError;
-            
-            const { data } = supabaseClient.storage
-                .from('avatars')
-                .getPublicUrl(fileName);
-            
+            const { data } = supabaseClient.storage.from('avatars').getPublicUrl(fileName);
             finalAvatarUrl = data.publicUrl;
         }
-        
-        const { error } = await supabaseClient
-            .from('profiles')
-            .update({ 
-                username: newUsername, 
-                bio: newBio, 
-                avatar_url: finalAvatarUrl 
-            })
-            .eq('id', currentUser.id);
-        
+        const { error } = await supabaseClient.from('profiles').update({ username: newUsername, bio: newBio, avatar_url: finalAvatarUrl }).eq('id', currentUser.id);
         if (error) throw error;
-        
-        userProfile.username = newUsername;
-        userProfile.bio = newBio;
-        userProfile.avatar_url = finalAvatarUrl;
-        
-        updateUIProfile();
-        closeEditModal();
-        alert("✅ Profil mis à jour !");
-    } catch (error) {
-        console.error("Erreur saveProfile:", error);
-        alert("❌ Erreur : " + error.message);
-    } finally {
-        if (btn) {
-            btn.innerText = "Enregistrer";
-            btn.disabled = false;
-            // ==========================================
-// FAITH CONNECT - PARTIE 2 : AMIS, CHAT, POSTS
-// ==========================================
-
-// ==========================================
-// 10. GESTION DES AMIS (CORRIGÉ)
-// ==========================================
-async function getFriendIds() {
-    try {
-        const { data } = await supabaseClient
-            .from('friendships')
-            .select('requester_id, receiver_id')
-            .eq('status', 'accepted')
-            .or(`requester_id.eq.${currentUser.id},receiver_id.eq.${currentUser.id}`);
-        
-        const friendIds = new Set([currentUser.id]); 
-        
-        if (data) {
-            data.forEach(f => {
-                friendIds.add(f.requester_id === currentUser.id ? f.receiver_id : f.requester_id);
-            });
-        }
-        
-        return Array.from(friendIds);
-    } catch (error) {
-        console.error("Erreur getFriendIds:", error);
-        return [currentUser.id];
-    }
+        userProfile.username = newUsername; userProfile.bio = newBio; userProfile.avatar_url = finalAvatarUrl;
+        updateUIProfile(); closeEditModal(); alert("Profil mis à jour !");
+    } catch (error) { alert("Erreur : " + error.message); } finally { btn.innerText = "Enregistrer"; btn.disabled = false; }
 }
 
-function switchProfileTab(tabName) {
-    const tabs = ['posts', 'prieres', 'amis'];
-    
-    tabs.forEach(t => {
-        const btn = document.getElementById(`tab-btn-${t}`);
-        const content = document.getElementById(`profile-content-${t}`);
-        
-        if (btn) {
-            btn.className = "flex-1 pb-3 text-sm font-medium text-gray-400 hover:text-white transition-colors cursor-pointer";
-        }
-        
-        if (content) {
-            content.classList.add('hidden');
-        }
-    });
+// ==========================================
+// 5. GESTION DES AMIS
+// ==========================================
 
-    const activeBtn = document.getElementById(`tab-btn-${tabName}`);
-    const activeContent = document.getElementById(`profile-content-${tabName}`);
+async function getFriendIds() {
+    const { data } = await supabaseClient.from('friendships').select('requester_id, receiver_id').eq('status', 'accepted').or(`requester_id.eq.${currentUser.id},receiver_id.eq.${currentUser.id}`);
+    const friendIds = new Set([currentUser.id]); 
+    if (data) data.forEach(f => { friendIds.add(f.requester_id === currentUser.id ? f.receiver_id : f.requester_id); });
+    return Array.from(friendIds);
+}
 
-    if (activeBtn) {
-        activeBtn.className = "flex-1 pb-3 text-sm font-bold text-white border-b-2 border-purple-500 transition-colors cursor-pointer";
-    }
-    
-    if (activeContent) {
-        activeContent.classList.remove('hidden');
-        
-        // Charger les données selon l'onglet
-        if (tabName === 'amis') {
-            const friendsContainer = document.getElementById('profile-friends-list');
-            if (friendsContainer) fetchMyFriendsList(friendsContainer);
-        } else if (tabName === 'prieres') {
-            const requestsContainer = document.getElementById('profile-requests-list');
-            if (requestsContainer) fetchMyRequestsList(requestsContainer);
-        }
+async function switchProfileTab(tabName) {
+    const btnFriends = document.getElementById('tab-friends');
+    const btnRequests = document.getElementById('tab-requests');
+    const container = document.getElementById('profile-social-list');
+    if(!btnFriends || !btnRequests || !container) return;
+    if(tabName === 'friends') {
+        btnFriends.className = "pb-2 text-sm font-bold text-purple-400 border-b-2 border-purple-400";
+        btnRequests.className = "pb-2 text-sm font-bold text-gray-500 hover:text-white";
+        await fetchMyFriendsList(container);
+    } else {
+        btnRequests.className = "pb-2 text-sm font-bold text-purple-400 border-b-2 border-purple-400";
+        btnFriends.className = "pb-2 text-sm font-bold text-gray-500 hover:text-white";
+        await fetchMyRequestsList(container);
     }
 }
 
 async function fetchMyFriendsList(container) {
-    if (!container) {
-        console.error("Container amis introuvable");
-        return;
-    }
-    
     container.innerHTML = '<div class="text-center text-xs text-gray-500 py-4 italic">Chargement...</div>';
-    
-    try {
-        const friendIds = await getFriendIds();
-        const otherFriendIds = friendIds.filter(id => id !== currentUser.id);
-        
-        if (otherFriendIds.length === 0) {
-            container.innerHTML = '<div class="text-center text-xs text-gray-500 py-4">Pas encore d\'amis.</div>';
-            return;
-        }
-        
-        const { data: profiles, error } = await supabaseClient
-            .from('profiles')
-            .select('*')
-            .in('id', otherFriendIds);
-        
-        if (error) throw error;
-        
-        container.innerHTML = '';
-        
-        if (profiles) {
-            profiles.forEach(p => {
-                const avatarHtml = p.avatar_url 
-                    ? `<img src="${p.avatar_url}" class="w-10 h-10 rounded-full object-cover">` 
-                    : `<div class="w-10 h-10 rounded-full bg-purple-600 flex items-center justify-center font-bold text-xs text-white">${p.username.substring(0, 2).toUpperCase()}</div>`;
-                
-                container.insertAdjacentHTML('beforeend', `
-                    <div class="flex items-center justify-between bg-gray-900/50 p-3 rounded-2xl border border-white/5 mb-2">
-                        <div class="flex items-center gap-3">
-                            ${avatarHtml}
-                            <div class="text-left">
-                                <p class="text-sm font-bold text-white">${p.username}</p>
-                                <p class="text-[10px] text-gray-500 truncate w-24">${p.status_text || 'En ligne'}</p>
-                            </div>
-                        </div>
-                        <div class="flex gap-2">
-                            <button onclick="openDirectChat('${p.id}', '${p.username.replace(/'/g, "\\'")}'))" class="p-2 bg-purple-600/20 text-purple-400 rounded-xl hover:bg-purple-600">
-                                <i data-lucide="message-circle" class="w-4 h-4"></i>
-                            </button>
-                            <button onclick="removeFriend('${p.id}')" class="p-2 bg-red-600/10 text-red-400 rounded-xl hover:bg-red-600">
-                                <i data-lucide="user-minus" class="w-4 h-4"></i>
-                            </button>
-                        </div>
-                    </div>
-                `);
-            });
-            
-            if (typeof lucide !== 'undefined') lucide.createIcons();
-        }
-        
-        const countEl = document.getElementById('stats-friends-count');
-        if (countEl) countEl.innerText = otherFriendIds.length;
-        
-    } catch (error) {
-        console.error("Erreur fetchMyFriendsList:", error);
-        container.innerHTML = '<div class="text-center text-xs text-red-400 py-4">❌ Erreur de chargement</div>';
-    }
+    const friendIds = await getFriendIds();
+    const otherFriendIds = friendIds.filter(id => id !== currentUser.id);
+    if(otherFriendIds.length === 0) { container.innerHTML = '<div class="text-center text-xs text-gray-500 py-4">Pas encore d\'amis.</div>'; return; }
+    const { data: profiles } = await supabaseClient.from('profiles').select('*').in('id', otherFriendIds);
+    container.innerHTML = '';
+    if(profiles) profiles.forEach(p => {
+        const avatarHtml = p.avatar_url ? `<img src="${p.avatar_url}" class="w-10 h-10 rounded-full object-cover">` : `<div class="w-10 h-10 rounded-full bg-purple-600 flex items-center justify-center font-bold text-xs text-white">${p.username.substring(0,2).toUpperCase()}</div>`;
+        container.insertAdjacentHTML('beforeend', `<div class="flex items-center justify-between bg-gray-900/50 p-3 rounded-2xl border border-white/5 mb-2"><div class="flex items-center gap-3">${avatarHtml}<div class="text-left"><p class="text-sm font-bold text-white">${p.username}</p><p class="text-[10px] text-gray-500 truncate w-24">${p.status_text || 'En ligne'}</p></div></div><div class="flex gap-2"><button onclick="openDirectChat('${p.id}', '${p.username}')" class="p-2 bg-purple-600/20 text-purple-400 rounded-xl hover:bg-purple-600"><i data-lucide="message-circle" class="w-4 h-4"></i></button><button onclick="removeFriend('${p.id}')" class="p-2 bg-red-600/10 text-red-400 rounded-xl hover:bg-red-600"><i data-lucide="user-minus" class="w-4 h-4"></i></button></div></div>`);
+    });
+    if(typeof lucide !== 'undefined') lucide.createIcons();
+    const countEl = document.getElementById('stats-friends-count');
+    if(countEl) countEl.innerText = otherFriendIds.length;
 }
 
 async function fetchMyRequestsList(container) {
-    if (!container) return;
-    
     container.innerHTML = '<div class="text-center text-xs text-gray-500 py-4 italic">Chargement...</div>';
-    
-    try {
-        const { data: requests } = await supabaseClient
-            .from('friendships')
-            .select('*')
-            .eq('receiver_id', currentUser.id)
-            .eq('status', 'pending');
-        
-        const badge = document.getElementById('profile-req-badge');
-        
-        if (!requests || requests.length === 0) {
-            container.innerHTML = '<div class="text-center text-xs text-gray-500 py-4">Aucune demande.</div>';
-            if (badge) badge.classList.add('hidden');
-            return;
-        }
-        
-        if (badge) {
-            badge.innerText = requests.length;
-            badge.classList.remove('hidden');
-        }
-        
-        const requesterIds = requests.map(r => r.requester_id);
-        const { data: profiles } = await supabaseClient
-            .from('profiles')
-            .select('*')
-            .in('id', requesterIds);
-        
-        container.innerHTML = '';
-        
-        if (profiles) {
-            requests.forEach(req => {
-                const p = profiles.find(prof => prof.id === req.requester_id);
-                if (!p) return;
-                
-                const avatarHtml = p.avatar_url 
-                    ? `<img src="${p.avatar_url}" class="w-10 h-10 rounded-full object-cover">` 
-                    : `<div class="w-10 h-10 rounded-full bg-gray-700 flex items-center justify-center font-bold text-xs">${p.username.substring(0, 2).toUpperCase()}</div>`;
-                
-                container.insertAdjacentHTML('beforeend', `
-                    <div class="flex items-center justify-between bg-gray-900/50 p-3 rounded-xl border border-white/5 mb-2">
-                        <div class="flex items-center gap-3">
-                            ${avatarHtml}
-                            <p class="text-sm font-bold text-white">${p.username}</p>
-                        </div>
-                        <div class="flex gap-2">
-                            <button onclick="handleFriendRequest('${req.id}', true)" class="px-4 py-1.5 bg-green-600 text-white text-xs font-bold rounded-lg">Accepter</button>
-                            <button onclick="handleFriendRequest('${req.id}', false)" class="px-4 py-1.5 bg-red-600/20 text-red-400 text-xs font-bold rounded-lg">Refuser</button>
-                        </div>
-                    </div>
-                `);
-            });
-        }
-    } catch (error) {
-        console.error("Erreur fetchMyRequestsList:", error);
-    }
+    const { data: requests } = await supabaseClient.from('friendships').select('*').eq('receiver_id', currentUser.id).eq('status', 'pending');
+    if(!requests || requests.length === 0) { container.innerHTML = '<div class="text-center text-xs text-gray-500 py-4">Aucune demande.</div>'; document.getElementById('profile-req-badge').classList.add('hidden'); return; }
+    document.getElementById('profile-req-badge').innerText = requests.length;
+    document.getElementById('profile-req-badge').classList.remove('hidden');
+    const requesterIds = requests.map(r => r.requester_id);
+    const { data: profiles } = await supabaseClient.from('profiles').select('*').in('id', requesterIds);
+    container.innerHTML = '';
+    if(profiles) requests.forEach(req => {
+        const p = profiles.find(prof => prof.id === req.requester_id);
+        if(!p) return;
+        const avatarHtml = p.avatar_url ? `<img src="${p.avatar_url}" class="w-10 h-10 rounded-full object-cover">` : `<div class="w-10 h-10 rounded-full bg-gray-700 flex items-center justify-center font-bold text-xs">${p.username.substring(0,2).toUpperCase()}</div>`;
+        container.insertAdjacentHTML('beforeend', `<div class="flex items-center justify-between bg-gray-900/50 p-3 rounded-xl border border-white/5 mb-2"><div class="flex items-center gap-3">${avatarHtml}<p class="text-sm font-bold text-white">${p.username}</p></div><div class="flex gap-2"><button onclick="handleFriendRequest('${req.id}', true)" class="px-4 py-1.5 bg-green-600 text-white text-xs font-bold rounded-lg">Accepter</button><button onclick="handleFriendRequest('${req.id}', false)" class="px-4 py-1.5 bg-red-600/20 text-red-400 text-xs font-bold rounded-lg">Refuser</button></div></div>`);
+    });
 }
 
 async function removeFriend(friendId) {
-    if (!confirm("Retirer cet ami ?")) return;
-    
-    try {
-        await supabaseClient
-            .from('friendships')
-            .delete()
-            .or(`and(requester_id.eq.${currentUser.id},receiver_id.eq.${friendId}),and(requester_id.eq.${friendId},receiver_id.eq.${currentUser.id})`);
-        
-        switchProfileTab('amis');
-        updateFriendCount(currentUser.id);
-    } catch (error) {
-        console.error("Erreur removeFriend:", error);
-    }
-}
-
-async function handleFriendRequest(id, accepted) {
-    try {
-        if (accepted) {
-            await supabaseClient
-                .from('friendships')
-                .update({ status: 'accepted' })
-                .eq('id', id);
-        } else {
-            await supabaseClient
-                .from('friendships')
-                .delete()
-                .eq('id', id);
-        }
-        
-        fetchNotifications();
-        updateFriendCount(currentUser.id);
-        switchProfileTab('prieres');
-    } catch (error) {
-        console.error("Erreur handleFriendRequest:", error);
-    }
-}
-
-async function addFriend(targetId) {
-    try {
-        const { error } = await supabaseClient
-            .from('friendships')
-            .insert([{ 
-                requester_id: currentUser.id, 
-                receiver_id: targetId, 
-                status: 'pending' 
-            }]);
-        
-        if (!error) {
-            alert("✅ Demande envoyée !");
-        } else {
-            throw error;
-        }
-    } catch (error) {
-        console.error("Erreur addFriend:", error);
-        alert("❌ Erreur : " + error.message);
-    }
-}
-
-async function updateFriendCount(userId) {
-    try {
-        const { count: c1 } = await supabaseClient
-            .from('friendships')
-            .select('*', { count: 'exact', head: true })
-            .eq('requester_id', userId)
-            .eq('status', 'accepted');
-        
-        const { count: c2 } = await supabaseClient
-            .from('friendships')
-            .select('*', { count: 'exact', head: true })
-            .eq('receiver_id', userId)
-            .eq('status', 'accepted');
-        
-        const el = document.getElementById('stats-friends-count');
-        if (el) el.innerText = (c1 || 0) + (c2 || 0);
-    } catch (error) {
-        console.error("Erreur updateFriendCount:", error);
-    }
+    if(!confirm("Retirer cet ami ?")) return;
+    await supabaseClient.from('friendships').delete().or(`and(requester_id.eq.${currentUser.id},receiver_id.eq.${friendId}),and(requester_id.eq.${friendId},receiver_id.eq.${currentUser.id})`);
+    switchProfileTab('friends'); updateFriendCount(currentUser.id);
 }
 
 // ==========================================
-// 11. CHAT & MESSAGERIE (CORRIGÉ)
+// 6. CHAT & MESSAGERIE
 // ==========================================
+
 function openDirectChat(userId, username) {
     startChat({ id: userId, username: username });
-    
-    if (window.innerWidth < 768) {
-        const sidebar = document.getElementById('conversations-sidebar');
-        const detail = document.getElementById('chat-detail');
-        
-        if (sidebar) sidebar.classList.add('hidden');
-        if (detail) {
-            detail.classList.remove('hidden');
-            detail.classList.add('flex');
-        }
+    if(window.innerWidth < 768) {
+        document.getElementById('conversations-sidebar').classList.add('hidden');
+        document.getElementById('chat-detail').classList.remove('hidden');
+        document.getElementById('chat-detail').classList.add('flex');
     }
 }
 
 async function loadConversations() {
     const container = document.getElementById('messages-list');
-    if (!container) return;
+    if(!container) return;
+    const { data: messages } = await supabaseClient.from('messages').select('*').or(`sender_id.eq.${currentUser.id},receiver_id.eq.${currentUser.id}`).not('receiver_id', 'is', null).order('created_at', { ascending: false });
+    if (!messages || messages.length === 0) { container.innerHTML = '<div class="text-gray-500 text-center mt-4 text-xs italic">Aucune discussion.</div>'; return; }
     
-    try {
-        const { data: messages } = await supabaseClient
-            .from('messages')
-            .select('*')
-            .or(`sender_id.eq.${currentUser.id},receiver_id.eq.${currentUser.id}`)
-            .not('receiver_id', 'is', null)
-            .order('created_at', { ascending: false });
-        
-        if (!messages || messages.length === 0) {
-            container.innerHTML = '<div class="text-gray-500 text-center mt-4 text-xs italic">Aucune discussion.</div>';
-            return;
-        }
-        
-        const uniqueConversations = {};
-        
-        for (const msg of messages) {
-            const otherUserId = msg.sender_id === currentUser.id ? msg.receiver_id : msg.sender_id;
-            if (!otherUserId || uniqueConversations[otherUserId]) continue;
-            
-            uniqueConversations[otherUserId] = { 
-                userId: otherUserId, 
-                lastMessage: msg.content, 
-                time: new Date(msg.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) 
-            };
-        }
-        
-        const conversationArray = Object.values(uniqueConversations);
-        
-        if (conversationArray.length > 0) {
-            const ids = conversationArray.map(c => c.userId);
-            const { data: profiles } = await supabaseClient
-                .from('profiles')
-                .select('id, username, avatar_url')
-                .in('id', ids);
-            
-            container.innerHTML = conversationArray.map(conv => {
-                const p = profiles.find(x => x.id === conv.userId);
-                const name = p ? p.username : "Ami";
-                const avatarDisplay = p && p.avatar_url 
-                    ? `<img src="${p.avatar_url}" class="w-10 h-10 rounded-full object-cover">` 
-                    : `<div class="w-10 h-10 bg-purple-600 rounded-full flex items-center justify-center font-bold text-xs text-white">${name.substring(0, 2).toUpperCase()}</div>`;
-                
-                return `
-                <div onclick="openDirectChat('${conv.userId}', '${name.replace(/'/g, "\\'")}'))" class="p-3 hover:bg-white/5 rounded-2xl cursor-pointer flex items-center space-x-3 border-b border-white/5 transition-colors">
-                    <div class="relative">
-                        ${avatarDisplay}
-                        <div class="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 border-2 border-gray-900 rounded-full"></div>
+    // Grouper par utilisateur
+    const uniqueConversations = {};
+    for (const msg of messages) {
+        const otherUserId = msg.sender_id === currentUser.id ? msg.receiver_id : msg.sender_id;
+        if (!otherUserId || uniqueConversations[otherUserId]) continue;
+        uniqueConversations[otherUserId] = { userId: otherUserId, lastMessage: msg.content, time: new Date(msg.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) };
+    }
+    const conversationArray = Object.values(uniqueConversations);
+    
+    if(conversationArray.length > 0) {
+        const ids = conversationArray.map(c => c.userId);
+        const { data: profiles } = await supabaseClient.from('profiles').select('id, username, avatar_url').in('id', ids);
+        container.innerHTML = conversationArray.map(conv => {
+            const p = profiles.find(x => x.id === conv.userId);
+            const name = p ? p.username : "Ami";
+            const avatarDisplay = p && p.avatar_url ? `<img src="${p.avatar_url}" class="w-10 h-10 rounded-full object-cover">` : `<div class="w-10 h-10 bg-purple-600 rounded-full flex items-center justify-center font-bold text-xs text-white">${name.substring(0,2).toUpperCase()}</div>`;
+            return `
+            <div onclick="openDirectChat('${conv.userId}', '${name.replace(/'/g, "\\'")}')" class="p-3 hover:bg-white/5 rounded-2xl cursor-pointer flex items-center space-x-3 border-b border-white/5 transition-colors">
+                <div class="relative">
+                    ${avatarDisplay}
+                    <div class="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 border-2 border-gray-900 rounded-full"></div>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <div class="flex justify-between items-baseline mb-0.5">
+                        <h4 class="font-bold text-sm text-white truncate">${name}</h4>
+                        <span class="text-[10px] text-gray-500">${conv.time}</span>
                     </div>
-                    <div class="flex-1 min-w-0">
-                        <div class="flex justify-between items-baseline mb-0.5">
-                            <h4 class="font-bold text-sm text-white truncate">${name}</h4>
-                            <span class="text-[10px] text-gray-500">${conv.time}</span>
-                        </div>
-                        <p class="text-xs text-gray-400 truncate">${conv.lastMessage}</p>
-                    </div>
-                </div>`;
-            }).join('');
-        }
-    } catch (error) {
-        console.error("Erreur loadConversations:", error);
+                    <p class="text-xs text-gray-400 truncate">${conv.lastMessage}</p>
+                </div>
+            </div>`;
+        }).join('');
     }
 }
 
 function startChat(targetProfile) {
-    activeChatUser = targetProfile;
-    switchView('messages');
+    activeChatUser = targetProfile; switchView('messages');
     
-    const chatWithName = document.getElementById('chat-with-name');
-    if (chatWithName) chatWithName.innerHTML = targetProfile.username;
-    
+    document.getElementById('chat-with-name').innerHTML = `${targetProfile.username}`;
     const headerAvatar = document.getElementById('chat-header-avatar');
     const headerInitials = document.getElementById('chat-header-initials');
     
-    supabaseClient
-        .from('profiles')
-        .select('*')
-        .eq('id', targetProfile.id)
-        .single()
-        .then(({data}) => {
-            if (data && data.avatar_url) {
-                if (headerAvatar) {
-                    headerAvatar.src = data.avatar_url;
-                    headerAvatar.classList.remove('hidden');
-                }
-                if (headerInitials) headerInitials.classList.add('hidden');
-            } else {
-                if (headerAvatar) headerAvatar.classList.add('hidden');
-                if (headerInitials) {
-                    headerInitials.classList.remove('hidden');
-                    headerInitials.innerText = targetProfile.username.substring(0, 2).toUpperCase();
-                }
-            }
-        });
+    supabaseClient.from('profiles').select('*').eq('id', targetProfile.id).single().then(({data}) => {
+         if(data && data.avatar_url) {
+             headerAvatar.src = data.avatar_url;
+             headerAvatar.classList.remove('hidden');
+             headerInitials.classList.add('hidden');
+         } else {
+             headerAvatar.classList.add('hidden');
+             headerInitials.classList.remove('hidden');
+             headerInitials.innerText = targetProfile.username.substring(0,2).toUpperCase();
+         }
+    });
 
     const input = document.getElementById('chat-input');
-    if (input) {
-        input.disabled = false;
-        input.focus();
-    }
-    
-    fetchMessages();
+    if(input) { input.disabled = false; input.focus(); }
+    fetchMessages(); 
 }
 
 function resetChat() {
     activeChatUser = null;
-    
-    const chatWithName = document.getElementById('chat-with-name');
-    if (chatWithName) chatWithName.innerText = "Sélectionnez un ami";
-    
+    document.getElementById('chat-with-name').innerText = "Sélectionnez un ami";
     const container = document.getElementById('chat-history');
-    if (container) {
-        container.innerHTML = `<div class="flex flex-col items-center justify-center h-full text-gray-600 italic text-sm"><p>Cliquez sur une discussion</p></div>`;
-    }
-    
+    if(container) container.innerHTML = `<div class="flex flex-col items-center justify-center h-full text-gray-600 italic text-sm"><p>Cliquez sur une discussion</p></div>`;
     const input = document.getElementById('chat-input');
-    if (input) {
-        input.value = "";
-        input.disabled = true;
-        input.placeholder = "Sélectionnez un ami d'abord";
-    }
+    if(input) { input.value = ""; input.disabled = true; input.placeholder = "Sélectionnez un ami d'abord"; }
 }
 
 async function fetchMessages() {
     const container = document.getElementById('chat-history');
-    if (!container || !activeChatUser) return;
+    if(!container || !activeChatUser) return;
+    const { data } = await supabaseClient.from('messages').select('*').or(`and(sender_id.eq.${currentUser.id},receiver_id.eq.${activeChatUser.id}),and(sender_id.eq.${activeChatUser.id},receiver_id.eq.${currentUser.id})`).order('created_at', { ascending: true });
+    container.innerHTML = '';
     
-    try {
-        const { data } = await supabaseClient
-            .from('messages')
-            .select('*')
-            .or(`and(sender_id.eq.${currentUser.id},receiver_id.eq.${activeChatUser.id}),and(sender_id.eq.${activeChatUser.id},receiver_id.eq.${currentUser.id})`)
-            .order('created_at', { ascending: true });
+    if(data && data.length > 0) {
+        let lastSenderId = null;
         
-        container.innerHTML = '';
-        
-        if (data && data.length > 0) {
-            let lastSenderId = null;
+        data.forEach(msg => {
+            const isMe = msg.sender_id === currentUser.id;
+            const isSameSender = lastSenderId === msg.sender_id;
+            const time = new Date(msg.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
             
-            data.forEach(msg => {
-                const isMe = msg.sender_id === currentUser.id;
-                const isSameSender = lastSenderId === msg.sender_id;
-                const time = new Date(msg.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-                
-                const bubbleClass = isMe 
-                    ? 'bg-purple-600 text-white rounded-tr-sm' 
-                    : 'bg-gray-800 text-gray-200 rounded-tl-sm';
-                
-                const marginClass = isSameSender ? 'mt-1' : 'mt-4';
+            const bubbleClass = isMe 
+                ? 'bg-purple-600 text-white rounded-tr-sm' 
+                : 'bg-gray-800 text-gray-200 rounded-tl-sm';
+            
+            const marginClass = isSameSender ? 'mt-1' : 'mt-4';
 
-                container.insertAdjacentHTML('beforeend', `
-                    <div class="flex ${isMe ? 'justify-end' : 'justify-start'} ${marginClass} group">
-                        <div class="max-w-[75%]">
-                            <div class="${bubbleClass} px-4 py-2 rounded-2xl text-sm shadow-sm relative">
-                                ${msg.content}
-                                <span class="text-[9px] opacity-60 block text-right mt-1 w-full ${isMe ? 'text-purple-200' : 'text-gray-400'}">${time}</span>
-                            </div>
+            container.insertAdjacentHTML('beforeend', `
+                <div class="flex ${isMe ? 'justify-end' : 'justify-start'} ${marginClass} group">
+                    <div class="max-w-[75%]">
+                        <div class="${bubbleClass} px-4 py-2 rounded-2xl text-sm shadow-sm relative">
+                            ${msg.content}
+                            <span class="text-[9px] opacity-60 block text-right mt-1 w-full ${isMe ? 'text-purple-200' : 'text-gray-400'}">${time}</span>
                         </div>
                     </div>
-                `);
-                lastSenderId = msg.sender_id;
-            });
-            
-            container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
-        } else {
-            container.innerHTML = '<div class="text-center text-gray-600 text-xs mt-10 italic">Dites bonjour ! 👋</div>';
-        }
-    } catch (error) {
-        console.error("Erreur fetchMessages:", error);
-    }
+                </div>
+            `);
+            lastSenderId = msg.sender_id;
+        });
+        container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
+    } else { container.innerHTML = '<div class="text-center text-gray-600 text-xs mt-10 italic">Dites bonjour ! 👋</div>'; }
 }
 
 async function sendChatMessage() {
     const input = document.getElementById('chat-input');
-    
     if (!activeChatUser || !input || !input.value.trim()) return;
-    
-    try {
-        const { error } = await supabaseClient
-            .from('messages')
-            .insert([{ 
-                content: input.value, 
-                sender_id: currentUser.id, 
-                sender_email: currentUser.email, 
-                sender_name: userProfile.username, 
-                receiver_id: activeChatUser.id 
-            }]);
-        
-        if (!error) {
-            input.value = '';
-            fetchMessages();
-            loadConversations();
-        }
-    } catch (error) {
-        console.error("Erreur sendChatMessage:", error);
+    const { error } = await supabaseClient.from('messages').insert([{ content: input.value, sender_id: currentUser.id, sender_email: currentUser.email, sender_name: userProfile.username, receiver_id: activeChatUser.id }]);
+    if(!error) { input.value = ''; fetchMessages(); loadConversations(); }
+}
+
+// ==========================================
+// 8. GESTION DES POSTS (DESIGN PREMIUM)
+// ==========================================
+
+function handleImageSelect(input) {
+    if (input.files && input.files[0]) {
+        selectedImageFile = input.files[0];
+        const reader = new FileReader();
+        reader.onload = function(e) { document.getElementById('image-preview').src = e.target.result; document.getElementById('image-preview-container').classList.remove('hidden'); }
+        reader.readAsDataURL(input.files[0]);
     }
 }
 
-// ==========================================
-// FAITH CONNECT - PARTIE 3 : POSTS, STORIES, CANVAS
-// ==========================================
-
-// ==========================================
-// 12. GESTION DES POSTS (CORRIGÉ)
-// ==========================================
-function handleImageSelect(input) {
-    if (!input.files || !input.files[0]) return;
-    
-    selectedImageFile = input.files[0];
-    const reader = new FileReader();
-    
-    reader.onload = function(e) {
-        const preview = document.getElementById('image-preview');
-        const container = document.getElementById('image-preview-container');
-        
-        if (preview) preview.src = e.target.result;
-        if (container) container.classList.remove('hidden');
-    };
-    
-    reader.readAsDataURL(input.files[0]);
-}
-
-function removeImage() {
-    selectedImageFile = null;
-    
-    const fileInput = document.getElementById('post-image-file');
-    const container = document.getElementById('image-preview-container');
-    
-    if (fileInput) fileInput.value = "";
-    if (container) container.classList.add('hidden');
-}
+function removeImage() { selectedImageFile = null; document.getElementById('post-image-file').value = ""; document.getElementById('image-preview-container').classList.add('hidden'); }
 
 async function publishPost() {
     const input = document.getElementById('new-post-input');
     const btn = document.getElementById('btn-publish');
-    
-    if (!input || (!input.value.trim() && !selectedImageFile)) {
-        alert("⚠️ Le post est vide !");
-        return;
-    }
-    
-    if (btn) {
-        btn.innerHTML = '<div class="flex items-center gap-2"><div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div> Envoi...</div>';
-        btn.disabled = true;
-    }
-    
+    if (!input.value.trim() && !selectedImageFile) return alert("Le post est vide !");
+    btn.innerHTML = 'Envoi...'; btn.disabled = true;
     try {
         let imageUrl = null;
-        
         if (selectedImageFile) {
             const fileExt = selectedImageFile.name.split('.').pop();
             const fileName = `${currentUser.id}/${Date.now()}.${fileExt}`;
-            
-            const { error: uploadError } = await supabaseClient.storage
-                .from('post-images')
-                .upload(fileName, selectedImageFile);
-            
+            const { error: uploadError } = await supabaseClient.storage.from('post-images').upload(fileName, selectedImageFile);
             if (uploadError) throw uploadError;
-            
-            const { data } = supabaseClient.storage
-                .from('post-images')
-                .getPublicUrl(fileName);
-            
+            const { data } = supabaseClient.storage.from('post-images').getPublicUrl(fileName);
             imageUrl = data.publicUrl;
         }
-        
-        await supabaseClient.from('posts').insert([{ 
-            user_id: currentUser.id, 
-            content: input.value, 
-            user_name: userProfile.username, 
-            image_url: imageUrl, 
-            avatar_initials: userProfile.username.substring(0, 2).toUpperCase() 
-        }]);
-        
-        input.value = '';
-        removeImage();
-        fetchPosts();
-    } catch (error) {
-        console.error("Erreur publishPost:", error);
-        alert("❌ Erreur : " + error.message);
-    } finally {
-        if (btn) {
-            btn.innerHTML = 'Publier';
-            btn.disabled = false;
-        }
-    }
+        await supabaseClient.from('posts').insert([{ user_id: currentUser.id, content: input.value, user_name: userProfile.username, image_url: imageUrl, avatar_initials: userProfile.username.substring(0,2).toUpperCase() }]);
+        input.value = ''; removeImage(); fetchPosts();
+    } catch (error) { alert("Erreur : " + error.message); } finally { btn.innerHTML = 'Publier'; btn.disabled = false; }
 }
 
 async function fetchPosts() {
     const container = document.getElementById('posts-container');
-    if (!container) return;
-    
+    if(!container) return;
     try {
         const friendIds = await getFriendIds();
-        
-        const { data: posts, error: postError } = await supabaseClient
-            .from('posts')
-            .select('*, profiles:user_id(avatar_url)')
-            .in('user_id', friendIds)
-            .order('created_at', { ascending: false });
-        
+        const { data: posts, error: postError } = await supabaseClient.from('posts').select('*, profiles:user_id(avatar_url)').in('user_id', friendIds).order('created_at', { ascending: false });
         if (postError) throw postError;
-        
-        const { data: allLikes } = await supabaseClient
-            .from('likes')
-            .select('post_id, user_id');
+        const { data: allLikes } = await supabaseClient.from('likes').select('post_id, user_id');
         
         container.innerHTML = ''; 
-        
         if (!posts || posts.length === 0) {
             container.innerHTML = `<div class="text-center py-10 px-4 animate-view"><p class="text-gray-500 italic">Aucune publication... 🍃</p></div>`;
             return;
         }
-        
         posts.forEach(post => {
             const isMyPost = post.user_id === currentUser.id;
             const date = new Date(post.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
             const userAvatarUrl = post.profiles && post.profiles.avatar_url;
-            
-            const avatarHtml = userAvatarUrl 
-                ? `<img src="${userAvatarUrl}" class="w-9 h-9 rounded-full object-cover border-2 border-purple-500/20 shadow-lg">` 
-                : `<div class="w-9 h-9 bg-gradient-to-tr from-purple-600 to-blue-600 rounded-full flex items-center justify-center font-bold text-white text-[10px] shadow-lg">${post.avatar_initials || "??"}</div>`;
-            
+            const avatarHtml = userAvatarUrl ? `<img src="${userAvatarUrl}" class="w-9 h-9 rounded-full object-cover border-2 border-purple-500/20 shadow-lg">` : `<div class="w-9 h-9 bg-gradient-to-tr from-purple-600 to-blue-600 rounded-full flex items-center justify-center font-bold text-white text-[10px] shadow-lg">${post.avatar_initials || "??"}</div>`;
             const postLikes = allLikes ? allLikes.filter(l => l.post_id === post.id) : [];
             const isAmened = postLikes.some(l => l.user_id === currentUser.id);
             const amenColor = isAmened ? 'text-pink-500 font-bold' : 'text-gray-400 hover:text-pink-400';
             const amenIconClass = isAmened ? 'fill-pink-500 text-pink-500' : 'text-gray-400';
 
+            // DESIGN PREMIUM (NEON & GLOW)
             container.insertAdjacentHTML('beforeend', `
                 <div class="premium-card rounded-2xl p-4 mb-5 animate-view" id="post-${post.id}">
                     <div class="flex justify-between items-start mb-3">
-                        <div class="flex items-center space-x-3">
-                            ${avatarHtml}
-                            <div>
-                                <h3 class="font-bold text-white text-sm tracking-wide">${post.user_name}</h3>
-                                <p class="text-[10px] text-gray-500">${date}</p>
-                            </div>
-                        </div>
+                        <div class="flex items-center space-x-3">${avatarHtml}<div><h3 class="font-bold text-white text-sm tracking-wide">${post.user_name}</h3><p class="text-[10px] text-gray-500">${date}</p></div></div>
                         ${isMyPost ? `<button onclick="deletePost('${post.id}')" class="text-gray-600 hover:text-red-500 transition-colors"><i data-lucide="trash-2" class="w-4 h-4"></i></button>` : ''}
                     </div>
                     <p class="text-gray-200 text-sm leading-relaxed whitespace-pre-wrap font-light">${post.content}</p>
                     ${post.image_url ? `<div class="mt-3 rounded-xl overflow-hidden border border-white/5 shadow-2xl"><img src="${post.image_url}" class="w-full max-h-96 object-cover"></div>` : ''}
                     <div class="border-t border-white/5 mt-4 pt-3 flex justify-between text-gray-400">
                         <div class="flex gap-5">
-                            <button onclick="toggleAmen('${post.id}')" class="${amenColor} flex items-center gap-1.5 text-xs transition-colors">
-                                <i data-lucide="heart" class="w-4 h-4 ${amenIconClass}"></i> 
-                                ${postLikes.length > 0 ? postLikes.length : ''} Amen
-                            </button>
-                            <button onclick="toggleComments('${post.id}')" class="hover:text-purple-400 flex items-center gap-1.5 text-xs transition-colors">
-                                <i data-lucide="message-square" class="w-4 h-4"></i> Commenter
-                            </button>
+                            <button onclick="toggleAmen('${post.id}')" class="${amenColor} flex items-center gap-1.5 text-xs transition-colors"><i data-lucide="heart" class="w-4 h-4 ${amenIconClass}"></i> ${postLikes.length > 0 ? postLikes.length : ''} Amen</button>
+                            <button onclick="toggleComments('${post.id}')" class="hover:text-purple-400 flex items-center gap-1.5 text-xs transition-colors"><i data-lucide="message-square" class="w-4 h-4"></i> Commenter</button>
                         </div>
                     </div>
                     <div id="comments-section-${post.id}" class="hidden mt-3 pt-3 bg-black/40 rounded-lg p-3 border border-white/5">
@@ -1386,416 +726,430 @@ async function fetchPosts() {
                     </div>
                 </div>`);
         });
-        
-        if (typeof lucide !== 'undefined') lucide.createIcons();
-    } catch (err) {
-        console.error("Erreur fetchPosts:", err);
-    }
+        if(typeof lucide !== 'undefined') lucide.createIcons();
+    } catch (err) { console.error("Erreur fetchPosts:", err); }
 }
 
 async function deletePost(id) {
-    if (!confirm("Supprimer ce post ?")) return;
-    
+    if(!confirm("Supprimer ce post ?")) return;
     try {
-        const { data: post } = await supabaseClient
-            .from('posts')
-            .select('image_url')
-            .eq('id', id)
-            .single();
-        
+        const { data: post } = await supabaseClient.from('posts').select('image_url').eq('id', id).single();
         if (post && post.image_url) {
             const fileName = post.image_url.split('/').pop();
-            await supabaseClient.storage
-                .from('post-images')
-                .remove([`${currentUser.id}/${fileName}`]);
+            await supabaseClient.storage.from('post-images').remove([`${currentUser.id}/${fileName}`]);
         }
-        
-        const { error } = await supabaseClient
-            .from('posts')
-            .delete()
-            .eq('id', id)
-            .eq('user_id', currentUser.id);
-        
-        if (!error) {
-            const postEl = document.getElementById(`post-${id}`);
-            if (postEl) postEl.remove();
-        } else {
-            throw error;
-        }
+        const { error } = await supabaseClient.from('posts').delete().eq('id', id).eq('user_id', currentUser.id);
+        if(!error) { 
+            document.getElementById(`post-${id}`).remove(); 
+        } else { throw error; }
     } catch (e) {
-        console.error("Erreur deletePost:", e);
-        alert("❌ Erreur suppression : " + e.message);
+        alert("Erreur suppression : " + e.message);
     }
 }
 
 async function toggleAmen(postId) {
-    try {
-        const { data } = await supabaseClient
-            .from('likes')
-            .select('*')
-            .match({ post_id: postId, user_id: currentUser.id });
-        
-        if (data && data.length > 0) {
-            await supabaseClient
-                .from('likes')
-                .delete()
-                .match({ post_id: postId, user_id: currentUser.id });
-        } else {
-            await supabaseClient
-                .from('likes')
-                .insert({ post_id: postId, user_id: currentUser.id });
-        }
-        
-        fetchPosts();
-    } catch (error) {
-        console.error("Erreur toggleAmen:", error);
-    }
+    const { data } = await supabaseClient.from('likes').select('*').match({ post_id: postId, user_id: currentUser.id });
+    if (data && data.length > 0) { await supabaseClient.from('likes').delete().match({ post_id: postId, user_id: currentUser.id }); } 
+    else { await supabaseClient.from('likes').insert({ post_id: postId, user_id: currentUser.id }); }
+    fetchPosts();
 }
 
 async function toggleComments(postId) {
     const section = document.getElementById(`comments-section-${postId}`);
     const list = document.getElementById(`comments-list-${postId}`);
-    
-    if (!section) return;
-    
     section.classList.toggle('hidden');
-    
-    if (!section.classList.contains('hidden') && list) {
-        try {
-            const { data: comments } = await supabaseClient
-                .from('comments')
-                .select('*')
-                .eq('post_id', postId)
-                .order('created_at', { ascending: true });
-            
-            list.innerHTML = (comments && comments.length > 0) 
-                ? comments.map(c => `<div class="text-[11px] text-gray-300"><span class="font-bold text-purple-400">${c.user_name}:</span> ${c.content}</div>`).join('') 
-                : '<div class="text-[10px] text-gray-500 italic">Soyez le premier à commenter !</div>';
-        } catch (error) {
-            console.error("Erreur toggleComments:", error);
-        }
+    if (!section.classList.contains('hidden')) {
+        const { data: comments } = await supabaseClient.from('comments').select('*').eq('post_id', postId).order('created_at', { ascending: true });
+        list.innerHTML = (comments && comments.length > 0) ? comments.map(c => `<div class="text-[11px] text-gray-300"><span class="font-bold text-purple-400">${c.user_name}:</span> ${c.content}</div>`).join('') : '<div class="text-[10px] text-gray-500 italic">Soyez le premier à commenter !</div>';
     }
 }
 
 async function sendComment(postId) {
     const input = document.getElementById(`input-comment-${postId}`);
-    if (!input) return;
-    
-    const content = input.value.trim();
-    if (!content) return;
-    
-    try {
-        const { error } = await supabaseClient
-            .from('comments')
-            .insert([{ 
-                post_id: postId, 
-                user_id: currentUser.id, 
-                user_name: userProfile.username, 
-                content: content 
-            }]);
-        
-        if (!error) {
-            input.value = '';
-            const section = document.getElementById(`comments-section-${postId}`);
-            if (section) section.classList.add('hidden');
-            toggleComments(postId);
-        } else {
-            throw error;
-        }
-    } catch (error) {
-        console.error("Erreur sendComment:", error);
-        alert("❌ Erreur : " + error.message);
-    }
+    const content = input.value.trim(); if(!content) return;
+    const { error } = await supabaseClient.from('comments').insert([{ post_id: postId, user_id: currentUser.id, user_name: userProfile.username, content: content }]);
+    if(!error) { input.value = ''; const section = document.getElementById(`comments-section-${postId}`); section.classList.add('hidden'); toggleComments(postId); } 
+    else { alert("Erreur : " + error.message); }
 }
 
 // ==========================================
-// 13. GESTION DES STORIES (CORRIGÉ)
+// 9. ENTRAIDE & ÉVÉNEMENTS & NOTIFS
 // ==========================================
-function triggerAddStory() {
-    const input = document.getElementById('btn-add-story-input');
-    if (input) input.click();
+
+async function fetchHelpRequests() {
+    const container = document.getElementById('help-list');
+    if(!container) return;
+    const { data: requests } = await supabaseClient.from('help_requests').select('*').order('created_at', { ascending: false }).limit(3);
+    if(requests && requests.length > 0) {
+        container.innerHTML = requests.map(req => `
+            <div class="bg-gray-900/50 p-3 rounded-xl border border-white/5 flex gap-3 items-center">
+                <div class="bg-blue-900/30 p-2.5 rounded-full h-fit flex-shrink-0"><i data-lucide="hand-heart" class="w-4 h-4 text-blue-400"></i></div>
+                <div class="flex-1">
+                    <h4 class="text-xs font-bold text-white">${req.title}</h4>
+                    <p class="text-[10px] text-gray-400 mt-0.5">${req.description} - <span class="text-blue-300">@${req.user_name}</span></p>
+                </div>
+                ${req.user_id !== currentUser.id ? `<button onclick="openDirectChat('${req.user_id}', '${req.user_name}')" class="p-2 bg-blue-600/20 rounded-lg text-blue-400 hover:bg-blue-600/30"><i data-lucide="message-circle" class="w-4 h-4"></i></button>` : ''}
+            </div>
+        `).join('');
+    } else { container.innerHTML = '<div class="text-center text-[10px] text-gray-500 py-2">Aucune demande.</div>'; }
+    if(typeof lucide !== 'undefined') lucide.createIcons();
 }
+
+async function askForHelp() {
+    const title = prompt("Titre de votre demande (ex: Déménagement)");
+    if(!title) return;
+    const desc = prompt("Description courte");
+    await supabaseClient.from('help_requests').insert([{ user_id: currentUser.id, user_name: userProfile.username, title: title, description: desc || "" }]);
+    fetchHelpRequests();
+}
+
+async function fetchEvents() {
+    const events = [
+        { id: 1, title: "Soirée Louange", date: "12 FÉV", location: "Église Centrale", icon: "music", color: "purple" },
+        { id: 2, title: "Maraude", date: "15 FÉV", location: "Gare du Nord", icon: "heart", color: "pink" },
+        { id: 3, title: "Étude Biblique", date: "20 FÉV", location: "En ligne", icon: "video", color: "blue" }
+    ];
+    const container = document.getElementById('events-list');
+    if(!container) return;
+    
+    container.innerHTML = events.map(evt => `
+        <div class="min-w-[150px] bg-gray-800 rounded-2xl p-3 border border-white/5 relative overflow-hidden group shrink-0">
+            <div class="absolute top-0 right-0 p-2 bg-${evt.color}-600 rounded-bl-xl text-[10px] font-bold text-white shadow-lg">${evt.date}</div>
+            <div class="mt-7">
+                <h4 class="font-bold text-white text-sm leading-tight">${evt.title}</h4>
+                <p class="text-[10px] text-gray-400 mt-1 flex items-center gap-1"><i data-lucide="${evt.icon}" class="w-3 h-3"></i> ${evt.location}</p>
+                <button onclick="alert('Inscrit !')" class="mt-3 w-full py-1.5 bg-white/5 hover:bg-${evt.color}-600/20 rounded-lg text-[10px] text-${evt.color}-300 font-bold transition-colors border border-white/5">Participer</button>
+            </div>
+        </div>
+    `).join('');
+    if(typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+async function fetchPrayers() {
+    const container = document.getElementById('prayers-list'); if(!container) return;
+    const { data: prayers } = await supabaseClient.from('prayers').select('*').order('created_at', { ascending: false });
+    container.innerHTML = (prayers && prayers.length > 0) ? prayers.map(p => `<div class="bg-gray-900/60 p-3 rounded-xl border border-pink-500/10 flex justify-between items-center mb-2"><div class="flex-1"><p class="text-[10px] font-bold text-pink-400 mb-0.5">${p.user_name}</p><p class="text-xs italic">"${p.content}"</p></div><button onclick="prayFor('${p.id}', ${p.count})" class="ml-3 flex flex-col items-center"><div class="bg-gray-800 p-2 rounded-full border border-gray-600 hover:border-pink-500 transition-all text-sm">🙏</div><span class="text-[9px] font-bold mt-1">${p.count}</span></button></div>`).join('') : '<div class="text-center text-[10px] text-gray-500 py-4 italic">Soyez le premier ! 🙏</div>';
+}
+
+async function addPrayer() {
+    const input = document.getElementById('prayer-input'); if (!input || !input.value.trim()) return;
+    await supabaseClient.from('prayers').insert([{ user_id: currentUser.id, user_name: userProfile.username, content: input.value, count: 0 }]);
+    input.value = ''; fetchPrayers();
+}
+
+async function prayFor(id, current) { await supabaseClient.from('prayers').update({ count: (current || 0) + 1 }).eq('id', id); fetchPrayers(); }
+
+function subscribeToRealtime() {
+    supabaseClient.channel('global-updates').on('postgres_changes', { event: '*', schema: 'public' }, async (payload) => {
+        if (payload.table === 'messages') { fetchMessages(); loadConversations(); }
+        if (payload.table === 'posts') fetchPosts();
+        if (payload.table === 'friendships') { fetchNotifications(); updateFriendCount(currentUser.id); }
+        if (payload.table === 'likes' && payload.eventType === 'INSERT') {
+            const { data: post } = await supabaseClient.from('posts').select('user_id').eq('id', payload.new.post_id).single();
+            if (post && post.user_id === currentUser.id && payload.new.user_id !== currentUser.id) {
+                showNotification("Bénédiction", "Quelqu'un a dit Amen à votre publication ! ✨");
+            }
+            fetchPosts(); 
+        }
+    }).subscribe();
+}
+
+async function updateFriendCount(userId) {
+    const { count: c1 } = await supabaseClient.from('friendships').select('*', { count: 'exact', head: true }).eq('requester_id', userId).eq('status', 'accepted');
+    const { count: c2 } = await supabaseClient.from('friendships').select('*', { count: 'exact', head: true }).eq('receiver_id', userId).eq('status', 'accepted');
+    const el = document.getElementById('stats-friends-count'); if(el) el.innerText = (c1 || 0) + (c2 || 0);
+}
+
+function showNotification(senderName, message) {
+    const container = document.getElementById('notification-container');
+    const audio = document.getElementById('notif-sound');
+    if(audio) audio.play().catch(() => {});
+    const notif = document.createElement('div');
+    notif.className = "bg-gray-800 border-l-4 border-purple-500 text-white p-3 rounded-xl shadow-2xl mb-2 animate-fade-in";
+    notif.innerHTML = `<h4 class="font-bold text-xs text-purple-400">${senderName}</h4><p class="text-xs text-gray-300 truncate">${message}</p>`;
+    container.appendChild(notif); 
+    setTimeout(() => notif.remove(), 4000);
+}
+
+async function fetchNotifications() {
+    const badge = document.getElementById('notif-badge');
+    const list = document.getElementById('notif-list');
+    const { data: requests } = await supabaseClient.from('friendships').select('*').eq('receiver_id', currentUser.id).eq('status', 'pending');
+    if (requests && requests.length > 0) {
+        badge.classList.remove('hidden');
+        const ids = requests.map(r => r.requester_id);
+        const { data: profiles } = await supabaseClient.from('profiles').select('id, username').in('id', ids);
+        if(list) list.innerHTML = requests.map(req => {
+            const p = profiles.find(x => x.id === req.requester_id);
+            return `<div class="p-3 border-b border-white/5 flex items-center justify-between"><span class="text-xs font-bold text-white">${p ? p.username : 'Ami'}</span><div class="flex gap-2"><button onclick="handleFriendRequest('${req.id}', true)" class="text-green-400"><i data-lucide="check" class="w-4 h-4"></i></button></div></div>`;
+        }).join('');
+        if(typeof lucide !== 'undefined') lucide.createIcons();
+    } else { badge.classList.add('hidden'); if(list) list.innerHTML = '<div class="p-4 text-center text-xs text-gray-500">🍃</div>'; }
+}
+
+async function handleFriendRequest(id, accepted) {
+    if (accepted) await supabaseClient.from('friendships').update({ status: 'accepted' }).eq('id', id);
+    else await supabaseClient.from('friendships').delete().eq('id', id);
+    fetchNotifications(); updateFriendCount(currentUser.id); switchProfileTab('requests');
+}
+
+async function addFriend(targetId) {
+    const { error } = await supabaseClient.from('friendships').insert([{ requester_id: currentUser.id, receiver_id: targetId, status: 'pending' }]);
+    if (!error) alert("Demande envoyée !");
+}
+
+function toggleNotifDropdown() { document.getElementById('notif-dropdown').classList.toggle('hidden'); }
+
+// ==========================================
+// 12. GESTION DES STORIES
+// ==========================================
+
+function triggerAddStory() { document.getElementById('btn-add-story-input').click(); }
 
 async function uploadStory(input) {
     if (!input.files || !input.files[0]) return;
-    
     try {
-        const file = input.files[0];
-        const fileName = `${currentUser.id}/${Date.now()}`;
-        
-        const { error: uploadError } = await supabaseClient.storage
-            .from('story-images')
-            .upload(fileName, file);
-        
+        const file = input.files[0]; const fileName = `${currentUser.id}/${Date.now()}`;
+        const { error: uploadError } = await supabaseClient.storage.from('story-images').upload(fileName, file);
         if (uploadError) throw uploadError;
-        
-        const { data } = supabaseClient.storage
-            .from('story-images')
-            .getPublicUrl(fileName);
-        
-        await supabaseClient
-            .from('stories')
-            .insert([{ 
-                user_id: currentUser.id, 
-                image_url: data.publicUrl 
-            }]);
-        
+        const { data } = supabaseClient.storage.from('story-images').getPublicUrl(fileName);
+        await supabaseClient.from('stories').insert([{ user_id: currentUser.id, image_url: data.publicUrl }]);
         renderStoriesList();
-    } catch (error) {
-        console.error("Erreur uploadStory:", error);
-        alert("❌ Erreur : " + error.message);
-    }
+    } catch (error) { alert("Erreur : " + error.message); }
 }
 
 async function renderStoriesList() {
-    const container = document.getElementById('stories-container');
-    if (!container) return;
-    
-    try {
-        const yesterday = new Date();
-        yesterday.setHours(yesterday.getHours() - 24);
-        
-        const { data: stories } = await supabaseClient
-            .from('stories')
-            .select('*, profiles(username, avatar_url)')
-            .gt('created_at', yesterday.toISOString())
-            .order('created_at', { ascending: false });
-        
-        let html = `
-        <div onclick="triggerAddStory()" class="flex flex-col items-center space-y-1 cursor-pointer shrink-0">
-            <div class="w-14 h-14 rounded-full bg-gray-800 border-2 border-dashed border-gray-600 flex items-center justify-center relative">
-                <i data-lucide="plus" class="w-5 h-5 text-gray-400"></i>
-            </div>
-            <span class="text-[9px] text-gray-300">Ma Story</span>
-        </div>`;
-        
-        if (stories) {
-            stories.forEach(s => {
-                if (!s.profiles) return;
-                
-                const storyData = encodeURIComponent(JSON.stringify(s));
-                const avatarContent = s.profiles.avatar_url 
-                    ? `<img src="${s.profiles.avatar_url}" class="w-full h-full object-cover rounded-full">` 
-                    : `<div class="w-full h-full rounded-full bg-gray-700 flex items-center justify-center font-bold text-white text-[10px]">${s.profiles.username[0].toUpperCase()}</div>`;
-                
-                html += `
-                <div onclick="openStoryViewer('${storyData}')" class="flex flex-col items-center space-y-1 cursor-pointer shrink-0">
-                    <div class="w-14 h-14 rounded-full bg-gradient-to-tr from-pink-500 to-purple-600 p-[2px]">
-                        <div class="w-full h-full rounded-full bg-gray-900 border-2 border-gray-900 overflow-hidden">
-                            ${avatarContent}
-                        </div>
-                    </div>
-                    <span class="text-[9px] text-gray-300 truncate w-14 text-center">${s.profiles.username}</span>
-                </div>`;
-            });
-        }
-        
-        container.innerHTML = html;
-        if (typeof lucide !== 'undefined') lucide.createIcons();
-    } catch (error) {
-        console.error("Erreur renderStoriesList:", error);
-    }
+    const container = document.getElementById('stories-container'); if (!container) return;
+    const yesterday = new Date(); yesterday.setHours(yesterday.getHours() - 24);
+    const { data: stories } = await supabaseClient.from('stories').select('*, profiles(username, avatar_url)').gt('created_at', yesterday.toISOString()).order('created_at', { ascending: false });
+    let html = `<div onclick="triggerAddStory()" class="flex flex-col items-center space-y-1 cursor-pointer shrink-0"><div class="w-14 h-14 rounded-full bg-gray-800 border-2 border-dashed border-gray-600 flex items-center justify-center relative"><i data-lucide="plus" class="w-5 h-5 text-gray-400"></i></div><span class="text-[9px] text-gray-300">Ma Story</span></div>`;
+    if (stories) stories.forEach(s => {
+        if (!s.profiles) return;
+        const storyData = encodeURIComponent(JSON.stringify(s));
+        const avatarContent = s.profiles.avatar_url ? `<img src="${s.profiles.avatar_url}" class="w-full h-full object-cover rounded-full">` : `<div class="w-full h-full rounded-full bg-gray-700 flex items-center justify-center font-bold text-white text-[10px]">${s.profiles.username[0].toUpperCase()}</div>`;
+        html += `<div onclick="openStoryViewer('${storyData}')" class="flex flex-col items-center space-y-1 cursor-pointer shrink-0"><div class="w-14 h-14 rounded-full bg-gradient-to-tr from-pink-500 to-purple-600 p-[2px]"><div class="w-full h-full rounded-full bg-gray-900 border-2 border-gray-900 overflow-hidden">${avatarContent}</div></div><span class="text-[9px] text-gray-300 truncate w-14 text-center">${s.profiles.username}</span></div>`;
+    });
+    container.innerHTML = html; if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
+let currentStoryTimer = null;
 function openStoryViewer(storyDataEncoded) {
-    try {
-        const story = JSON.parse(decodeURIComponent(storyDataEncoded));
-        const viewer = document.getElementById('story-viewer');
-        
-        if (!viewer) return;
-        
-        const imageEl = document.getElementById('story-viewer-image');
-        const nameEl = document.getElementById('story-viewer-name');
-        const avatarEl = document.getElementById('story-viewer-avatar');
-        const deleteBtnContainer = document.getElementById('story-delete-btn-container');
-        
-        if (imageEl) imageEl.src = story.image_url;
-        if (nameEl) nameEl.innerText = story.profiles.username;
-        
-        if (avatarEl) {
-            if (story.profiles.avatar_url) {
-                avatarEl.src = story.profiles.avatar_url;
-            } else {
-                avatarEl.src = `https://ui-avatars.com/api/?name=${story.profiles.username}`;
-            }
-        }
-        
-        if (deleteBtnContainer) {
-            deleteBtnContainer.innerHTML = (story.user_id === currentUser.id) 
-                ? `<button onclick="deleteStory('${story.id}')" class="bg-red-500/20 text-red-400 px-4 py-2 rounded-full text-xs font-bold border border-red-500/50">Supprimer</button>` 
-                : "";
-        }
-        
-        viewer.classList.remove('hidden');
-        
-        const progress = document.getElementById('story-progress');
-        if (progress) {
-            progress.style.transition = 'none';
-            progress.style.width = '0%';
-            setTimeout(() => {
-                progress.style.transition = 'width 5s linear';
-                progress.style.width = '100%';
-            }, 10);
-        }
-        
-        if (currentStoryTimer) {
-            clearTimeout(currentStoryTimer);
-        }
-        
-        currentStoryTimer = setTimeout(() => closeStoryViewer(), 5000);
-    } catch (error) {
-        console.error("Erreur openStoryViewer:", error);
-    }
-}
-
-function closeStoryViewer() {
+    const story = JSON.parse(decodeURIComponent(storyDataEncoded));
     const viewer = document.getElementById('story-viewer');
-    if (viewer) viewer.classList.add('hidden');
-    
-    if (currentStoryTimer) {
-        clearTimeout(currentStoryTimer);
-        currentStoryTimer = null;
-    }
+    document.getElementById('story-viewer-image').src = story.image_url;
+    document.getElementById('story-viewer-name').innerText = story.profiles.username;
+    const avatarEl = document.getElementById('story-viewer-avatar');
+    if (story.profiles.avatar_url) avatarEl.src = story.profiles.avatar_url; else avatarEl.src = "https://ui-avatars.com/api/?name=" + story.profiles.username;
+    document.getElementById('story-delete-btn-container').innerHTML = (story.user_id === currentUser.id) ? `<button onclick="deleteStory('${story.id}')" class="bg-red-500/20 text-red-400 px-4 py-2 rounded-full text-xs font-bold border border-red-500/50">Supprimer</button>` : "";
+    viewer.classList.remove('hidden');
+    const progress = document.getElementById('story-progress');
+    progress.style.transition = 'none'; progress.style.width = '0%';
+    setTimeout(() => { progress.style.transition = 'width 5s linear'; progress.style.width = '100%'; }, 10);
+    if (currentStoryTimer) clearTimeout(currentStoryTimer);
+    currentStoryTimer = setTimeout(() => closeStoryViewer(), 5000);
 }
 
-async function deleteStory(id) {
-    if (!confirm("Supprimer cette story ?")) return;
-    
-    try {
-        await supabaseClient
-            .from('stories')
-            .delete()
-            .eq('id', id);
-        
-        closeStoryViewer();
-        renderStoriesList();
-    } catch (error) {
-        console.error("Erreur deleteStory:", error);
+function closeStoryViewer() { document.getElementById('story-viewer').classList.add('hidden'); if (currentStoryTimer) clearTimeout(currentStoryTimer); }
+async function deleteStory(id) { if (confirm("Supprimer ?")) { await supabaseClient.from('stories').delete().eq('id', id); closeStoryViewer(); renderStoriesList(); } }
+
+
+// ==========================================
+// 13. NOUVEAU : CRÉATEUR DE VERSETS (CANVAS)
+// ==========================================
+
+// --- VARIABLES GLOBALES CANVAS ---
+let currentTextAlign = 'center';
+let currentBgType = 'color'; 
+let currentBgValue = '#1f2937'; 
+let uploadedBgImage = null;
+// Initialisation au chargement
+document.addEventListener('DOMContentLoaded', () => {
+    canvas = document.getElementById('verse-canvas');
+    if(canvas) {
+        ctx = canvas.getContext('2d');
+        // On dessine une première fois au démarrage
+        setTimeout(drawCanvas, 500); 
     }
-}
+});
 
-// ==========================================
-// FAITH CONNECT - PARTIE 4 FINALE
-// ==========================================
-
-// ==========================================
-// 14. CANVAS (CRÉATION DE VERSETS) - CORRIGÉ
-// ==========================================
+// --- GESTION DU MODAL ---
 function openVerseEditor() {
-    const modal = document.getElementById('verse-editor-modal');
-    if (modal) {
-        modal.classList.remove('hidden');
-        drawCanvas();
-    }
+    document.getElementById('verse-editor-modal').classList.remove('hidden');
+    drawCanvas(); // Redessiner à l'ouverture
 }
-
 function closeVerseEditor() {
-    const modal = document.getElementById('verse-editor-modal');
-    if (modal) modal.classList.add('hidden');
+    document.getElementById('verse-editor-modal').classList.add('hidden');
 }
 
+
+
+// --- GESTION DE L'IMAGE DE FOND ---
 function setBackground(type, value) {
     currentBgType = type;
     currentBgValue = value;
-    uploadedBgImage = null;
+    uploadedBgImage = null; // Reset si on choisit une couleur
     drawCanvas();
 }
 
 function handleBgUpload(input) {
-    if (!input.files || !input.files[0]) return;
-    
-    const reader = new FileReader();
-    reader.onload = function(e) {
-        uploadedBgImage = new Image();
-        uploadedBgImage.onload = function() {
-            currentBgType = 'image';
-            drawCanvas();
-        };
-        uploadedBgImage.src = e.target.result;
-    };
-    reader.readAsDataURL(input.files[0]);
-}
-
-function drawCanvas() {
-    // Debounce pour éviter trop de redessins
-    if (drawCanvasTimer) {
-        clearTimeout(drawCanvasTimer);
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            uploadedBgImage = new Image();
+            uploadedBgImage.onload = function() {
+                currentBgType = 'image';
+                drawCanvas();
+            };
+            uploadedBgImage.src = e.target.result;
+        }
+        reader.readAsDataURL(input.files[0]);
     }
-    
-    drawCanvasTimer = setTimeout(() => {
-        drawCanvasImmediate();
-    }, 100);
 }
 
-function drawCanvasImmediate() {
-    if (!canvas || !ctx) return;
+// --- FONCTION PRINCIPALE : DESSINER SUR LE CANVAS ---
+function drawCanvas() {
+    if(!canvas || !ctx) return;
 
-    // Récupération des valeurs
-    const text = document.getElementById('verse-text-input')?.value || "Votre verset ici...";
-    const color = document.getElementById('text-color-picker')?.value || '#ffffff';
-    const fontSize = parseInt(document.getElementById('font-size-picker')?.value || '40');
-    const fontFamily = document.getElementById('font-family-picker')?.value || 'sans-serif';
-    const lineHeightMultiplier = parseFloat(document.getElementById('line-height-slider')?.value || '1.2');
-    const strokeColor = document.getElementById('stroke-color-picker')?.value || '#000000';
-    const strokeWidth = parseFloat(document.getElementById('stroke-width-slider')?.value || '0');
-    const overlayOpacity = document.getElementById('overlay-slider')?.value || '0.5';
-    const blurAmount = document.getElementById('blur-slider')?.value || '0';
-    const grayscaleAmount = document.getElementById('grayscale-slider')?.value || '0';
-
-    // Nettoyage
+    // 1. Nettoyer le canvas
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // Application des filtres sur le fond
-    ctx.filter = `blur(${blurAmount}px) grayscale(${grayscaleAmount}%)`;
-
-    // Dessin du fond
+    // 2. Dessiner le fond
     if (currentBgType === 'color') {
         ctx.fillStyle = currentBgValue;
         ctx.fillRect(0, 0, canvas.width, canvas.height);
     } else if (currentBgType === 'image' && uploadedBgImage) {
-        const scale = Math.max(
-            canvas.width / uploadedBgImage.width,
-            canvas.height / uploadedBgImage.height
-        );
-        const x = (canvas.width / 2) - (uploadedBgImage.width / 2) * scale;
-        const y = (canvas.height / 2) - (uploadedBgImage.height / 2) * scale;
-        ctx.drawImage(
-            uploadedBgImage,
-            x, y,
-            uploadedBgImage.width * scale,
-            uploadedBgImage.height * scale
-        );
+        // Dessiner l'image en mode "cover" (remplit tout sans déformer)
+        const ratio = Math.max(canvas.width / uploadedBgImage.width, canvas.height / uploadedBgImage.height);
+        const centerShift_x = (canvas.width - uploadedBgImage.width * ratio) / 2;
+        const centerShift_y = (canvas.height - uploadedBgImage.height * ratio) / 2;
+        ctx.drawImage(uploadedBgImage, 0, 0, uploadedBgImage.width, uploadedBgImage.height,
+                      centerShift_x, centerShift_y, uploadedBgImage.width * ratio, uploadedBgImage.height * ratio);
+        
+        // Ajouter un filtre sombre par dessus l'image pour lisibilité
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
     }
 
-    // Reset filtres
+    // 3. Configurer le texte
+    const text = document.getElementById('verse-text-input').value || "Votre verset ici...";
+    const textColor = document.getElementById('text-color-picker').value;
+    const fontSize = document.getElementById('font-size-picker').value;
+    
+    ctx.fillStyle = textColor;
+    ctx.font = `bold ${fontSize}px sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+
+    // 4. Dessiner le texte (avec retour à la ligne automatique)
+    const x = canvas.width / 2;
+    const y = canvas.height / 2;
+    const maxWidth = canvas.width - 60; // Marges de 30px
+    const lineHeight = fontSize * 1.2;
+
+    wrapText(ctx, text, x, y, maxWidth, lineHeight);
+    
+    // 5. Petit filigrane de l'app en bas
+    ctx.font = 'italic 20px sans-serif';
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+    ctx.fillText("Faith Connect", canvas.width / 2, canvas.height - 30);
+}
+
+// Fonction utilitaire pour gérer les retours à la ligne sur Canvas
+function wrapText(context, text, x, y, maxWidth, lineHeight) {
+    const words = text.split(' ');
+    let line = '';
+    let lines = [];
+
+    for(let n = 0; n < words.length; n++) {
+      const testLine = line + words[n] + ' ';
+      const metrics = context.measureText(testLine);
+      const testWidth = metrics.width;
+      if (testWidth > maxWidth && n > 0) {
+        lines.push(line);
+        line = words[n] + ' ';
+      } else {
+        line = testLine;
+      }
+    }
+    lines.push(line);
+
+    // Calculer la hauteur totale pour centrer verticalement
+    let startY = y - ((lines.length - 1) * lineHeight) / 2;
+
+    for(let k = 0; k < lines.length; k++) {
+        context.fillText(lines[k], x, startY + (k * lineHeight));
+    }
+}
+
+// --- NOUVELLE FONCTION DRAWCANVAS "STYLE CANVA" ---
+function drawCanvas() {
+    const canvas = document.getElementById('verse-canvas');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    
+    // --- 1. RÉCUPÉRATION DE TOUTES LES VALEURS DES INPUTS ---
+    const text = document.getElementById('verse-text-input').value;
+    // Texte Basic
+    const color = document.getElementById('text-color-picker').value;
+    const fontSize = parseInt(document.getElementById('font-size-picker').value);
+    const fontFamily = document.getElementById('font-family-picker').value;
+    const lineHeightMultiplier = parseFloat(document.getElementById('line-height-slider').value);
+    // Texte Effets
+    const strokeColor = document.getElementById('stroke-color-picker').value;
+    const strokeWidth = parseFloat(document.getElementById('stroke-width-slider').value);
+    // Fond Filtres
+    const overlayOpacity = document.getElementById('overlay-slider').value;
+    const blurAmount = document.getElementById('blur-slider').value;
+    const grayscaleAmount = document.getElementById('grayscale-slider').value;
+
+
+    // --- 2. DESSIN DU FOND AVEC FILTRES ---
+    ctx.clearRect(0, 0, canvas.width, canvas.height); // Nettoyage
+
+    // Application des filtres CSS sur le contexte avant de dessiner l'image
+    ctx.filter = `blur(${blurAmount}px) grayscale(${grayscaleAmount}%)`;
+
+    if (currentBgType === 'color') {
+        ctx.fillStyle = currentBgValue;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+    } else if (currentBgType === 'image' && uploadedBgImage) {
+        const scale = Math.max(canvas.width / uploadedBgImage.width, canvas.height / uploadedBgImage.height);
+        const x = (canvas.width / 2) - (uploadedBgImage.width / 2) * scale;
+        const y = (canvas.height / 2) - (uploadedBgImage.height / 2) * scale;
+        ctx.drawImage(uploadedBgImage, x, y, uploadedBgImage.width * scale, uploadedBgImage.height * scale);
+    }
+    
+    // Réinitialiser les filtres pour ne pas affecter le texte et l'overlay
     ctx.filter = 'none';
 
-    // Overlay
+
+    // --- 3. DESSIN DU FILTRE SOMBRE (OVERLAY) ---
     ctx.fillStyle = `rgba(0, 0, 0, ${overlayOpacity})`;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    // Configuration texte
+
+    // --- 4. CONFIGURATION ET DESSIN DU TEXTE ---
     if (text) {
         ctx.fillStyle = color;
         ctx.font = `bold ${fontSize}px ${fontFamily}`;
         ctx.textAlign = currentTextAlign;
         ctx.textBaseline = 'middle';
-
-        // Contour
+        
+        // Configuration du contour (Stroke)
         if (strokeWidth > 0) {
             ctx.strokeStyle = strokeColor;
             ctx.lineWidth = strokeWidth;
-            ctx.lineJoin = 'round';
+            ctx.lineJoin = 'round'; // Coins arrondis pour le contour
         }
 
-        // Ombre
+        // Ombre portée standard (peut être améliorée plus tard)
         ctx.shadowColor = "rgba(0, 0, 0, 0.5)";
         ctx.shadowBlur = 4;
         ctx.shadowOffsetX = 2;
         ctx.shadowOffsetY = 2;
 
-        // Word wrap
-        const maxWidth = canvas.width - 60;
+        // Calcul du retour à la ligne (Word Wrap)
+        const maxWidth = canvas.width - 60; // Marge
         const words = text.split(' ');
         let lines = [];
         let currentLine = words[0];
@@ -1812,8 +1166,8 @@ function drawCanvasImmediate() {
         }
         lines.push(currentLine);
 
-        // Dessin
-        const lineHeight = fontSize * lineHeightMultiplier;
+        // Dessin ligne par ligne avec interligne variable
+        const lineHeight = fontSize * lineHeightMultiplier; // Utilisation du nouveau multiplicateur
         const totalHeight = lines.length * lineHeight;
         let startY = (canvas.height - totalHeight) / 2 + (lineHeight / 2);
 
@@ -1823,422 +1177,148 @@ function drawCanvasImmediate() {
 
         lines.forEach((line, i) => {
             let yPos = startY + (i * lineHeight);
+            // Dessiner le contour d'abord si activé
             if (strokeWidth > 0) {
                 ctx.strokeText(line, startX, yPos);
             }
+            // Dessiner le remplissage du texte ensuite
             ctx.fillText(line, startX, yPos);
         });
     }
-
+    
     // Reset shadow
     ctx.shadowColor = "transparent";
 }
+async function fetchReels() {
+    const container = document.getElementById('reels-container');
+    if(!container) return;
+    
+    container.innerHTML = '<div class="col-span-full text-center text-gray-500 mt-10 animate-pulse">Chargement des versets...</div>';
+    
+    // On récupère les reels (vidéos ET images créées via Canvas)
+    const { data: reels, error } = await supabaseClient
+        .from('reels')
+        .select('*, profiles:user_id(username, avatar_url)')
+        .order('created_at', { ascending: false });
 
-async function publishVerseCard() {
-    if (!canvas || !currentUser) return;
-    
-    const btn = document.getElementById('btn-publish-verse');
-    
-    if (btn) {
-        const originalText = btn.innerHTML;
-        btn.innerHTML = '<div class="flex items-center gap-2"><div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div> Publication...</div>';
-        btn.disabled = true;
+    if (error) {
+        console.error(error);
+        return;
     }
 
+    container.innerHTML = '';
+
+    if (reels && reels.length > 0) {
+        reels.forEach(reel => {
+            const isImage = reel.video_url.includes('.png') || reel.video_url.includes('.jpg') || reel.video_url.includes('verses/');
+            
+            let contentHtml = '';
+            
+            if (isImage) {
+                // IMAGE : Coins arrondis, ombre douce
+                contentHtml = `<img src="${reel.video_url}" class="w-full h-auto object-cover rounded-2xl shadow-lg border border-white/5" loading="lazy">`;
+            } else {
+                // VIDÉO
+                let videoId = reel.video_url.split('v=')[1] || reel.video_url.split('/').pop();
+                const ampersandPosition = videoId.indexOf('&');
+                if(ampersandPosition !== -1) videoId = videoId.substring(0, ampersandPosition);
+                contentHtml = `<iframe class="w-full aspect-[9/16] rounded-2xl shadow-lg border border-white/5" src="https://www.youtube.com/embed/${videoId}?controls=0&rel=0" frameborder="0" allowfullscreen></iframe>`;
+            }
+
+            // MODIFICATION ICI : On retire "bg-gray-800" pour "bg-transparent"
+            container.insertAdjacentHTML('beforeend', `
+                <div class="bg-transparent break-inside-avoid mb-6 animate-fade-in group">
+                    ${contentHtml}
+                    <div class="px-1 py-2">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-2">
+                                <div class="w-5 h-5 rounded-full bg-gradient-to-tr from-purple-500 to-pink-500 flex items-center justify-center text-[9px] text-white font-bold shadow-md">
+                                    ${reel.profiles?.username?.[0] || '?'}
+                                </div>
+                                <span class="text-xs font-bold text-gray-300">${reel.profiles?.username || 'Anonyme'}</span>
+                            </div>
+                            
+                            <button onclick="toggleReelAmen('${reel.id}')" class="text-gray-500 hover:text-pink-500 transition-colors flex items-center gap-1.5 text-xs group-hover:opacity-100 opacity-70">
+                                <i data-lucide="heart" class="w-4 h-4 transition-transform active:scale-125"></i>
+                            </button>
+                        </div>
+                        ${reel.caption ? `<p class="text-xs text-gray-400 mt-1 line-clamp-2 pl-7">${reel.caption}</p>` : ''}
+                    </div>
+                </div>
+            `);
+        });
+        if(typeof lucide !== 'undefined') lucide.createIcons();
+    } else {
+        container.innerHTML = '<div class="col-span-full text-center text-gray-600 mt-10">Aucun verset pour le moment.</div>';
+    }
+}
+
+async function publishVerseCard() {
+    const canvas = document.getElementById('verse-canvas');
+    const btn = document.getElementById('btn-publish-verse');
+    
+    // 1. UI Loading
+    const originalText = btn.innerHTML;
+    btn.innerHTML = 'Publication...';
+    btn.disabled = true;
+
+    // 2. Conversion Canvas -> Image
     canvas.toBlob(async (blob) => {
         try {
+            // 3. Upload vers Supabase Storage
             const fileName = `verses/${currentUser.id}_${Date.now()}.png`;
-            
-            const { error: uploadError } = await supabaseClient.storage
-                .from('post-images')
-                .upload(fileName, blob);
+            const { error: uploadError } = await supabaseClient.storage.from('post-images').upload(fileName, blob);
             
             if (uploadError) throw uploadError;
             
-            const { data } = supabaseClient.storage
-                .from('post-images')
-                .getPublicUrl(fileName);
+            const { data } = supabaseClient.storage.from('post-images').getPublicUrl(fileName);
             
-            const caption = document.getElementById('verse-text-input')?.value || "Verset du jour";
-            
-            const { error: dbError } = await supabaseClient
-                .from('reels')
-                .insert([{
-                    user_id: currentUser.id,
-                    video_url: data.publicUrl,
-                    caption: caption
-                }]);
+            // 4. Création du Post dans la base de données
+            // On l'ajoute comme un "Reel" (Verset)
+            const { error: dbError } = await supabaseClient.from('reels').insert([{
+                user_id: currentUser.id,
+                video_url: data.publicUrl, // On utilise ce champ pour l'image du verset
+                caption: document.getElementById('verse-text-input').value || "Verset du jour",
+                // Tu peux ajouter un champ 'type': 'image' dans ta table si tu veux distinguer vidéo/image
+            }]);
 
             if (dbError) throw dbError;
 
-            alert("✅ Carte verset publiée !");
+            alert("Carte verset publiée avec succès !");
             closeVerseEditor();
-            switchView('reels');
+            switchView('reels'); // Rafraîchir la vue
+
         } catch (error) {
-            console.error("Erreur publishVerseCard:", error);
-            alert("❌ Erreur : " + error.message);
+            console.error(error);
+            alert("Erreur lors de la publication : " + error.message);
         } finally {
-            if (btn) {
-                btn.innerHTML = 'Publier';
-                btn.disabled = false;
-            }
+            btn.innerHTML = originalText;
+            btn.disabled = false;
         }
     });
 }
 
-// ==========================================
-// 15. REELS (CORRIGÉ)
-// ==========================================
-async function fetchReels() {
-    const container = document.getElementById('reels-container');
-    if (!container) return;
-    
-    container.innerHTML = '<div class="col-span-full text-center text-gray-500 mt-10 animate-pulse">Chargement...</div>';
-    
-    try {
-        const { data: reels, error } = await supabaseClient
-            .from('reels')
-            .select('*, profiles:user_id(username, avatar_url)')
-            .order('created_at', { ascending: false });
+function setBackground(type, value) {
+    currentBgType = type;
+    currentBgValue = value;
+    drawCanvas();
+}
 
-        if (error) throw error;
-
-        container.innerHTML = '';
-
-        if (reels && reels.length > 0) {
-            reels.forEach(reel => {
-                const isImage = reel.video_url.includes('.png') || 
-                                reel.video_url.includes('.jpg') || 
-                                reel.video_url.includes('verses/');
-                
-                let contentHtml = '';
-                
-                if (isImage) {
-                    contentHtml = `<img src="${reel.video_url}" class="w-full h-auto object-cover rounded-2xl shadow-lg border border-white/5" loading="lazy">`;
-                } else {
-                    let videoId = reel.video_url.split('v=')[1] || reel.video_url.split('/').pop();
-                    const ampersandPosition = videoId.indexOf('&');
-                    if (ampersandPosition !== -1) videoId = videoId.substring(0, ampersandPosition);
-                    
-                    contentHtml = `<iframe class="w-full aspect-[9/16] rounded-2xl shadow-lg border border-white/5" src="https://www.youtube.com/embed/${videoId}?controls=0&rel=0" frameborder="0" allowfullscreen></iframe>`;
-                }
-
-                container.insertAdjacentHTML('beforeend', `
-                    <div class="bg-transparent break-inside-avoid mb-6 animate-fade-in group">
-                        ${contentHtml}
-                        <div class="px-1 py-2">
-                            <div class="flex items-center justify-between">
-                                <div class="flex items-center gap-2">
-                                    <div class="w-5 h-5 rounded-full bg-gradient-to-tr from-purple-500 to-pink-500 flex items-center justify-center text-[9px] text-white font-bold shadow-md">
-                                        ${reel.profiles?.username?.[0] || '?'}
-                                    </div>
-                                    <span class="text-xs font-bold text-gray-300">${reel.profiles?.username || 'Anonyme'}</span>
-                                </div>
-                                <button onclick="toggleReelAmen('${reel.id}')" class="text-gray-500 hover:text-pink-500 transition-colors flex items-center gap-1.5 text-xs">
-                                    <i data-lucide="heart" class="w-4 h-4 transition-transform active:scale-125"></i>
-                                </button>
-                            </div>
-                            ${reel.caption ? `<p class="text-xs text-gray-400 mt-1 line-clamp-2 pl-7">${reel.caption}</p>` : ''}
-                        </div>
-                    </div>
-                `);
-            });
-            
-            if (typeof lucide !== 'undefined') lucide.createIcons();
-        } else {
-            container.innerHTML = '<div class="col-span-full text-center text-gray-600 mt-10">Aucun verset pour le moment.</div>';
-        }
-    } catch (error) {
-        console.error("Erreur fetchReels:", error);
-        container.innerHTML = '<div class="col-span-full text-center text-red-400 mt-10">❌ Erreur de chargement</div>';
+function handleBgUpload(input) {
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            uploadedBgImage = new Image();
+            uploadedBgImage.onload = function() {
+                currentBgType = 'image';
+                drawCanvas();
+            };
+            uploadedBgImage.src = e.target.result;
+        };
+        reader.readAsDataURL(input.files[0]);
     }
 }
 
-async function toggleReelAmen(reelId) {
-    // Fonction similaire à toggleAmen pour les posts
-    try {
-        const { data } = await supabaseClient
-            .from('reel_likes')
-            .select('*')
-            .match({ reel_id: reelId, user_id: currentUser.id });
-        
-        if (data && data.length > 0) {
-            await supabaseClient
-                .from('reel_likes')
-                .delete()
-                .match({ reel_id: reelId, user_id: currentUser.id });
-        } else {
-            await supabaseClient
-                .from('reel_likes')
-                .insert({ reel_id: reelId, user_id: currentUser.id });
-        }
-        
-        fetchReels();
-    } catch (error) {
-        console.error("Erreur toggleReelAmen:", error);
-    }
-}
-
-// ==========================================
-// 16. ENTRAIDE, ÉVÉNEMENTS, PRIÈRES
-// ==========================================
-async function fetchHelpRequests() {
-    const container = document.getElementById('help-list');
-    if (!container) return;
-    
-    try {
-        const { data: requests } = await supabaseClient
-            .from('help_requests')
-            .select('*')
-            .order('created_at', { ascending: false })
-            .limit(3);
-        
-        if (requests && requests.length > 0) {
-            container.innerHTML = requests.map(req => `
-                <div class="bg-gray-900/50 p-3 rounded-xl border border-white/5 flex gap-3 items-center">
-                    <div class="bg-blue-900/30 p-2.5 rounded-full h-fit flex-shrink-0">
-                        <i data-lucide="hand-heart" class="w-4 h-4 text-blue-400"></i>
-                    </div>
-                    <div class="flex-1">
-                        <h4 class="text-xs font-bold text-white">${req.title}</h4>
-                        <p class="text-[10px] text-gray-400 mt-0.5">${req.description} - <span class="text-blue-300">@${req.user_name}</span></p>
-                    </div>
-                    ${req.user_id !== currentUser.id ? `<button onclick="openDirectChat('${req.user_id}', '${req.user_name.replace(/'/g, "\\'")}'))" class="p-2 bg-blue-600/20 rounded-lg text-blue-400 hover:bg-blue-600/30"><i data-lucide="message-circle" class="w-4 h-4"></i></button>` : ''}
-                </div>
-            `).join('');
-        } else {
-            container.innerHTML = '<div class="text-center text-[10px] text-gray-500 py-2">Aucune demande.</div>';
-        }
-        
-        if (typeof lucide !== 'undefined') lucide.createIcons();
-    } catch (error) {
-        console.error("Erreur fetchHelpRequests:", error);
-    }
-}
-
-async function askForHelp() {
-    const title = prompt("Titre de votre demande (ex: Déménagement)");
-    if (!title) return;
-    
-    const desc = prompt("Description courte");
-    
-    try {
-        await supabaseClient
-            .from('help_requests')
-            .insert([{ 
-                user_id: currentUser.id, 
-                user_name: userProfile.username, 
-                title: title, 
-                description: desc || "" 
-            }]);
-        
-        fetchHelpRequests();
-    } catch (error) {
-        console.error("Erreur askForHelp:", error);
-    }
-}
-
-async function fetchEvents() {
-    const events = [
-        { id: 1, title: "Soirée Louange", date: "12 FÉV", location: "Église Centrale", icon: "music", color: "purple" },
-        { id: 2, title: "Maraude", date: "15 FÉV", location: "Gare du Nord", icon: "heart", color: "pink" },
-        { id: 3, title: "Étude Biblique", date: "20 FÉV", location: "En ligne", icon: "video", color: "blue" }
-    ];
-    
-    const container = document.getElementById('events-list');
-    if (!container) return;
-    
-    container.innerHTML = events.map(evt => `
-        <div class="min-w-[150px] bg-gray-800 rounded-2xl p-3 border border-white/5 relative overflow-hidden group shrink-0">
-            <div class="absolute top-0 right-0 p-2 bg-${evt.color}-600 rounded-bl-xl text-[10px] font-bold text-white shadow-lg">${evt.date}</div>
-            <div class="mt-7">
-                <h4 class="font-bold text-white text-sm leading-tight">${evt.title}</h4>
-                <p class="text-[10px] text-gray-400 mt-1 flex items-center gap-1">
-                    <i data-lucide="${evt.icon}" class="w-3 h-3"></i> ${evt.location}
-                </p>
-                <button onclick="alert('Inscrit !')" class="mt-3 w-full py-1.5 bg-white/5 hover:bg-${evt.color}-600/20 rounded-lg text-[10px] text-${evt.color}-300 font-bold transition-colors border border-white/5">Participer</button>
-            </div>
-        </div>
-    `).join('');
-    
-    if (typeof lucide !== 'undefined') lucide.createIcons();
-}
-
-async function fetchPrayers() {
-    const container = document.getElementById('prayers-list');
-    if (!container) return;
-    
-    try {
-        const { data: prayers } = await supabaseClient
-            .from('prayers')
-            .select('*')
-            .order('created_at', { ascending: false });
-        
-        container.innerHTML = (prayers && prayers.length > 0) 
-            ? prayers.map(p => `
-                <div class="bg-gray-900/60 p-3 rounded-xl border border-pink-500/10 flex justify-between items-center mb-2">
-                    <div class="flex-1">
-                        <p class="text-[10px] font-bold text-pink-400 mb-0.5">${p.user_name}</p>
-                        <p class="text-xs italic">"${p.content}"</p>
-                    </div>
-                    <button onclick="prayFor('${p.id}', ${p.count})" class="ml-3 flex flex-col items-center">
-                        <div class="bg-gray-800 p-2 rounded-full border border-gray-600 hover:border-pink-500 transition-all text-sm">🙏</div>
-                        <span class="text-[9px] font-bold mt-1">${p.count}</span>
-                    </button>
-                </div>
-            `).join('') 
-            : '<div class="text-center text-[10px] text-gray-500 py-4 italic">Soyez le premier ! 🙏</div>';
-    } catch (error) {
-        console.error("Erreur fetchPrayers:", error);
-    }
-}
-
-async function addPrayer() {
-    const input = document.getElementById('prayer-input');
-    if (!input || !input.value.trim()) return;
-    
-    try {
-        await supabaseClient
-            .from('prayers')
-            .insert([{ 
-                user_id: currentUser.id, 
-                user_name: userProfile.username, 
-                content: input.value, 
-                count: 0 
-            }]);
-        
-        input.value = '';
-        fetchPrayers();
-    } catch (error) {
-        console.error("Erreur addPrayer:", error);
-    }
-}
-
-async function prayFor(id, current) {
-    try {
-        await supabaseClient
-            .from('prayers')
-            .update({ count: (current || 0) + 1 })
-            .eq('id', id);
-        
-        fetchPrayers();
-    } catch (error) {
-        console.error("Erreur prayFor:", error);
-    }
-}
-
-// ==========================================
-// 17. NOTIFICATIONS & REALTIME (CORRIGÉ)
-// ==========================================
-function subscribeToRealtime() {
-    // Nettoyer l'ancien canal
-    if (realtimeChannel) {
-        supabaseClient.removeChannel(realtimeChannel);
-    }
-
-    realtimeChannel = supabaseClient
-        .channel('global-updates')
-        .on('postgres_changes', { event: '*', schema: 'public' }, async (payload) => {
-            if (payload.table === 'messages') {
-                fetchMessages();
-                loadConversations();
-            }
-            
-            if (payload.table === 'posts') {
-                fetchPosts();
-            }
-            
-            if (payload.table === 'friendships') {
-                fetchNotifications();
-                updateFriendCount(currentUser.id);
-            }
-            
-            if (payload.table === 'likes' && payload.eventType === 'INSERT') {
-                const { data: post } = await supabaseClient
-                    .from('posts')
-                    .select('user_id')
-                    .eq('id', payload.new.post_id)
-                    .single();
-                
-                if (post && post.user_id === currentUser.id && payload.new.user_id !== currentUser.id) {
-                    showNotification("Bénédiction", "Quelqu'un a dit Amen ! ✨");
-                }
-                
-                fetchPosts();
-            }
-        })
-        .subscribe();
-}
-
-function showNotification(senderName, message) {
-    const container = document.getElementById('notification-container');
-    if (!container) return;
-    
-    const audio = document.getElementById('notif-sound');
-    if (audio) audio.play().catch(() => {});
-    
-    const notif = document.createElement('div');
-    notif.className = "bg-gray-800 border-l-4 border-purple-500 text-white p-3 rounded-xl shadow-2xl mb-2 animate-fade-in";
-    notif.innerHTML = `
-        <h4 class="font-bold text-xs text-purple-400">${senderName}</h4>
-        <p class="text-xs text-gray-300 truncate">${message}</p>
-    `;
-    
-    container.appendChild(notif);
-    setTimeout(() => notif.remove(), 4000);
-}
-
-async function fetchNotifications() {
-    const badge = document.getElementById('notif-badge');
-    const list = document.getElementById('notif-list');
-    
-    try {
-        const { data: requests } = await supabaseClient
-            .from('friendships')
-            .select('*')
-            .eq('receiver_id', currentUser.id)
-            .eq('status', 'pending');
-        
-        if (requests && requests.length > 0) {
-            if (badge) badge.classList.remove('hidden');
-            
-            const ids = requests.map(r => r.requester_id);
-            const { data: profiles } = await supabaseClient
-                .from('profiles')
-                .select('id, username')
-                .in('id', ids);
-            
-            if (list) {
-                list.innerHTML = requests.map(req => {
-                    const p = profiles.find(x => x.id === req.requester_id);
-                    return `
-                    <div class="p-3 border-b border-white/5 flex items-center justify-between">
-                        <span class="text-xs font-bold text-white">${p ? p.username : 'Ami'}</span>
-                        <div class="flex gap-2">
-                            <button onclick="handleFriendRequest('${req.id}', true)" class="text-green-400">
-                                <i data-lucide="check" class="w-4 h-4"></i>
-                            </button>
-                        </div>
-                    </div>`;
-                }).join('');
-                
-                if (typeof lucide !== 'undefined') lucide.createIcons();
-            }
-        } else {
-            if (badge) badge.classList.add('hidden');
-            if (list) list.innerHTML = '<div class="p-4 text-center text-xs text-gray-500">🍃</div>';
-        }
-    } catch (error) {
-        console.error("Erreur fetchNotifications:", error);
-    }
-}
-
-function toggleNotifDropdown() {
-    const dropdown = document.getElementById('notif-dropdown');
-    if (dropdown) dropdown.classList.toggle('hidden');
-}
-
-// ==========================================
-// 18. UTILITAIRES FINAUX
-// ==========================================
-console.log("✅ Faith Connect - Code 100% corrigé chargé !");
+// Fonctions nécessaires pour l'ouverture/fermeture du modal (si manquantes)
+function openVerseEditor() { document.getElementById('verse-editor-modal').classList.remove('hidden'); drawCanvas(); }
+function closeVerseEditor() { document.getElementById('verse-editor-modal').classList.add('hidden'); }
