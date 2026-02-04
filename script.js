@@ -1009,30 +1009,103 @@ function handleBgUpload(input) {
     }
 }
 
-// --- NOUVELLE FONCTION DRAWCANVAS "STYLE CANVA" ---
+// ==========================================
+// 13. NOUVEAU : CRÉATEUR DE VERSETS (CANVAS)
+// ==========================================
+
+// --- VARIABLES GLOBALES CANVAS ---
+let canvas;
+let ctx;
+let currentTextAlign = 'center';
+let currentBgType = 'color';
+let currentBgValue = '#1f2937';
+let uploadedBgImage = null;
+
+// Initialisation au chargement
+document.addEventListener('DOMContentLoaded', () => {
+    canvas = document.getElementById('verse-canvas');
+    if (canvas) {
+        ctx = canvas.getContext('2d');
+        // On ne dessine plus automatiquement au démarrage, ce qui causait une erreur.
+        // setTimeout(drawCanvas, 500); 
+    }
+});
+
+
+// --- GESTION DU MODAL ---
+function openVerseEditor() {
+    document.getElementById('verse-editor-modal').classList.remove('hidden');
+    drawCanvas(); // Redessiner à l'ouverture
+}
+
+function closeVerseEditor() {
+    document.getElementById('verse-editor-modal').classList.add('hidden');
+}
+
+// --- GESTION DE L'IMAGE DE FOND ---
+function setBackground(type, value) {
+    currentBgType = type;
+    currentBgValue = value;
+    uploadedBgImage = null; // Reset si on choisit une couleur
+    drawCanvas();
+}
+
+function handleBgUpload(input) {
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            uploadedBgImage = new Image();
+            uploadedBgImage.onload = function() {
+                currentBgType = 'image';
+                drawCanvas();
+            };
+            uploadedBgImage.src = e.target.result;
+        }
+        reader.readAsDataURL(input.files[0]);
+    }
+}
+
+// --- NOUVELLE FONCTION DRAWCANVAS "STYLE CANVA" (VERSION SÉCURISÉE) ---
 function drawCanvas() {
     const canvas = document.getElementById('verse-canvas');
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
 
-    // --- 1. RÉCUPÉRATION DE TOUTES LES VALEURS DES INPUTS ---
-    const text = document.getElementById('verse-text-input').value;
-    // Texte Basic
-    const color = document.getElementById('text-color-picker').value;
-    const fontSize = parseInt(document.getElementById('font-size-picker').value);
-    const fontFamily = document.getElementById('font-family-picker').value;
-    const lineHeightMultiplier = parseFloat(document.getElementById('line-height-slider').value);
-    // Texte Effets
-    const strokeColor = document.getElementById('stroke-color-picker').value;
-    const strokeWidth = parseFloat(document.getElementById('stroke-width-slider').value);
-    // Fond Filtres
-    const overlayOpacity = document.getElementById('overlay-slider').value;
-    const blurAmount = document.getElementById('blur-slider').value;
-    const grayscaleAmount = document.getElementById('grayscale-slider').value;
+    // --- 1. RÉCUPÉRATION DE TOUTES LES VALEURS (AVEC SÉCURITÉ) ---
+    const textInput = document.getElementById('verse-text-input');
+    const text = textInput ? textInput.value : "Texte par défaut";
+
+    const colorPicker = document.getElementById('text-color-picker');
+    const color = colorPicker ? colorPicker.value : '#FFFFFF';
+
+    const fontSizePicker = document.getElementById('font-size-picker');
+    const fontSize = fontSizePicker ? parseInt(fontSizePicker.value) : 40;
+
+    const fontFamilyPicker = document.getElementById('font-family-picker');
+    const fontFamily = fontFamilyPicker ? fontFamilyPicker.value : 'Lora';
+    
+    const lineHeightSlider = document.getElementById('line-height-slider');
+    const lineHeightMultiplier = lineHeightSlider ? parseFloat(lineHeightSlider.value) : 1.5;
+
+    // Effets (non présents dans le HTML, valeurs par défaut pour éviter les erreurs)
+    const strokeColorPicker = document.getElementById('stroke-color-picker');
+    const strokeColor = strokeColorPicker ? strokeColorPicker.value : '#000000';
+    
+    const strokeWidthSlider = document.getElementById('stroke-width-slider');
+    const strokeWidth = strokeWidthSlider ? parseFloat(strokeWidthSlider.value) : 0;
+
+    // Filtres
+    const overlaySlider = document.getElementById('overlay-slider');
+    const overlayOpacity = overlaySlider ? overlaySlider.value : 0.3;
+
+    const blurSlider = document.getElementById('blur-slider');
+    const blurAmount = blurSlider ? blurSlider.value : 0;
+
+    const grayscaleSlider = document.getElementById('grayscale-slider');
+    const grayscaleAmount = grayscaleSlider ? grayscaleSlider.value : 0;
 
     // --- 2. DESSIN DU FOND AVEC FILTRES ---
-    ctx.clearRect(0, 0, canvas.width, canvas.height); // Nettoyage
-    // Application des filtres CSS sur le contexte avant de dessiner l'image
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.filter = `blur(${blurAmount}px) grayscale(${grayscaleAmount}%)`;
     if (currentBgType === 'color') {
         ctx.fillStyle = currentBgValue;
@@ -1043,8 +1116,6 @@ function drawCanvas() {
         const y = (canvas.height / 2) - (uploadedBgImage.height / 2) * scale;
         ctx.drawImage(uploadedBgImage, x, y, uploadedBgImage.width * scale, uploadedBgImage.height * scale);
     }
-
-    // Réinitialiser les filtres pour ne pas affecter le texte et l'overlay
     ctx.filter = 'none';
 
     // --- 3. DESSIN DU FILTRE SOMBRE (OVERLAY) ---
@@ -1057,21 +1128,17 @@ function drawCanvas() {
         ctx.font = `bold ${fontSize}px ${fontFamily}`;
         ctx.textAlign = currentTextAlign;
         ctx.textBaseline = 'middle';
-
-        // Configuration du contour (Stroke)
         if (strokeWidth > 0) {
             ctx.strokeStyle = strokeColor;
             ctx.lineWidth = strokeWidth;
-            ctx.lineJoin = 'round'; // Coins arrondis pour le contour
+            ctx.lineJoin = 'round';
         }
-        // Ombre portée standard (peut être améliorée plus tard)
         ctx.shadowColor = "rgba(0, 0, 0, 0.5)";
         ctx.shadowBlur = 4;
         ctx.shadowOffsetX = 2;
         ctx.shadowOffsetY = 2;
 
-        // Calcul du retour à la ligne (Word Wrap)
-        const maxWidth = canvas.width - 60; // Marge
+        const maxWidth = canvas.width - 60;
         const words = text.split(' ');
         let lines = [];
         let currentLine = words[0];
@@ -1087,8 +1154,7 @@ function drawCanvas() {
         }
         lines.push(currentLine);
 
-        // Dessin ligne par ligne avec interligne variable
-        const lineHeight = fontSize * lineHeightMultiplier; // Utilisation du nouveau multiplicateur
+        const lineHeight = fontSize * lineHeightMultiplier;
         const totalHeight = lines.length * lineHeight;
         let startY = (canvas.height - totalHeight) / 2 + (lineHeight / 2);
         let startX = canvas.width / 2;
@@ -1097,31 +1163,27 @@ function drawCanvas() {
 
         lines.forEach((line, i) => {
             let yPos = startY + (i * lineHeight);
-            // Dessiner le contour d'abord si activé
             if (strokeWidth > 0) {
                 ctx.strokeText(line, startX, yPos);
             }
-            // Dessiner le remplissage du texte ensuite
             ctx.fillText(line, startX, yPos);
         });
     }
-
-    // Reset shadow
     ctx.shadowColor = "transparent";
 }
 
 
+// ... (Le reste du fichier jusqu'à la fin)
 async function fetchReels() {
     const container = document.getElementById('reels-container');
     if(!container) return;
-
     container.innerHTML = '<div class="col-span-full text-center text-gray-500 mt-10 animate-pulse">Chargement des versets...</div>';
 
-    // On récupère les reels (vidéos ET images créées via Canvas)
     const { data: reels, error } = await supabaseClient
         .from('reels')
         .select('*, profiles:user_id(username, avatar_url)')
         .order('created_at', { ascending: false });
+
     if (error) {
         console.error(error);
         return;
@@ -1130,20 +1192,16 @@ async function fetchReels() {
     if (reels && reels.length > 0) {
         reels.forEach(reel => {
             const isImage = reel.video_url.includes('.png') || reel.video_url.includes('.jpg') || reel.video_url.includes('verses/');
-
             let contentHtml = '';
-
             if (isImage) {
-                // IMAGE : Coins arrondis, ombre douce
                 contentHtml = `<img src="${reel.video_url}" class="w-full h-auto object-cover rounded-2xl shadow-lg border border-white/5" loading="lazy">`;
             } else {
-                // VIDÉO
                 let videoId = reel.video_url.split('v=')[1] || reel.video_url.split('/').pop();
                 const ampersandPosition = videoId.indexOf('&');
                 if(ampersandPosition !== -1) videoId = videoId.substring(0, ampersandPosition);
                 contentHtml = `<iframe class="w-full aspect-[9/16] rounded-2xl shadow-lg border border-white/5" src="https://www.youtube.com/embed/${videoId}?controls=0&rel=0" frameborder="0" allowfullscreen></iframe>`;
             }
-            // MODIFICATION ICI : On retire "bg-gray-800" pour "bg-transparent"
+
             container.insertAdjacentHTML('beforeend', `
                 <div class="bg-transparent break-inside-avoid mb-6 animate-fade-in group">
                     ${contentHtml}
@@ -1174,37 +1232,28 @@ async function fetchReels() {
 async function publishVerseCard() {
     const canvas = document.getElementById('verse-canvas');
     const btn = document.getElementById('btn-publish-verse');
-
-    // 1. UI Loading
     const originalText = btn.innerHTML;
     btn.innerHTML = 'Publication...';
     btn.disabled = true;
 
-    // 2. Conversion Canvas -> Image
     canvas.toBlob(async (blob) => {
         try {
-            // 3. Upload vers Supabase Storage
             const fileName = `verses/${currentUser.id}_${Date.now()}.png`;
             const { error: uploadError } = await supabaseClient.storage.from('post-images').upload(fileName, blob);
-            
             if (uploadError) throw uploadError;
             
             const { data } = supabaseClient.storage.from('post-images').getPublicUrl(fileName);
             
-            // 4. Création du Post dans la base de données
-            // On l'ajoute comme un "Reel" (Verset)
             const { error: dbError } = await supabaseClient.from('reels').insert([{
                 user_id: currentUser.id,
-                video_url: data.publicUrl, // On utilise ce champ pour l'image du verset
+                video_url: data.publicUrl,
                 caption: document.getElementById('verse-text-input').value || "Verset du jour",
-                // Tu peux ajouter un champ 'type': 'image' dans ta table si tu veux distinguer vidéo/image
             }]);
-
             if (dbError) throw dbError;
-
+            
             alert("Carte verset publiée avec succès !");
             closeVerseEditor();
-            switchView('reels'); // Rafraîchir la vue
+            switchView('reels');
         } catch (error) {
             console.error(error);
             alert("Erreur lors de la publication : " + error.message);
