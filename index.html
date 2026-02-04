@@ -4,19 +4,15 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>FaithCircle - Votre Communauté</title>
-
     <!-- TailwindCSS pour le style -->
     <script src="https://cdn.tailwindcss.com"></script>
-
     <!-- Supabase & Lucide Icons -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/lucide-static@latest/dist/lucide.min.js"></script>
-
     <!-- Polices Google pour un design moderne -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&family=Lora:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
-
     <!-- Styles CSS personnalisés -->
     <style>
         body {
@@ -41,7 +37,6 @@
             border: 1px solid rgba(255, 255, 255, 0.05);
             box-shadow: 0 0 15px rgba(192, 132, 252, 0.05);
         }
-
         /* Scrollbar customisée */
         .scrollbar-hide::-webkit-scrollbar { display: none; }
         .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
@@ -275,9 +270,8 @@
         </nav>
     </div>
 
-
     <!-- =========== MODALS & OVERLAYS =========== -->
-
+    <!-- ... (le reste des modales ne change pas) ... -->
     <!-- Modal: Modification du Profil -->
     <div id="edit-profile-modal" class="hidden fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
         <div class="bg-gray-900 w-full max-w-md rounded-2xl p-6 space-y-4 relative">
@@ -320,7 +314,6 @@
             <div id="story-delete-btn-container" class="absolute bottom-5 left-1/2 -translate-x-1/2 z-10"></div>
         </div>
     </div>
-
     <!-- Modal: Éditeur de Verset -->
     <div id="verse-editor-modal" class="hidden fixed inset-0 z-50 bg-black/80 flex flex-col items-center justify-center p-4">
         <div class="bg-gray-900 w-full max-w-4xl rounded-2xl p-2 md:p-6 relative flex flex-col md:flex-row gap-6 max-h-[90vh]">
@@ -330,7 +323,6 @@
             <div class="flex-1 flex flex-col items-center justify-center bg-black rounded-lg p-2">
                 <canvas id="verse-canvas" width="500" height="500" class="w-full h-auto object-contain rounded-md"></canvas>
             </div>
-
             <!-- Panneau de Contrôles -->
             <div class="w-full md:w-72 flex-shrink-0 space-y-4 overflow-y-auto pr-2 scrollbar-hide">
                 <h3 class="text-lg font-bold text-white">Créateur de Verset</h3>
@@ -339,7 +331,6 @@
                     <label class="text-xs font-bold text-gray-400">Texte du verset</label>
                     <textarea id="verse-text-input" oninput="drawCanvas()" rows="4" class="w-full bg-gray-800 border-gray-700 rounded-lg px-3 py-2 mt-1 text-sm">"Car Dieu a tant aimé le monde qu'il a donné son Fils unique..." (Jean 3:16)</textarea>
                 </div>
-
                 <!-- Style Texte -->
                  <div class="grid grid-cols-2 gap-4">
                     <div>
@@ -363,7 +354,6 @@
                     <label class="text-xs font-bold text-gray-400">Interligne</label>
                     <input id="line-height-slider" oninput="drawCanvas()" type="range" min="1.0" max="2.5" step="0.1" value="1.5" class="w-full">
                 </div>
-
                 <!-- Fond -->
                 <div>
                      <label class="text-xs font-bold text-gray-400">Arrière-plan</label>
@@ -385,8 +375,6 @@
             </div>
         </div>
     </div>
-
-
     <!-- Notification Audio (cachée) -->
     <audio id="notif-sound" src="https://example.com/notification.mp3" preload="auto"></audio>
     <div id="notification-container" class="fixed top-20 right-4 z-50 w-72 space-y-2"></div>
@@ -400,9 +388,12 @@
             // Activer la première vue par défaut
             switchView('home');
             
-            // Initialiser les icônes
-            lucide.createIcons();
+            // Initialiser les icônes SEULEMENT si la librairie est prête
+            if (typeof lucide !== 'undefined') {
+                lucide.createIcons();
+            }
         });
     </script>
+
 </body>
 </html>
