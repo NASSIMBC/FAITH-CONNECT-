@@ -1,14 +1,266 @@
-.scrollbar-hide::-webkit-scrollbar { display: none; }
-.scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+/* ==========================================
+   FAITHCIRCLE - MODERN DESIGN SYSTEM 2026
+   ========================================== */
 
-/* Animation pour les coeurs */
+/* === VARIABLES CSS === */
+:root {
+    /* Couleurs Principales */
+    --primary-purple: #8B5CF6;
+    --primary-indigo: #6366F1;
+    --accent-rose: #EC4899;
+    --accent-cyan: #06B6D4;
+    
+    /* Backgrounds */
+    --bg-dark: #0A0A0A;
+    --bg-card: #111111;
+    --bg-elevated: #1a1a1a;
+    
+    /* Glassmorphism */
+    --glass-bg: rgba(17, 24, 39, 0.7);
+    --glass-border: rgba(255, 255, 255, 0.1);
+    
+    /* Shadows & Glows */
+    --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.1);
+    --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.15);
+    --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.2);
+    --glow-purple: 0 0 20px rgba(139, 92, 246, 0.3);
+    --glow-rose: 0 0 20px rgba(236, 72, 153, 0.3);
+    
+    /* Transitions */
+    --transition-fast: 150ms ease-out;
+    --transition-base: 300ms ease-out;
+    --transition-slow: 500ms ease-out;
+}
+
+/* === SCROLLBAR MODERNE === */
+.scrollbar-hide::-webkit-scrollbar { 
+    display: none; 
+}
+
+.scrollbar-hide { 
+    -ms-overflow-style: none; 
+    scrollbar-width: none; 
+}
+
+/* Scrollbar personnalisée pour les zones avec scroll visible */
+.custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 10px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, var(--primary-purple), var(--primary-indigo));
+    border-radius: 10px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(180deg, var(--accent-rose), var(--primary-purple));
+}
+
+/* === ANIMATIONS === */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes slideUp {
+    from { 
+        transform: translateY(100%); 
+    }
+    to { 
+        transform: translateY(0); 
+    }
+}
+
 @keyframes like-bounce {
     0% { transform: scale(1); }
     50% { transform: scale(1.3); }
     100% { transform: scale(1); }
 }
-.liked-anim { animation: like-bounce 0.3s ease; }
-/* Style spécifique pour les Reels */
+
+@keyframes pulse-glow {
+    0%, 100% { 
+        box-shadow: 0 0 20px rgba(139, 92, 246, 0.3);
+    }
+    50% { 
+        box-shadow: 0 0 30px rgba(139, 92, 246, 0.6);
+    }
+}
+
+@keyframes shimmer {
+    0% {
+        background-position: -1000px 0;
+    }
+    100% {
+        background-position: 1000px 0;
+    }
+}
+
+@keyframes float {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-10px); }
+}
+
+/* Classes d'animation */
+.animate-view { 
+    animation: fadeIn 0.3s ease-out forwards; 
+}
+
+.animate-slide-up { 
+    animation: slideUp 0.3s ease-out; 
+}
+
+.liked-anim { 
+    animation: like-bounce 0.3s ease; 
+}
+
+.animate-pulse-glow {
+    animation: pulse-glow 2s ease-in-out infinite;
+}
+
+.animate-shimmer {
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+    background-size: 1000px 100%;
+    animation: shimmer 2s infinite;
+}
+
+.animate-float {
+    animation: float 3s ease-in-out infinite;
+}
+
+/* === GLASSMORPHISM === */
+.glass-card {
+    background: var(--glass-bg);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid var(--glass-border);
+    box-shadow: var(--shadow-lg);
+}
+
+.glass-sidebar {
+    background: rgba(10, 10, 10, 0.8);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border-right: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* === PREMIUM CARDS === */
+.premium-card {
+    background: linear-gradient(135deg, #111111 0%, #1a1a1a 100%);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.12);
+    transition: all var(--transition-base);
+}
+
+.premium-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 32px rgba(139, 92, 246, 0.15);
+    border-color: rgba(139, 92, 246, 0.2);
+}
+
+/* === BOUTONS MODERNES === */
+.btn-gradient {
+    background: linear-gradient(135deg, var(--primary-purple), var(--primary-indigo));
+    transition: all var(--transition-base);
+}
+
+.btn-gradient:hover {
+    filter: brightness(1.2);
+    transform: scale(1.02);
+    box-shadow: var(--glow-purple);
+}
+
+.btn-gradient:active {
+    transform: scale(0.98);
+}
+
+.btn-ghost {
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    transition: all var(--transition-base);
+}
+
+.btn-ghost:hover {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(139, 92, 246, 0.5);
+}
+
+/* === INPUTS MODERNES === */
+.input-modern {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    transition: all var(--transition-base);
+}
+
+.input-modern:focus {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: var(--primary-purple);
+    box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1);
+    outline: none;
+}
+
+/* === BADGES & INDICATORS === */
+.badge-gradient {
+    background: linear-gradient(135deg, var(--accent-rose), var(--primary-purple));
+    box-shadow: var(--glow-rose);
+}
+
+.indicator-active {
+    position: relative;
+}
+
+.indicator-active::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 4px;
+    height: 70%;
+    background: linear-gradient(180deg, var(--primary-purple), var(--accent-rose));
+    border-radius: 0 4px 4px 0;
+    box-shadow: var(--glow-purple);
+}
+
+/* === AVATARS === */
+.avatar-gradient {
+    background: linear-gradient(135deg, var(--primary-purple), var(--accent-rose));
+    box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
+}
+
+.avatar-ring {
+    border: 2px solid transparent;
+    background-origin: border-box;
+    background-clip: padding-box, border-box;
+    background-image: linear-gradient(#0A0A0A, #0A0A0A), 
+                      linear-gradient(135deg, var(--primary-purple), var(--accent-rose));
+}
+
+/* === STORIES STYLE INSTAGRAM === */
+.story-ring {
+    padding: 3px;
+    background: linear-gradient(45deg, var(--accent-rose), var(--primary-purple), var(--accent-cyan));
+    border-radius: 50%;
+    box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
+}
+
+.story-ring-inner {
+    background: var(--bg-dark);
+    border-radius: 50%;
+    padding: 2px;
+}
+
+/* === REELS STYLE === */
 .reel-item {
     scroll-snap-align: start;
     scroll-snap-stop: always;
@@ -16,102 +268,72 @@
     width: 100%;
     position: relative;
     background: black;
+    border-radius: 12px;
+    overflow: hidden;
 }
+
 .reel-video-container iframe {
     width: 100%;
     height: 100%;
-    pointer-events: none; /* Important pour que le scroll fonctionne bien sur mobile */
+    pointer-events: none;
     object-fit: cover;
 }
-/* Animation slide up pour les commentaires */
-@keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
-.animate-slide-up { animation: slideUp 0.3s ease-out; }
-/* --- EFFET DE VERRE (GLASSMORPHISM) --- */
-.premium-card, .glass-input, #search-results-container > div {
-    background: rgba(255, 255, 255, 0.03);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+
+/* === SKELETON LOADERS === */
+.skeleton {
+    background: linear-gradient(90deg, #1a1a1a 25%, #2a2a2a 50%, #1a1a1a 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+    border-radius: 8px;
 }
 
-/* --- BARRE DE RECHERCHE ANIMÉE --- */
-.search-input-wrapper input {
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.search-input-wrapper input:focus {
-    background: rgba(139, 92, 246, 0.05); /* Teinte violette très légère */
-    border-color: #8b5cf6;
-    box-shadow: 0 0 15px rgba(139, 92, 246, 0.3); /* Glow néon */
-}
-
-/* --- BOUTON AUDIO BIBLE --- */
-.btn-audio-bible {
+/* === TOOLTIPS === */
+.tooltip {
     position: relative;
-    overflow: hidden;
-    transition: all 0.3s ease;
 }
 
-.btn-audio-bible:active {
-    transform: scale(0.95);
+.tooltip::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%) translateY(-8px);
+    padding: 6px 12px;
+    background: rgba(0, 0, 0, 0.9);
+    color: white;
+    font-size: 12px;
+    border-radius: 6px;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity var(--transition-base);
 }
 
-.btn-audio-bible.playing {
-    animation: pulse-purple 2s infinite;
-    background: rgba(139, 92, 246, 0.2);
-    color: #a78bfa;
+.tooltip:hover::after {
+    opacity: 1;
 }
 
-/* --- ANIMATION DE PULSATION --- */
-@keyframes pulse-purple {
-    0% { box-shadow: 0 0 0 0 rgba(139, 92, 246, 0.4); }
-    70% { box-shadow: 0 0 0 10px rgba(139, 92, 246, 0); }
-    100% { box-shadow: 0 0 0 0 rgba(139, 92, 246, 0); }
-}
-
-/* --- SCROLLBAR PERSONNALISÉE (STYLE ÉPURÉ) --- */
-::-webkit-scrollbar {
-    width: 5px;
-}
-::-webkit-scrollbar-track {
-    background: transparent;
-}
-::-webkit-scrollbar-thumb {
-    background: rgba(139, 92, 246, 0.3);
-    border-radius: 10px;
-}
-::-webkit-scrollbar-thumb:hover {
-    background: #8b5cf6;
-}
-function toggleBibleAudio() {
-    const btn = event.currentTarget; // Récupère le bouton cliqué
-    const text = document.getElementById('reader-content').innerText;
+/* === RESPONSIVE UTILITIES === */
+@media (max-width: 768px) {
+    .premium-card {
+        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+    }
     
-    if (!isReading) {
-        const utterance = new SpeechSynthesisUtterance(text);
-        utterance.lang = 'fr-FR';
-        
-        utterance.onstart = () => {
-            isReading = true;
-            btn.classList.add('playing');
-            btn.innerHTML = '<i data-lucide="square" class="w-5 h-5"></i>'; // Icône Stop
-            lucide.createIcons();
-        };
+    .glass-card {
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+    }
+}
 
-        utterance.onend = () => {
-            isReading = false;
-            btn.classList.remove('playing');
-            btn.innerHTML = '<i data-lucide="volume-2" class="w-5 h-5"></i>'; // Icône Play
-            lucide.createIcons();
-        };
+/* === ACCESSIBILITY === */
+.focus-visible:focus {
+    outline: 2px solid var(--primary-purple);
+    outline-offset: 2px;
+}
 
-        speechSynthesis.speak(utterance);
-    } else {
-        speechSynthesis.cancel();
-        isReading = false;
-        btn.classList.remove('playing');
-        btn.innerHTML = '<i data-lucide="volume-2" class="w-5 h-5"></i>';
-        lucide.createIcons();
+/* === DARK MODE OPTIMIZATIONS === */
+@media (prefers-color-scheme: dark) {
+    :root {
+        color-scheme: dark;
     }
 }
