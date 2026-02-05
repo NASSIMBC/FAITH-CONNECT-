@@ -175,27 +175,7 @@
                             class="absolute -right-10 -top-10 w-40 h-40 bg-purple-500/20 blur-[60px] rounded-full group-hover:bg-purple-500/30 transition-all">
                         </div>
 
-                        <!-- MOBILE/HOME TOP WIDGETS (Links to Prayers/Events) -->
-                        <div class="grid grid-cols-2 gap-3 md:hidden">
-                            <div onclick="App.UI.navigateTo('events')"
-                                class="glass-panel p-4 rounded-[20px] flex items-center gap-3 active:scale-95 transition cursor-pointer">
-                                <div class="bg-yellow-500/20 text-yellow-400 p-2 rounded-full"><i data-lucide="calendar"
-                                        class="w-5 h-5"></i></div>
-                                <div>
-                                    <p class="font-bold text-sm text-white">Événements</p>
-                                    <p class="text-[10px] text-gray-400">Voir l'agenda</p>
-                                </div>
-                            </div>
-                            <div onclick="App.UI.navigateTo('prayers')"
-                                class="glass-panel p-4 rounded-[20px] flex items-center gap-3 active:scale-95 transition cursor-pointer">
-                                <div class="bg-pink-500/20 text-pink-400 p-2 rounded-full"><i
-                                        data-lucide="heart-handshake" class="w-5 h-5"></i></div>
-                                <div>
-                                    <p class="font-bold text-sm text-white">Prières</p>
-                                    <p class="text-[10px] text-gray-400">Mur de prière</p>
-                                </div>
-                            </div>
-                        </div>
+
                         <div class="relative z-10 flex flex-col items-center text-center">
                             <span
                                 class="text-[10px] uppercase tracking-widest text-purple-400 font-bold mb-3 flex items-center gap-2">
@@ -218,6 +198,28 @@
                         </button>
                         <button class="text-purple-400 p-2 hover:bg-purple-500/20 rounded-full transition"><i
                                 data-lucide="image"></i></button>
+                    </div>
+
+                    <!-- MOBILE/HOME TOP WIDGETS (Moved Below Creator) -->
+                    <div class="grid grid-cols-2 gap-3 md:hidden">
+                        <div onclick="App.UI.navigateTo('events')"
+                            class="glass-panel p-4 rounded-[20px] flex items-center gap-3 active:scale-95 transition cursor-pointer">
+                            <div class="bg-yellow-500/20 text-yellow-400 p-2 rounded-full"><i data-lucide="calendar"
+                                    class="w-5 h-5"></i></div>
+                            <div>
+                                <p class="font-bold text-sm text-white">Événements</p>
+                                <p class="text-[10px] text-gray-400">Voir l'agenda</p>
+                            </div>
+                        </div>
+                        <div onclick="App.UI.navigateTo('prayers')"
+                            class="glass-panel p-4 rounded-[20px] flex items-center gap-3 active:scale-95 transition cursor-pointer">
+                            <div class="bg-pink-500/20 text-pink-400 p-2 rounded-full"><i data-lucide="heart-handshake"
+                                    class="w-5 h-5"></i></div>
+                            <div>
+                                <p class="font-bold text-sm text-white">Prières</p>
+                                <p class="text-[10px] text-gray-400">Mur de prière</p>
+                            </div>
+                        </div>
                     </div>
 
                     <!-- Feed Stream -->
@@ -343,7 +345,7 @@
                 </section>
 
                 <!-- VIEW: MESSAGES -->
-                <section id="view-messages" class="page-view hidden h-[calc(100vh-8rem)] md:h-[calc(100vh-4rem)]">
+                <section id="view-messages" class="page-view hidden h-[calc(100vh-10rem)] md:h-[calc(100vh-4rem)]">
                     <div class="glass-panel w-full h-full rounded-[24px] overflow-hidden flex">
                         <!-- List (Sidebar) -->
                         <div class="w-full md:w-80 border-r border-white/5 bg-gray-900/50 flex flex-col"
