@@ -115,266 +115,274 @@
             </div>
         </div>
 
-        <main class="pb-24 md:pb-4">
-            <!-- VUE HOME -->
-            <div id="view-home">
-                <!-- Stories -->
-                <div id="stories-container"
-                    class="p-4 flex items-center space-x-4 overflow-x-auto scrollbar-hide border-b border-white/5">
-                    <!-- Contenu généré par JS -->
+        <main class="grid grid-cols-1 md:grid-cols-12 gap-6 p-4 pb-24 md:pb-4">
+            <!-- Navigation Desktop (Sidebar) - Persistent -->
+            <div class="hidden md:flex flex-col md:col-span-2 lg:col-span-3 sticky top-4 h-[calc(100vh-2rem)]">
+                <!-- Logo -->
+                <div class="mb-8 px-4">
+                    <h1 class="text-2xl font-black text-white">Faith<span class="text-purple-400">Circle</span>
+                    </h1>
                 </div>
-                <input type="file" id="btn-add-story-input" class="hidden" onchange="uploadStory(this)"
-                    accept="image/*">
 
-                <div class="grid grid-cols-1 md:grid-cols-12 gap-6 p-4">
-                    <!-- Navigation Desktop (Sidebar) -->
-                    <div class="hidden md:flex flex-col md:col-span-2 lg:col-span-3 sticky top-4 h-[calc(100vh-2rem)]">
-                        <!-- Logo -->
-                        <div class="mb-8 px-4">
-                            <h1 class="text-2xl font-black text-white">Faith<span class="text-purple-400">Circle</span>
-                            </h1>
+                <!-- Menu -->
+                <nav class="space-y-2 flex-1">
+                    <button onclick="switchView('home')"
+                        class="w-full flex items-center gap-4 px-4 py-3 rounded-xl hover:bg-white/5 text-gray-300 hover:text-white transition-colors">
+                        <i data-lucide="home"></i>
+                        <span class="font-bold text-lg hidden lg:inline">Accueil</span>
+                    </button>
+                    <button onclick="switchView('reels')"
+                        class="w-full flex items-center gap-4 px-4 py-3 rounded-xl hover:bg-white/5 text-gray-300 hover:text-white transition-colors">
+                        <i data-lucide="film"></i>
+                        <span class="font-bold text-lg hidden lg:inline">Versets</span>
+                    </button>
+                    <button onclick="switchView('bible')"
+                        class="w-full flex items-center gap-4 px-4 py-3 rounded-xl hover:bg-white/5 text-gray-300 hover:text-white transition-colors">
+                        <i data-lucide="book-open"></i>
+                        <span class="font-bold text-lg hidden lg:inline">Bible</span>
+                    </button>
+                    <button onclick="switchView('messages')"
+                        class="w-full flex items-center gap-4 px-4 py-3 rounded-xl hover:bg-white/5 text-gray-300 hover:text-white transition-colors">
+                        <i data-lucide="message-square"></i>
+                        <span class="font-bold text-lg hidden lg:inline">Messages</span>
+                    </button>
+                    <button onclick="switchView('profile')"
+                        class="w-full flex items-center gap-4 px-4 py-3 rounded-xl hover:bg-white/5 text-gray-300 hover:text-white transition-colors">
+                        <i data-lucide="user"></i>
+                        <span class="font-bold text-lg hidden lg:inline">Profil</span>
+                    </button>
+                </nav>
+
+                <!-- Mini Profil Sidebar -->
+                <div class="mt-auto border-t border-white/10 pt-4 px-4">
+                    <button onclick="switchView('profile')"
+                        class="flex items-center gap-3 w-full hover:bg-white/5 p-2 rounded-xl transition-colors">
+                        <div
+                            class="w-8 h-8 rounded-full bg-purple-700 flex items-center justify-center font-bold text-xs text-white">
+                            MOI</div>
+                        <span class="font-bold text-sm text-white hidden lg:inline">Mon Profil</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Content Area -->
+            <div class="md:col-span-10 lg:col-span-9">
+                <!-- VUE HOME -->
+                <div id="view-home">
+                    <!-- Stories -->
+                    <div id="stories-container"
+                        class="p-4 flex items-center space-x-4 overflow-x-auto scrollbar-hide border-b border-white/5">
+                        <!-- Contenu généré par JS -->
+                    </div>
+                    <input type="file" id="btn-add-story-input" class="hidden" onchange="uploadStory(this)"
+                        accept="image/*">
+
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 pt-4">
+                        <!-- Colonne Principale (Posts) -->
+                        <div class="lg:col-span-2">
+                            <!-- Créateur de post -->
+                            <div class="premium-card p-4 mb-6">
+                                <textarea id="new-post-input"
+                                    class="w-full bg-transparent text-white placeholder-gray-500 focus:outline-none resize-none"
+                                    rows="3" placeholder="Partagez une pensée, une prière..."></textarea>
+                                <!-- Aperçu image -->
+                                <div id="image-preview-container" class="hidden mt-2 relative">
+                                    <img id="image-preview" class="rounded-lg max-h-60 w-auto">
+                                    <button onclick="removeImage()"
+                                        class="absolute top-2 right-2 bg-black/50 p-1.5 rounded-full text-white"><i
+                                            data-lucide="x" class="w-4 h-4"></i></button>
+                                </div>
+                                <div class="flex justify-between items-center mt-3">
+                                    <input type="file" id="post-image-file" class="hidden"
+                                        onchange="handleImageSelect(this)" accept="image/*">
+                                    <button onclick="document.getElementById('post-image-file').click()"
+                                        class="text-gray-400 hover:text-purple-400"><i data-lucide="image"></i></button>
+                                    <button id="btn-publish" onclick="publishPost()"
+                                        class="bg-purple-600 hover:bg-purple-500 text-white font-bold px-6 py-2 rounded-full text-sm transition-colors">Publier</button>
+                                </div>
+                            </div>
+
+                            <!-- Feed de Posts -->
+                            <div id="posts-container">
+                                <!-- Contenu généré par JS -->
+                            </div>
                         </div>
 
-                        <!-- Menu -->
-                        <nav class="space-y-2 flex-1">
-                            <button onclick="switchView('home')"
-                                class="w-full flex items-center gap-4 px-4 py-3 rounded-xl hover:bg-white/5 text-gray-300 hover:text-white transition-colors">
-                                <i data-lucide="home"></i>
-                                <span class="font-bold text-lg hidden lg:inline">Accueil</span>
-                            </button>
-                            <button onclick="switchView('reels')"
-                                class="w-full flex items-center gap-4 px-4 py-3 rounded-xl hover:bg-white/5 text-gray-300 hover:text-white transition-colors">
-                                <i data-lucide="film"></i>
-                                <span class="font-bold text-lg hidden lg:inline">Versets</span>
-                            </button>
-                            <button onclick="switchView('bible')"
-                                class="w-full flex items-center gap-4 px-4 py-3 rounded-xl hover:bg-white/5 text-gray-300 hover:text-white transition-colors">
-                                <i data-lucide="book-open"></i>
-                                <span class="font-bold text-lg hidden lg:inline">Bible</span>
-                            </button>
-                            <button onclick="switchView('messages')"
-                                class="w-full flex items-center gap-4 px-4 py-3 rounded-xl hover:bg-white/5 text-gray-300 hover:text-white transition-colors">
-                                <i data-lucide="message-square"></i>
-                                <span class="font-bold text-lg hidden lg:inline">Messages</span>
-                            </button>
-                            <button onclick="switchView('profile')"
-                                class="w-full flex items-center gap-4 px-4 py-3 rounded-xl hover:bg-white/5 text-gray-300 hover:text-white transition-colors">
-                                <i data-lucide="user"></i>
-                                <span class="font-bold text-lg hidden lg:inline">Profil</span>
-                            </button>
-                        </nav>
-
-                        <!-- Mini Profil Sidebar -->
-                        <div class="mt-auto border-t border-white/10 pt-4 px-4">
-                            <button onclick="switchView('profile')"
-                                class="flex items-center gap-3 w-full hover:bg-white/5 p-2 rounded-xl transition-colors">
-                                <div
-                                    class="w-8 h-8 rounded-full bg-purple-700 flex items-center justify-center font-bold text-xs text-white">
-                                    MOI</div>
-                                <span class="font-bold text-sm text-white hidden lg:inline">Mon Profil</span>
-                            </button>
+                        <!-- Colonne Droite (Entraide, Evénements) -->
+                        <div class="hidden lg:block lg:col-span-1">
+                            <div class="sticky top-4 space-y-6">
+                                <!-- Prières -->
+                                <div>
+                                    <h3 class="font-bold text-white mb-3">Mur de prière</h3>
+                                    <div id="prayers-list" class="space-y-2 max-h-60 overflow-y-auto scrollbar-hide">
+                                    </div>
+                                    <div class="flex gap-2 mt-2">
+                                        <input id="prayer-input" placeholder="Je prie pour..."
+                                            class="flex-1 bg-gray-900 border border-white/10 rounded-lg px-3 py-2 text-xs text-white outline-none focus:border-purple-500">
+                                        <button onclick="addPrayer()"
+                                            class="p-2 bg-purple-600/20 text-purple-300 rounded-lg"><i
+                                                data-lucide="send" class="w-4 h-4"></i></button>
+                                    </div>
+                                </div>
+                                <!-- Entraide -->
+                                <div>
+                                    <div class="flex justify-between items-center mb-3">
+                                        <h3 class="font-bold text-white">Entraide</h3>
+                                        <button onclick="askForHelp()"
+                                            class="text-xs text-purple-400 font-bold hover:underline">+
+                                            Demander</button>
+                                    </div>
+                                    <div id="help-list" class="space-y-2"></div>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                    <!-- Colonne Principale (Posts) -->
-                    <div class="md:col-span-8 lg:col-span-6">
-                        <!-- Créateur de post -->
-                        <div class="premium-card p-4 mb-6">
-                            <textarea id="new-post-input"
-                                class="w-full bg-transparent text-white placeholder-gray-500 focus:outline-none resize-none"
-                                rows="3" placeholder="Partagez une pensée, une prière..."></textarea>
-                            <!-- Aperçu image -->
-                            <div id="image-preview-container" class="hidden mt-2 relative">
-                                <img id="image-preview" class="rounded-lg max-h-60 w-auto">
-                                <button onclick="removeImage()"
-                                    class="absolute top-2 right-2 bg-black/50 p-1.5 rounded-full text-white"><i
-                                        data-lucide="x" class="w-4 h-4"></i></button>
-                            </div>
-                            <div class="flex justify-between items-center mt-3">
-                                <input type="file" id="post-image-file" class="hidden"
-                                    onchange="handleImageSelect(this)" accept="image/*">
-                                <button onclick="document.getElementById('post-image-file').click()"
-                                    class="text-gray-400 hover:text-purple-400"><i data-lucide="image"></i></button>
-                                <button id="btn-publish" onclick="publishPost()"
-                                    class="bg-purple-600 hover:bg-purple-500 text-white font-bold px-6 py-2 rounded-full text-sm transition-colors">Publier</button>
-                            </div>
+                </div>
+
+                <!-- VUE REELS -->
+                <div id="view-reels" class="hidden p-4">
+                    <div id="reels-container" class="masonry-container columns-2 md:columns-3 lg:columns-4 gap-4">
+                        <!-- Contenu généré par JS -->
+                    </div>
+                </div>
+
+                <!-- VUE BIBLE -->
+                <div id="view-bible" class="hidden p-4 space-y-6">
+                    <!-- Faith AI -->
+                    <div class="bg-gray-900 border border-white/10 rounded-2xl p-4">
+                        <h3 class="text-lg font-bold text-white mb-2 flex items-center gap-2"><i data-lucide="sparkles"
+                                class="text-purple-400"></i> Faith AI</h3>
+                        <p class="text-xs text-gray-400 mb-4">Posez une question sur un passage ou un thème biblique.
+                        </p>
+                        <div class="flex gap-2">
+                            <input type="text" id="ai-bible-input" placeholder="Ex: Explique-moi Jean 3:16"
+                                class="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-sm text-white focus:outline-none focus:border-purple-500">
+                            <button onclick="askFaithAI()" class="bg-purple-600 text-white px-4 rounded-lg font-bold"><i
+                                    data-lucide="send"></i></button>
+                        </div>
+                        <div id="ai-response-area" class="mt-4 hidden"></div>
+                    </div>
+
+                    <!-- Lecteur Bible -->
+                    <div class="bg-gray-900 border border-white/10 rounded-2xl p-4">
+                        <!-- Tabs AT/NT -->
+                        <div class="flex gap-2 mb-4">
+                            <button id="btn-at" onclick="showTestament('AT')">Ancien Testament</button>
+                            <button id="btn-nt" onclick="showTestament('NT')">Nouveau Testament</button>
                         </div>
 
-                        <!-- Feed de Posts -->
-                        <div id="posts-container">
+                        <!-- Liste des livres -->
+                        <div id="bible-books-list" class="grid grid-cols-2 md:grid-cols-4 gap-2">
+                            <!-- Contenu généré par JS -->
+                        </div>
+
+                        <!-- Lecteur de chapitre -->
+                        <div id="bible-reader" class="hidden">
+                            <div class="flex justify-between items-center mb-4">
+                                <button onclick="closeBibleReader()" class="p-2 text-gray-400 hover:text-white"><i
+                                        data-lucide="arrow-left"></i></button>
+                                <h2 id="reader-title" class="font-bold text-lg text-white"></h2>
+                                <div></div> <!-- Spacer -->
+                            </div>
+                            <div id="reader-content" class="max-h-[60vh] overflow-y-auto scrollbar-hide"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- VUE MESSAGES -->
+                <div id="view-messages"
+                    class="hidden md:grid md:grid-cols-12 h-[calc(100vh-6rem)] md:h-[calc(100vh-2rem)]">
+                    <!-- Sidebar Conversations -->
+                    <div id="conversations-sidebar"
+                        class="md:col-span-4 lg:col-span-3 border-r border-white/5 p-2 h-full overflow-y-auto scrollbar-hide">
+                        <h2 class="text-2xl font-bold p-4">Messages</h2>
+                        <div id="messages-list" class="space-y-1">
                             <!-- Contenu généré par JS -->
                         </div>
                     </div>
-
-                    <!-- Colonne Droite (Entraide, Evénements) -->
-                    <div class="hidden lg:block lg:col-span-3">
-                        <div class="sticky top-4 space-y-6">
-                            <!-- Prières -->
-                            <div>
-                                <h3 class="font-bold text-white mb-3">Mur de prière</h3>
-                                <div id="prayers-list" class="space-y-2 max-h-60 overflow-y-auto scrollbar-hide"></div>
-                                <div class="flex gap-2 mt-2">
-                                    <input id="prayer-input" placeholder="Je prie pour..."
-                                        class="flex-1 bg-gray-900 border border-white/10 rounded-lg px-3 py-2 text-xs text-white outline-none focus:border-purple-500">
-                                    <button onclick="addPrayer()"
-                                        class="p-2 bg-purple-600/20 text-purple-300 rounded-lg"><i data-lucide="send"
-                                            class="w-4 h-4"></i></button>
+                    <!-- Fenêtre de Chat -->
+                    <div id="chat-detail" class="col-span-12 md:col-span-8 lg:col-span-9 flex flex-col h-full bg-black">
+                        <div id="chat-header" class="flex items-center gap-3 p-3 border-b border-white/5">
+                            <div class="relative w-10 h-10">
+                                <img id="chat-header-avatar" class="w-10 h-10 rounded-full object-cover hidden">
+                                <div id="chat-header-initials"
+                                    class="w-10 h-10 rounded-full bg-purple-600 flex items-center justify-center font-bold text-white">
                                 </div>
                             </div>
-                            <!-- Entraide -->
-                            <div>
-                                <div class="flex justify-between items-center mb-3">
-                                    <h3 class="font-bold text-white">Entraide</h3>
-                                    <button onclick="askForHelp()"
-                                        class="text-xs text-purple-400 font-bold hover:underline">+ Demander</button>
-                                </div>
-                                <div id="help-list" class="space-y-2"></div>
+                            <h3 id="chat-with-name" class="font-bold text-white">Sélectionnez un ami</h3>
+                        </div>
+                        <div id="chat-history" class="flex-1 p-4 overflow-y-auto scrollbar-hide">
+                            <!-- Contenu généré par JS -->
+                        </div>
+                        <div class="p-4 border-t border-white/5">
+                            <div class="flex items-center gap-2">
+                                <input id="chat-input" placeholder="Votre message..."
+                                    class="flex-1 bg-gray-900 border border-gray-700 rounded-full px-5 py-3 text-sm text-white focus:outline-none focus:border-purple-500"
+                                    disabled>
+                                <button onclick="sendChatMessage()"
+                                    class="bg-purple-600 w-12 h-12 flex items-center justify-center rounded-full text-white"><i
+                                        data-lucide="send-horizontal"></i></button>
                             </div>
                         </div>
                     </div>
                 </div>
-            </div>
 
-            <!-- VUE REELS -->
-            <div id="view-reels" class="hidden p-4">
-                <div id="reels-container" class="masonry-container columns-2 md:columns-3 lg:columns-4 gap-4">
-                    <!-- Contenu généré par JS -->
-                </div>
-            </div>
-
-            <!-- VUE BIBLE -->
-            <div id="view-bible" class="hidden p-4 space-y-6">
-                <!-- Faith AI -->
-                <div class="bg-gray-900 border border-white/10 rounded-2xl p-4">
-                    <h3 class="text-lg font-bold text-white mb-2 flex items-center gap-2"><i data-lucide="sparkles"
-                            class="text-purple-400"></i> Faith AI</h3>
-                    <p class="text-xs text-gray-400 mb-4">Posez une question sur un passage ou un thème biblique.</p>
-                    <div class="flex gap-2">
-                        <input type="text" id="ai-bible-input" placeholder="Ex: Explique-moi Jean 3:16"
-                            class="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-sm text-white focus:outline-none focus:border-purple-500">
-                        <button onclick="askFaithAI()" class="bg-purple-600 text-white px-4 rounded-lg font-bold"><i
-                                data-lucide="send"></i></button>
-                    </div>
-                    <div id="ai-response-area" class="mt-4 hidden"></div>
-                </div>
-
-                <!-- Lecteur Bible -->
-                <div class="bg-gray-900 border border-white/10 rounded-2xl p-4">
-                    <!-- Tabs AT/NT -->
-                    <div class="flex gap-2 mb-4">
-                        <button id="btn-at" onclick="showTestament('AT')">Ancien Testament</button>
-                        <button id="btn-nt" onclick="showTestament('NT')">Nouveau Testament</button>
-                    </div>
-
-                    <!-- Liste des livres -->
-                    <div id="bible-books-list" class="grid grid-cols-2 md:grid-cols-4 gap-2">
-                        <!-- Contenu généré par JS -->
-                    </div>
-
-                    <!-- Lecteur de chapitre -->
-                    <div id="bible-reader" class="hidden">
-                        <div class="flex justify-between items-center mb-4">
-                            <button onclick="closeBibleReader()" class="p-2 text-gray-400 hover:text-white"><i
-                                    data-lucide="arrow-left"></i></button>
-                            <h2 id="reader-title" class="font-bold text-lg text-white"></h2>
-                            <div></div> <!-- Spacer -->
+                <!-- VUE PROFIL -->
+                <div id="view-profile" class="hidden p-4 space-y-6">
+                    <!-- Header Profil -->
+                    <div class="flex flex-col items-center">
+                        <div id="profile-avatar-big"
+                            class="w-24 h-24 rounded-full bg-purple-800 flex items-center justify-center font-bold text-4xl mb-4 border-4 border-gray-800">
                         </div>
-                        <div id="reader-content" class="max-h-[60vh] overflow-y-auto scrollbar-hide"></div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- VUE MESSAGES -->
-            <div id="view-messages" class="hidden md:grid md:grid-cols-12 h-[calc(100vh-6rem)] md:h-screen">
-                <!-- Sidebar Conversations -->
-                <div id="conversations-sidebar"
-                    class="md:col-span-4 lg:col-span-3 border-r border-white/5 p-2 h-full overflow-y-auto scrollbar-hide">
-                    <h2 class="text-2xl font-bold p-4">Messages</h2>
-                    <div id="messages-list" class="space-y-1">
-                        <!-- Contenu généré par JS -->
-                    </div>
-                </div>
-                <!-- Fenêtre de Chat -->
-                <div id="chat-detail" class="col-span-12 md:col-span-8 lg:col-span-9 flex flex-col h-full bg-black">
-                    <div id="chat-header" class="flex items-center gap-3 p-3 border-b border-white/5">
-                        <div class="relative w-10 h-10">
-                            <img id="chat-header-avatar" class="w-10 h-10 rounded-full object-cover hidden">
-                            <div id="chat-header-initials"
-                                class="w-10 h-10 rounded-full bg-purple-600 flex items-center justify-center font-bold text-white">
-                            </div>
+                        <h2 id="profile-name" class="text-2xl font-bold"></h2>
+                        <p id="profile-email" class="text-sm text-gray-500"></p>
+                        <p id="profile-bio" class="text-center text-sm text-gray-400 mt-2 max-w-md"></p>
+                        <div class="flex items-center gap-4 mt-4">
+                            <button onclick="openEditModal()"
+                                class="bg-gray-800 hover:bg-gray-700 text-white text-xs font-bold py-2 px-4 rounded-full">Modifier
+                                le profil</button>
+                            <button onclick="logout()"
+                                class="text-red-400 hover:underline text-xs font-bold">Déconnexion</button>
                         </div>
-                        <h3 id="chat-with-name" class="font-bold text-white">Sélectionnez un ami</h3>
                     </div>
-                    <div id="chat-history" class="flex-1 p-4 overflow-y-auto scrollbar-hide">
-                        <!-- Contenu généré par JS -->
+                    <!-- Stats -->
+                    <div class="grid grid-cols-3 gap-4 text-center">
+                        <div>
+                            <p id="stats-posts-count" class="text-xl font-bold">0</p>
+                            <p class="text-xs text-gray-500">Posts</p>
+                        </div>
+                        <div>
+                            <p id="stats-friends-count" class="text-xl font-bold">0</p>
+                            <p class="text-xs text-gray-500">Amis</p>
+                        </div>
+                        <div>
+                            <p id="stats-amens-count" class="text-xl font-bold">0</p>
+                            <p class="text-xs text-gray-500">Amens</p>
+                        </div>
                     </div>
-                    <div class="p-4 border-t border-white/5">
-                        <div class="flex items-center gap-2">
-                            <input id="chat-input" placeholder="Votre message..."
-                                class="flex-1 bg-gray-900 border border-gray-700 rounded-full px-5 py-3 text-sm text-white focus:outline-none focus:border-purple-500"
-                                disabled>
-                            <button onclick="sendChatMessage()"
-                                class="bg-purple-600 w-12 h-12 flex items-center justify-center rounded-full text-white"><i
-                                    data-lucide="send-horizontal"></i></button>
+
+                    <!-- Contenu Social (Amis, Demandes) -->
+                    <div class="bg-gray-900/50 rounded-2xl p-4">
+                        <div class="flex border-b border-white/10 mb-4">
+                            <button id="tab-friends" onclick="switchProfileTab('friends')"
+                                class="flex-1 pb-2 text-sm font-bold">Amis</button>
+                            <button id="tab-requests" onclick="switchProfileTab('requests')"
+                                class="flex-1 pb-2 text-sm font-bold relative">
+                                Demandes
+                                <span id="profile-req-badge"
+                                    class="absolute top-0 right-4 w-5 h-5 bg-red-500 text-white text-[10px] flex items-center justify-center rounded-full hidden"></span>
+                            </button>
+                        </div>
+                        <div id="profile-social-list" class="space-y-2 max-h-96 overflow-y-auto scrollbar-hide">
+                            <!-- Contenu généré par JS -->
                         </div>
                     </div>
                 </div>
-            </div>
 
-            <!-- VUE PROFIL -->
-            <div id="view-profile" class="hidden p-4 space-y-6">
-                <!-- Header Profil -->
-                <div class="flex flex-col items-center">
-                    <div id="profile-avatar-big"
-                        class="w-24 h-24 rounded-full bg-purple-800 flex items-center justify-center font-bold text-4xl mb-4 border-4 border-gray-800">
-                    </div>
-                    <h2 id="profile-name" class="text-2xl font-bold"></h2>
-                    <p id="profile-email" class="text-sm text-gray-500"></p>
-                    <p id="profile-bio" class="text-center text-sm text-gray-400 mt-2 max-w-md"></p>
-                    <div class="flex items-center gap-4 mt-4">
-                        <button onclick="openEditModal()"
-                            class="bg-gray-800 hover:bg-gray-700 text-white text-xs font-bold py-2 px-4 rounded-full">Modifier
-                            le profil</button>
-                        <button onclick="logout()"
-                            class="text-red-400 hover:underline text-xs font-bold">Déconnexion</button>
-                    </div>
+                <div id="view-public-profile" class="hidden">
+                    <!-- Pourrait être développé plus tard -->
                 </div>
-                <!-- Stats -->
-                <div class="grid grid-cols-3 gap-4 text-center">
-                    <div>
-                        <p id="stats-posts-count" class="text-xl font-bold">0</p>
-                        <p class="text-xs text-gray-500">Posts</p>
-                    </div>
-                    <div>
-                        <p id="stats-friends-count" class="text-xl font-bold">0</p>
-                        <p class="text-xs text-gray-500">Amis</p>
-                    </div>
-                    <div>
-                        <p id="stats-amens-count" class="text-xl font-bold">0</p>
-                        <p class="text-xs text-gray-500">Amens</p>
-                    </div>
-                </div>
-
-                <!-- Contenu Social (Amis, Demandes) -->
-                <div class="bg-gray-900/50 rounded-2xl p-4">
-                    <div class="flex border-b border-white/10 mb-4">
-                        <button id="tab-friends" onclick="switchProfileTab('friends')"
-                            class="flex-1 pb-2 text-sm font-bold">Amis</button>
-                        <button id="tab-requests" onclick="switchProfileTab('requests')"
-                            class="flex-1 pb-2 text-sm font-bold relative">
-                            Demandes
-                            <span id="profile-req-badge"
-                                class="absolute top-0 right-4 w-5 h-5 bg-red-500 text-white text-[10px] flex items-center justify-center rounded-full hidden"></span>
-                        </button>
-                    </div>
-                    <div id="profile-social-list" class="space-y-2 max-h-96 overflow-y-auto scrollbar-hide">
-                        <!-- Contenu généré par JS -->
-                    </div>
-                </div>
-            </div>
-
-            <div id="view-public-profile" class="hidden">
-                <!-- Pourrait être développé plus tard -->
-            </div>
+            </div> <!-- End Content Area -->
         </main>
 
         <!-- Barre de Navigation (Mobile) -->
