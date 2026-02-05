@@ -80,6 +80,9 @@
         <header class="md:hidden sticky top-0 z-40 glass-nav px-5 py-3 flex justify-between items-center">
             <h1 class="text-lg font-black tracking-tight">Faith<span class="text-purple-400">.</span></h1>
             <div class="flex items-center gap-4">
+                <button class="text-gray-400 hover:text-white" onclick="App.UI.toggleMobileSearch()">
+                    <i data-lucide="search" class="w-5 h-5"></i>
+                </button>
                 <button class="relative text-gray-400 hover:text-white" onclick="App.UI.toggleNotifs()">
                     <i data-lucide="bell" class="w-5 h-5"></i>
                     <span id="notif-badge-mobile"
@@ -92,6 +95,18 @@
                 </div>
             </div>
         </header>
+
+        <!-- MOBILE SEARCH OVERLAY -->
+        <div id="mobile-search-overlay"
+            class="md:hidden hidden glass-nav fixed top-0 inset-x-0 z-50 p-3 h-16 flex items-center gap-3 animate-slide-in-up">
+            <button onclick="App.UI.toggleMobileSearch()" class="p-2 text-gray-400"><i
+                    data-lucide="arrow-left"></i></button>
+            <div class="relative flex-1">
+                <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 w-4 h-4"></i>
+                <input type="text" id="mobile-search-input" placeholder="Rechercher sur FaithConnect..."
+                    class="input-field w-full pl-10 pr-4 py-2 rounded-xl text-sm">
+            </div>
+        </div>
 
         <div class="flex max-w-7xl mx-auto md:pt-6 md:px-6 gap-6">
 
