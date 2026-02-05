@@ -150,6 +150,7 @@ const App = {
             if (viewName === 'profile') App.Features.ProfilePage.init();
             if (viewName === 'prayers') App.Features.Prayers.load();
             if (viewName === 'events') App.Features.Events.load();
+            if (viewName === 'marketplace') App.Features.Marketplace.load();
         },
 
         modals: {
@@ -222,6 +223,7 @@ const App = {
             this.Bible.init();
             this.Prayers.load();
             this.Events.loadWidget();
+            this.Marketplace.initSearch();
             if (window.innerWidth > 768) App.Features.Chat.loadList();
 
             // Initialisation Groupes & Realtime
@@ -791,11 +793,21 @@ const App = {
                 { t: "Tableau Déco", p: "60€", img: "https://images.unsplash.com/photo-1513519245088-0e12902e5a38?w=500&auto=format&fit=crop&q=60", s: "ArtFoi" }
             ],
 
-            load() {
+            load(filter = "") {
                 const container = document.getElementById('marketplace-grid');
                 if (!container) return;
 
-                container.innerHTML = this.items.map(p => `
+                const filtered = this.items.filter(p =>
+                    p.t.toLowerCase().includes(filter.toLowerCase()) ||
+                    p.s.toLowerCase().includes(filter.toLowerCase())
+                );
+
+                if (filtered.length === 0) {
+                    container.innerHTML = `<div class="col-span-full text-center py-10 text-gray-500">Aucun article trouvé pour "${filter}".</div>`;
+                    return;
+                }
+
+                container.innerHTML = filtered.map(p => `
                     <div class="glass-panel p-0 rounded-2xl overflow-hidden group cursor-pointer hover:border-primary/50 transition relative">
                         <div class="absolute top-2 right-2 bg-black/60 text-white text-xs font-bold px-2 py-1 rounded-lg backdrop-blur-sm z-10">${p.p}</div>
                         <div class="h-40 overflow-hidden">
@@ -810,6 +822,16 @@ const App = {
                         </div>
                     </div>
                 `).join('');
+                if (typeof lucide !== 'undefined') lucide.createIcons();
+            },
+
+            initSearch() {
+                const input = document.getElementById('marketplace-search');
+                if (input) {
+                    input.addEventListener('input', (e) => {
+                        this.load(e.target.value);
+                    });
+                }
             },
 
             openSellModal() {
