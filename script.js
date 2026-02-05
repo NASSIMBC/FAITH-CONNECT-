@@ -531,53 +531,87 @@ async function removeFriend(friendId) {
 // ==========================================
 // 8. CHAT & MESSAGERIE
 // ==========================================
+// ==========================================
+// 8. CHAT & MESSAGERIE
+// ==========================================
 function openDirectChat(userId, username) {
     startChat({ id: userId, username: username });
     if (window.innerWidth < 768) {
-        document.getElementById('conversations-sidebar').classList.add('hidden');
-        document.getElementById('chat-detail').classList.remove('hidden');
-        document.getElementById('chat-detail').classList.add('flex');
+        document.querySelector('.messenger-sidebar')?.classList.add('hidden-mobile');
+        document.getElementById('messenger-chat-area')?.classList.remove('hidden-mobile');
+        document.getElementById('messenger-chat-area')?.classList.add('flex');
     }
 }
 
 async function loadConversations() {
-    const container = document.getElementById('messages-list');
+    const container = document.getElementById('conversations-list');
     if (!container) return;
-    const { data: messages } = await supabaseClient.from('messages').select('*').or(`sender_id.eq.${currentUser.id},receiver_id.eq.${currentUser.id}`).not('receiver_id', 'is', null).order('created_at', { ascending: false });
-    if (!messages || messages.length === 0) { container.innerHTML = '<div class="text-gray-500 text-center mt-4 text-xs italic">Aucune discussion.</div>'; return; }
 
-    // Grouper par utilisateur
+    // Fetch last messages
+    const { data: messages } = await supabaseClient.from('messages')
+        .select('*')
+        .or(`sender_id.eq.${currentUser.id},receiver_id.eq.${currentUser.id}`)
+        .not('receiver_id', 'is', null)
+        .order('created_at', { ascending: false });
+
+    if (!messages || messages.length === 0) {
+        container.innerHTML = '<div class="text-gray-500 text-center mt-4 text-xs italic">Aucune discussion.</div>';
+        return;
+    }
+
+    // Group by user
     const uniqueConversations = {};
     for (const msg of messages) {
         const otherUserId = msg.sender_id === currentUser.id ? msg.receiver_id : msg.sender_id;
         if (!otherUserId || uniqueConversations[otherUserId]) continue;
-        uniqueConversations[otherUserId] = { userId: otherUserId, lastMessage: msg.content, time: new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) };
+
+        let preview = msg.content;
+        if (msg.type === 'voice') preview = '🎤 Message vocal';
+        if (msg.type === 'photo') preview = '📷 Photo';
+
+        uniqueConversations[otherUserId] = {
+            userId: otherUserId,
+            lastMessage: preview,
+            time: new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            unread: false // TODO: Implement unread count
+        };
     }
     const conversationArray = Object.values(uniqueConversations);
 
     if (conversationArray.length > 0) {
         const ids = conversationArray.map(c => c.userId);
         const { data: profiles } = await supabaseClient.from('profiles').select('id, username, avatar_url').in('id', ids);
+
         container.innerHTML = conversationArray.map(conv => {
             const p = profiles.find(x => x.id === conv.userId);
-            const name = p ? p.username : "Ami";
+            const name = p ? p.username : "Utilisateur";
             const initials = name.substring(0, 2).toUpperCase();
-            const avatarHtml = p && p.avatar_url
-                ? `<img src="${p.avatar_url}" alt="${name}">`
-                : `<div class="avatar-placeholder">${initials}</div>`;
+
+            // Generate avatar HTML
+            let avatarHtml;
+            if (p && p.avatar_url) {
+                avatarHtml = `<img src="${p.avatar_url}" class="w-full h-full object-cover">`;
+            } else {
+                avatarHtml = `<div class="w-full h-full flex items-center justify-center bg-purple-600 text-white text-xs font-bold">${initials}</div>`;
+            }
 
             return `
-            <div onclick="openDirectChat('${conv.userId}', '${name.replace(/'/g, "\\'")}')" class="conversation-item">
-                <div class="conversation-avatar">
-                    ${avatarHtml}
-                    <div class="online-indicator"></div>
+            <div onclick="openDirectChat('${conv.userId}', '${name.replace(/'/g, "\\'")}')" class="flex items-center gap-3 p-3 hover:bg-white/5 cursor-pointer rounded-xl transition-colors cursor-pointer conversation-item">
+                <div class="relative w-12 h-12 flex-shrink-0">
+                    <div class="w-12 h-12 rounded-full overflow-hidden bg-gray-800">
+                        ${avatarHtml}
+                    </div>
+                    ${conv.online ? '<div class="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-black"></div>' : ''}
                 </div>
-                <div class="conversation-info">
-                    <div class="conversation-name">${name}</div>
-                    <div class="conversation-preview">${conv.lastMessage}</div>
-                </div>
-                <div class="conversation-meta">
-                    <div class="conversation-time">${conv.time}</div>
+                <div class="flex-1 min-w-0">
+                    <div class="flex justify-between items-baseline mb-1">
+                        <h4 class="font-semibold text-white truncate">${name}</h4>
+                        <span class="text-xs text-gray-500">${conv.time}</span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <p class="text-xs text-gray-400 truncate max-w-[140px]">${conv.lastMessage}</p>
+                        ${conv.unread ? '<span class="w-2 h-2 bg-purple-500 rounded-full"></span>' : ''}
+                    </div>
                 </div>
             </div>`;
         }).join('');
@@ -585,26 +619,47 @@ async function loadConversations() {
 }
 
 function startChat(targetProfile) {
-    activeChatUser = targetProfile; switchView('messages');
+    activeChatUser = targetProfile;
+    // Ensure we are in messages view
+    if (!document.getElementById('view-messages').classList.contains('hidden')) {
+        // We are already in view, just update chat content
+    } else {
+        switchView('messages');
+    }
 
-    document.getElementById('chat-with-name').innerHTML = `${targetProfile.username}`;
-    const headerAvatar = document.getElementById('chat-header-avatar');
-    const headerInitials = document.getElementById('chat-header-initials');
+    const nameEl = document.getElementById('chat-with-name');
+    const statusEl = document.getElementById('chat-status');
+    const avatarEl = document.getElementById('chat-avatar');
+
+    if (nameEl) nameEl.textContent = targetProfile.username;
+    if (statusEl) statusEl.textContent = "En ligne"; // TODO: Real status
 
     supabaseClient.from('profiles').select('*').eq('id', targetProfile.id).single().then(({ data }) => {
-        if (data && data.avatar_url) {
-            headerAvatar.src = data.avatar_url;
-            headerAvatar.classList.remove('hidden');
-            headerInitials.classList.add('hidden');
-        } else {
-            headerAvatar.classList.add('hidden');
-            headerInitials.classList.remove('hidden');
-            headerInitials.innerText = targetProfile.username.substring(0, 2).toUpperCase();
+        if (data && avatarEl) {
+            if (data.avatar_url) {
+                avatarEl.innerHTML = `<img src="${data.avatar_url}" class="w-full h-full object-cover">`;
+            } else {
+                avatarEl.innerHTML = data.username.substring(0, 2).toUpperCase();
+            }
         }
     });
+
+    // Enable input
     const input = document.getElementById('chat-input');
-    if (input) { input.disabled = false; input.focus(); }
+    if (input) {
+        input.disabled = false;
+        input.placeholder = `Message à ${targetProfile.username}...`;
+    }
+
+    // Load messages
     fetchMessages();
+
+    // Mobile handling
+    if (window.innerWidth < 768) {
+        document.querySelector('.messenger-sidebar')?.classList.add('hidden-mobile');
+        document.getElementById('messenger-chat-area')?.classList.remove('hidden-mobile');
+        document.getElementById('messenger-chat-area')?.classList.add('flex');
+    }
 }
 
 function resetChat() {
