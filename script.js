@@ -148,6 +148,8 @@ const App = {
             if (viewName === 'groups') App.Features.Groups.fetchAll();
             if (viewName === 'messages') App.Features.Chat.loadList();
             if (viewName === 'profile') App.Features.ProfilePage.init();
+            if (viewName === 'prayers') App.Features.Prayers.load();
+            if (viewName === 'events') App.Features.Events.load();
         },
 
         modals: {
@@ -733,31 +735,84 @@ const App = {
         // 3. PRAYERS
         Prayers: {
             async load() {
-                const container = document.getElementById('widget-prayers-list');
-                const { data } = await sb.from('prayers').select('*').order('created_at', { ascending: false }).limit(5);
-                if (data && container) {
-                    container.innerHTML = data.map(p => `
-                        <div class="flex justify-between items-start border-b border-white/5 pb-2 last:border-0">
-                            <div>
-                                <p class="text-[10px] text-primary font-bold">${p.user_name}</p>
-                                <p class="text-xs text-gray-300 italic">"${p.content}"</p>
+                const widgetContainer = document.getElementById('widget-prayers-list');
+                const mainContainer = document.getElementById('prayers-container');
+
+                const { data } = await sb.from('prayers').select('*').order('created_at', { ascending: false }).limit(20);
+
+                if (data) {
+                    const html = data.map(p => `
+                        <div class="glass-panel p-4 rounded-xl flex flex-col gap-2 relative group hover:border-primary/30 transition-colors">
+                            <div class="flex justify-between items-start">
+                                <span class="font-bold text-sm text-primary">${p.user_name}</span>
+                                <span class="text-[10px] text-gray-500">${new Date(p.created_at).toLocaleDateString()}</span>
                             </div>
+                            <p class="text-sm text-gray-200 italic leading-relaxed">"${p.content}"</p>
+                            <div class="mt-2 flex justify-end">
+                                <button class="text-xs text-gray-400 hover:text-pink-400 flex items-center gap-1 transition">
+                                    <i data-lucide="heart" class="w-3 h-3"></i> Soutenir (${p.count})
+                                </button>
+                            </div>
+                        </div>
+                    `).join('');
+
+                    if (widgetContainer) widgetContainer.innerHTML = data.slice(0, 5).map(p => `
+                        <div class="flex justify-between items-start border-b border-white/5 pb-2 last:border-0">
+                            <div><p class="text-[10px] text-primary font-bold">${p.user_name}</p><p class="text-xs text-gray-300 italic truncate w-40">"${p.content}"</p></div>
                             <span class="text-[10px] bg-white/5 px-2 py-0.5 rounded text-gray-500">🙏 ${p.count}</span>
                         </div>
                     `).join('');
+
+                    if (mainContainer) mainContainer.innerHTML = html;
                 }
             },
-            async add() {
-                const input = document.getElementById('widget-prayer-input');
-                if (!input.value) return;
+
+            async add() { this._add('widget-prayer-input'); },
+            async addMain() { this._add('main-prayer-input'); },
+
+            async _add(inputId) {
+                const input = document.getElementById(inputId);
+                if (!input || !input.value) return;
                 await sb.from('prayers').insert([{ user_id: App.state.user.id, user_name: App.state.profile.username, content: input.value, count: 0 }]);
                 input.value = "";
+                alert("Prière publiée 🙏");
                 this.load();
             }
         },
 
-        // 4. EVENTS (Mock)
+        // 4. EVENTS
         Events: {
+            load() {
+                this.loadWidget(); // Keep widget sync
+
+                const list = [
+                    { t: "Culte de Louange & Adoration", d: "Dimanche 10h00", l: "Paris & Online", img: "https://images.unsplash.com/photo-1438232992991-995b7058bbb3?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3" },
+                    { t: "Maraude Solidaire", d: "Mardi 19h30", l: "Gare du Nord", img: "https://images.unsplash.com/photo-1469571486292-0ba58a3f068b?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3" },
+                    { t: "Étude Biblique Zoom", d: "Jeudi 20h00", l: "Lien privé", img: "https://images.unsplash.com/photo-1491841550275-ad7854e35ca6?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3" },
+                    { t: "Concert Gospel", d: "Samedi 25 Oct, 20h", l: "Salle Pleyel", img: "https://images.unsplash.com/photo-1516280440614-6697288d5d38?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3" }
+                ];
+
+                const mainContainer = document.getElementById('events-container');
+                if (mainContainer) {
+                    mainContainer.innerHTML = list.map(e => `
+                        <div class="glass-panel p-0 rounded-2xl overflow-hidden flex flex-col md:flex-row hover:shadow-glow transition-all">
+                            <img src="${e.img}" class="w-full md:w-48 h-32 object-cover">
+                            <div class="p-4 flex-1 flex flex-col justify-center">
+                                <h4 class="font-bold text-lg text-white mb-1">${e.t}</h4>
+                                <div class="flex flex-col md:flex-row gap-2 md:gap-6 text-sm text-gray-400">
+                                    <span class="flex items-center gap-1"><i data-lucide="calendar" class="w-4 h-4 text-primary"></i> ${e.d}</span>
+                                    <span class="flex items-center gap-1"><i data-lucide="map-pin" class="w-4 h-4 text-primary"></i> ${e.l}</span>
+                                </div>
+                                <div class="mt-3 flex gap-2">
+                                     <button class="px-4 py-1.5 bg-primary/20 hover:bg-primary/40 text-primary text-xs font-bold rounded-lg transition">Je participe</button>
+                                     <button class="px-4 py-1.5 bg-white/5 hover:bg-white/10 text-white text-xs font-bold rounded-lg transition">Détails</button>
+                                </div>
+                            </div>
+                        </div>
+                    `).join('');
+                }
+            },
+
             loadWidget() {
                 const list = [
                     { t: "Louange Live", d: "Dimanche 10h", l: "Paris" },
