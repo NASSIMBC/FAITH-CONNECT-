@@ -412,34 +412,55 @@ const App = {
             }
         },
 
-        // 1.8 FAITH AI
+        // 1.8 FAITH AI (CODE UTILISATEUR RESTAURÉ)
         FaithAI: {
             async ask() {
-                const q = document.getElementById('ai-question-input').value;
-                const container = document.getElementById('ai-chat-response');
-                if (!q) return;
+                const input = document.getElementById('ai-question-input');
+                const container = document.getElementById('ai-chat-response'); // Id adapté au nouveau design
+                const question = input.value.trim();
 
-                container.innerHTML += `<p class="mt-4 font-bold text-white">Vous: ${q}</p>`;
-                container.innerHTML += `<p class="mt-2 text-gray-400 italic">Faith AI réfléchit...</p>`;
+                // Ton URL Supabase correcte
+                const FUNCTION_URL = 'https://uduajuxobmywmkjnawjn.supabase.co/functions/v1/faith-ai';
+                if (!question) return;
+
+                // Indicateur de chargement
+                const loadingId = 'ai-loading-' + Date.now();
+                container.innerHTML += `<div id="${loadingId}" class="flex items-center gap-2 text-purple-300 text-xs animate-pulse mt-4">Faith AI réfléchit...</div>`;
                 container.scrollTop = container.scrollHeight;
-                document.getElementById('ai-question-input').value = "";
+                input.value = '';
 
                 try {
-                    const { data, error } = await sb.functions.invoke('faith-ai', {
-                        body: { question: q }
+                    const response = await fetch(FUNCTION_URL, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            // C'EST ICI LA CORRECTION DE L'ERREUR 401 :
+                            'Authorization': `Bearer ${SUPABASE_KEY}`
+                        },
+                        body: JSON.stringify({ question: question })
                     });
+                    const data = await response.json();
 
-                    // Fallback si la fonction n'est pas déployée ou erreur
-                    let reponse = data?.answer || "Je ne peux pas répondre pour l'instant.";
-                    if (error) reponse = "Désolé, le service Faith AI est momentanément indisponible (Erreur Cloud Function). Priez et réessayez plus tard.";
+                    // Retrait du chargement
+                    const loadingEl = document.getElementById(loadingId);
+                    if (loadingEl) loadingEl.remove();
 
-                    // Remove "Faith AI réfléchit..." and add response
-                    container.lastElementChild.remove();
-                    container.innerHTML += `<p class="mt-2 text-purple-300">${reponse}</p>`;
+                    if (data.error) throw new Error(data.error);
 
-                } catch (e) {
-                    container.lastElementChild.remove();
-                    container.innerHTML += `<p class="mt-2 text-red-400">Erreur de connexion.</p>`;
+                    // Affichage de la réponse (Format demandé)
+                    container.innerHTML += `
+                    <div class="mt-4 bg-gray-800/50 border-l-4 border-purple-500 pl-3 py-4 rounded-r-lg shadow-lg animate-slide-in-up">
+                        <p class="text-[10px] text-gray-500 mb-2 uppercase tracking-wide font-bold">Question : "${question}"</p>
+                        <p class="text-white text-sm font-serif leading-relaxed text-justify whitespace-pre-line">${data.answer}</p>
+                    </div>`;
+
+                    if (typeof lucide !== 'undefined') lucide.createIcons();
+
+                } catch (error) {
+                    console.error("Erreur Faith AI:", error);
+                    const loadingEl = document.getElementById(loadingId);
+                    if (loadingEl) loadingEl.remove();
+                    container.innerHTML += `<div class="mt-4 text-red-400 text-xs bg-red-900/20 p-2 rounded border border-red-500/20">Erreur : ${error.message}</div>`;
                 }
                 container.scrollTop = container.scrollHeight;
             }
