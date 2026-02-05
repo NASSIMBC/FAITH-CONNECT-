@@ -93,15 +93,17 @@ async function logout() { await supabaseClient.auth.signOut(); location.reload()
 // 3. NAVIGATION & UI (DESIGN PREMIUM + ANIMATIONS)
 // ==========================================
 function switchView(viewName) {
+    console.log('🔄 switchView appelée avec:', viewName);
+
     // 1. Cacher toutes les vues et reset les styles
     ['home', 'reels', 'bible', 'messages', 'profile', 'public-profile'].forEach(v => {
         const el = document.getElementById('view-' + v);
-        if(el) {
+        if (el) {
             el.classList.add('hidden');
             el.classList.remove('animate-view'); // Reset l'animation
         }
         const btn = document.getElementById('nav-' + v);
-        if(btn) {
+        if (btn) {
             btn.classList.remove('text-purple-400', 'scale-110'); // Reset l'effet de zoom
             btn.classList.add('text-gray-500');
         }
@@ -109,36 +111,64 @@ function switchView(viewName) {
 
     // 2. Afficher la nouvelle vue avec Animation
     const target = document.getElementById('view-' + viewName);
-    if(target) {
+    if (target) {
         target.classList.remove('hidden');
         void target.offsetWidth; // Force le navigateur à relancer l'animation
         target.classList.add('animate-view');
     }
 
-    // 3. Activer le bouton du menu
-    const activeBtn = document.getElementById('nav-' + viewName);
-    if(activeBtn) {
-        activeBtn.classList.remove('text-gray-500');
-        activeBtn.classList.add('text-purple-400', 'scale-110', 'transition-transform', 'duration-200');
-    }
+    // 3. Activer le bouton du menu (Mobile et Desktop)
+    ['nav-', 'nav-desktop-'].forEach(prefix => {
+        const activeBtn = document.getElementById(prefix + viewName);
+        if (activeBtn) {
+            activeBtn.classList.remove('text-gray-500'); // Ou autre classe par défaut si différente
+            // Pour le desktop, on peut avoir besoin de gérer le bg aussi si on veut
+            // Mais pour l'instant on garde la cohérence avec le code précédent : text-purple-400
+            activeBtn.classList.add('text-purple-400', 'scale-110', 'transition-transform', 'duration-200');
+
+            // Si c'est le bouton desktop, on peut ajouter un background subtil si on veut
+            if (prefix === 'nav-desktop-') {
+                activeBtn.classList.add('bg-white/10', 'text-white');
+                activeBtn.classList.remove('text-gray-300');
+            }
+        }
+    });
+
+    // Reset des autres boutons (Mobile et Desktop)
+    ['home', 'reels', 'bible', 'messages', 'profile', 'public-profile'].forEach(v => {
+        if (v !== viewName) {
+            ['nav-', 'nav-desktop-'].forEach(prefix => {
+                const btn = document.getElementById(prefix + v);
+                if (btn) {
+                    btn.classList.remove('text-purple-400', 'scale-110', 'bg-white/10', 'text-white'); // Reset styles actifs
+                    // Appliquer styles inactifs
+                    if (prefix === 'nav-desktop-') {
+                        btn.classList.add('text-gray-300');
+                    } else {
+                        btn.classList.add('text-gray-500');
+                    }
+                }
+            });
+        }
+    });
 
     // Logiques spécifiques inchangées
     const reelsContainer = document.getElementById('reels-container');
     if (viewName === 'reels') {
         fetchReels();
     } else {
-        if(reelsContainer) reelsContainer.innerHTML = '';
+        if (reelsContainer) reelsContainer.innerHTML = '';
     }
     if (viewName === 'bible') {
         showTestament('NT');
     }
     if (viewName === 'messages') {
         const badge = document.getElementById('msg-badge');
-        if(badge) badge.classList.add('hidden');
-        if(!activeChatUser) resetChat();
+        if (badge) badge.classList.add('hidden');
+        if (!activeChatUser) resetChat();
     }
     if (viewName === 'profile') switchProfileTab('friends');
-    if(viewName !== 'messages' && viewName !== 'public-profile') activeChatUser = null;
+    if (viewName !== 'messages' && viewName !== 'public-profile') activeChatUser = null;
 }
 
 async function loadAppData() {
@@ -153,7 +183,7 @@ async function loadAppData() {
     ]);
     resetChat();
     subscribeToRealtime();
-    if(typeof lucide !== 'undefined') lucide.createIcons();
+    if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
 // ==========================================
@@ -161,30 +191,30 @@ async function loadAppData() {
 // ==========================================
 
 let currentBibleVersion = 'ls1910'; // Langue par défaut
-let currentBookId = 43; 
+let currentBookId = 43;
 let currentBookName = "Jean";
 let currentChapter = 1;
 
 const bibleStructure = {
     AT: [
-        { name: "Genèse", id: 1 }, { name: "Exode", id: 2 }, { name: "Lévitique", id: 3 }, { name: "Nombres", id: 4 }, 
-        { name: "Deutéronome", id: 5 }, { name: "Josué", id: 6 }, { name: "Juges", id: 7 }, { name: "Ruth", id: 8 }, 
-        { name: "1 Samuel", id: 9 }, { name: "2 Samuel", id: 10 }, { name: "1 Rois", id: 11 }, { name: "2 Rois", id: 12 }, 
-        { name: "1 Chroniques", id: 13 }, { name: "2 Chroniques", id: 14 }, { name: "Esdras", id: 15 }, { name: "Néhémie", id: 16 }, 
-        { name: "Esther", id: 17 }, { name: "Job", id: 18 }, { name: "Psaumes", id: 19 }, { name: "Proverbes", id: 20 }, 
-        { name: "Ecclésiaste", id: 21 }, { name: "Cantique", id: 22 }, { name: "Ésaïe", id: 23 }, { name: "Jérémie", id: 24 }, 
-        { name: "Lamentations", id: 25 }, { name: "Ézéchiel", id: 26 }, { name: "Daniel", id: 27 }, { name: "Osée", id: 28 }, 
-        { name: "Joël", id: 29 }, { name: "Amos", id: 30 }, { name: "Abdias", id: 31 }, { name: "Jonas", id: 32 }, 
-        { name: "Michée", id: 33 }, { name: "Nahum", id: 34 }, { name: "Habacuc", id: 35 }, { name: "Sophonie", id: 36 }, 
+        { name: "Genèse", id: 1 }, { name: "Exode", id: 2 }, { name: "Lévitique", id: 3 }, { name: "Nombres", id: 4 },
+        { name: "Deutéronome", id: 5 }, { name: "Josué", id: 6 }, { name: "Juges", id: 7 }, { name: "Ruth", id: 8 },
+        { name: "1 Samuel", id: 9 }, { name: "2 Samuel", id: 10 }, { name: "1 Rois", id: 11 }, { name: "2 Rois", id: 12 },
+        { name: "1 Chroniques", id: 13 }, { name: "2 Chroniques", id: 14 }, { name: "Esdras", id: 15 }, { name: "Néhémie", id: 16 },
+        { name: "Esther", id: 17 }, { name: "Job", id: 18 }, { name: "Psaumes", id: 19 }, { name: "Proverbes", id: 20 },
+        { name: "Ecclésiaste", id: 21 }, { name: "Cantique", id: 22 }, { name: "Ésaïe", id: 23 }, { name: "Jérémie", id: 24 },
+        { name: "Lamentations", id: 25 }, { name: "Ézéchiel", id: 26 }, { name: "Daniel", id: 27 }, { name: "Osée", id: 28 },
+        { name: "Joël", id: 29 }, { name: "Amos", id: 30 }, { name: "Abdias", id: 31 }, { name: "Jonas", id: 32 },
+        { name: "Michée", id: 33 }, { name: "Nahum", id: 34 }, { name: "Habacuc", id: 35 }, { name: "Sophonie", id: 36 },
         { name: "Aggée", id: 37 }, { name: "Zacharie", id: 38 }, { name: "Malachie", id: 39 }
     ],
     NT: [
-        { name: "Matthieu", id: 40 }, { name: "Marc", id: 41 }, { name: "Luc", id: 42 }, { name: "Jean", id: 43 }, 
-        { name: "Actes", id: 44 }, { name: "Romains", id: 45 }, { name: "1 Corinthiens", id: 46 }, { name: "2 Corinthiens", id: 47 }, 
-        { name: "Galates", id: 48 }, { name: "Éphésiens", id: 49 }, { name: "Philippiens", id: 50 }, { name: "Colossiens", id: 51 }, 
-        { name: "1 Thessal.", id: 52 }, { name: "2 Thessal.", id: 53 }, { name: "1 Timothée", id: 54 }, { name: "2 Timothée", id: 55 }, 
-        { name: "Tite", id: 56 }, { name: "Philémon", id: 57 }, { name: "Hébreux", id: 58 }, { name: "Jacques", id: 59 }, 
-        { name: "1 Pierre", id: 60 }, { name: "2 Pierre", id: 61 }, { name: "1 Jean", id: 62 }, { name: "2 Jean", id: 63 }, 
+        { name: "Matthieu", id: 40 }, { name: "Marc", id: 41 }, { name: "Luc", id: 42 }, { name: "Jean", id: 43 },
+        { name: "Actes", id: 44 }, { name: "Romains", id: 45 }, { name: "1 Corinthiens", id: 46 }, { name: "2 Corinthiens", id: 47 },
+        { name: "Galates", id: 48 }, { name: "Éphésiens", id: 49 }, { name: "Philippiens", id: 50 }, { name: "Colossiens", id: 51 },
+        { name: "1 Thessal.", id: 52 }, { name: "2 Thessal.", id: 53 }, { name: "1 Timothée", id: 54 }, { name: "2 Timothée", id: 55 },
+        { name: "Tite", id: 56 }, { name: "Philémon", id: 57 }, { name: "Hébreux", id: 58 }, { name: "Jacques", id: 59 },
+        { name: "1 Pierre", id: 60 }, { name: "2 Pierre", id: 61 }, { name: "1 Jean", id: 62 }, { name: "2 Jean", id: 63 },
         { name: "3 Jean", id: 64 }, { name: "Jude", id: 65 }, { name: "Apocalypse", id: 66 }
     ]
 };
@@ -200,9 +230,9 @@ function showTestament(type) {
     if (reader) reader.classList.add('hidden');
     if (listContainer) listContainer.classList.remove('hidden');
 
-    if(!atBtn || !ntBtn) return;
+    if (!atBtn || !ntBtn) return;
 
-    if(type === 'AT') {
+    if (type === 'AT') {
         atBtn.className = "flex-1 py-2 bg-purple-600 text-white rounded-xl text-xs font-bold transition-colors shadow-lg";
         ntBtn.className = "flex-1 py-2 bg-gray-800 text-gray-400 rounded-xl text-xs font-bold hover:bg-gray-700 transition-colors";
     } else {
@@ -210,7 +240,7 @@ function showTestament(type) {
         atBtn.className = "flex-1 py-2 bg-gray-800 text-gray-400 rounded-xl text-xs font-bold hover:bg-gray-700 transition-colors";
     }
 
-    if(listContainer) {
+    if (listContainer) {
         listContainer.innerHTML = bibleStructure[type].map(book => `
             <button onclick="loadBibleChapter(${book.id}, '${book.name}', 1)" class="p-3 bg-gray-800 border border-white/5 rounded-xl hover:bg-gray-700 transition-all text-left group active:scale-95 animate-fade-in">
                 <span class="font-bold text-white group-hover:text-purple-400 text-sm transition-colors">${book.name}</span>
@@ -225,19 +255,19 @@ async function loadBibleChapter(id, name, chapter) {
     const listContainer = document.getElementById('bible-books-list');
     const content = document.getElementById('reader-content');
     const title = document.getElementById('reader-title');
-    
-    if(!reader) return;
-    
+
+    if (!reader) return;
+
     // Bascule d'affichage
-    if(listContainer) listContainer.classList.add('hidden');
+    if (listContainer) listContainer.classList.add('hidden');
     reader.classList.remove('hidden');
-    
+
     currentBookId = id;
     currentBookName = name;
     currentChapter = chapter;
 
-    if(title) title.innerText = `${name} ${chapter}`;
-    
+    if (title) title.innerText = `${name} ${chapter}`;
+
     content.innerHTML = `
         <div class="flex flex-col h-full items-center justify-center space-y-4">
             <div class="w-8 h-8 border-4 border-purple-500 rounded-full animate-spin border-t-transparent"></div>
@@ -250,7 +280,7 @@ async function loadBibleChapter(id, name, chapter) {
         // 2. On utilise 'id' directement (plus besoin de mapper les noms en anglais).
         // 3. 'LSG' est le code officiel pour Louis Segond sur cette API.
         const apiUrl = `https://bolls.life/get-chapter/LSG/${id}/${chapter}/`;
-        
+
         const response = await fetch(apiUrl);
         if (!response.ok) throw new Error("Chapitre introuvable (Erreur réseau)");
 
@@ -258,24 +288,24 @@ async function loadBibleChapter(id, name, chapter) {
 
         // Bolls Life renvoie un tableau simple, on vérifie sa longueur
         if (Array.isArray(data) && data.length > 0) {
-            
+
             // Configuration visuelle
-            const dir = 'ltr'; 
+            const dir = 'ltr';
             const align = 'text-justify';
             const font = 'font-serif';
 
             // Mapping des données (API Bolls : 'verse' = numéro, 'text' = contenu)
-            let formattedText = data.map(v => 
+            let formattedText = data.map(v =>
                 `<p class="mb-3 leading-relaxed text-gray-200 ${align}" dir="${dir}">
                     <sup class="text-purple-400 text-[10px] font-bold mr-1 select-none">${v.verse}</sup>${v.text}
                 </p>`
             ).join('');
 
             // Boutons de navigation
-            const prevBtn = chapter > 1 
-                ? `<button onclick="loadBibleChapter(${id}, '${name.replace(/'/g, "\\'")}', ${chapter - 1})" class="flex-1 bg-gray-800 py-3 rounded-xl text-xs font-bold text-gray-300 hover:bg-gray-700 transition-colors">← Précédent</button>` 
+            const prevBtn = chapter > 1
+                ? `<button onclick="loadBibleChapter(${id}, '${name.replace(/'/g, "\\'")}', ${chapter - 1})" class="flex-1 bg-gray-800 py-3 rounded-xl text-xs font-bold text-gray-300 hover:bg-gray-700 transition-colors">← Précédent</button>`
                 : `<div class="flex-1"></div>`;
-            
+
             const nextBtn = `<button onclick="loadBibleChapter(${id}, '${name.replace(/'/g, "\\'")}', ${chapter + 1})" class="flex-1 bg-purple-600 py-3 rounded-xl text-xs font-bold text-white shadow-lg hover:bg-purple-500 transition-colors">Suivant →</button>`;
 
             content.innerHTML = `
@@ -339,7 +369,7 @@ async function askFaithAI() {
 
     // Ton URL Supabase correcte
     const FUNCTION_URL = 'https://uduajuxobmywmkjnawjn.supabase.co/functions/v1/faith-ai';
-    if(!question) return;
+    if (!question) return;
 
     area.classList.remove('hidden');
     area.innerHTML = `<div class="flex items-center gap-2 text-purple-300 text-xs animate-pulse">Faith AI réfléchit...</div>`;
@@ -379,7 +409,7 @@ async function updateMyStatus() {
 function updateUIProfile() {
     const initials = userProfile.username ? userProfile.username.substring(0, 2).toUpperCase() : "??";
     document.querySelectorAll('#user-display, #profile-name').forEach(el => el.innerText = userProfile.username);
-    if(document.getElementById('profile-email')) document.getElementById('profile-email').innerText = "@" + userProfile.username;
+    if (document.getElementById('profile-email')) document.getElementById('profile-email').innerText = "@" + userProfile.username;
     const textDisplay = document.getElementById('status-text-display');
     const emojiDisplay = document.getElementById('status-emoji-display');
     if (textDisplay && emojiDisplay) {
@@ -389,7 +419,7 @@ function updateUIProfile() {
     const avatarElements = ['current-user-avatar-small', 'profile-avatar-big'];
     avatarElements.forEach(id => {
         const el = document.getElementById(id);
-        if(!el) return;
+        if (!el) return;
         if (userProfile.avatar_url) {
             el.innerHTML = `<img src="${userProfile.avatar_url}" class="w-full h-full object-cover rounded-full">`;
             el.innerText = "";
@@ -415,7 +445,7 @@ function handleAvatarPreview(input) {
     if (input.files && input.files[0]) {
         selectedAvatarFile = input.files[0];
         const reader = new FileReader();
-        reader.onload = function(e) { document.getElementById('edit-avatar-preview').src = e.target.result; }
+        reader.onload = function (e) { document.getElementById('edit-avatar-preview').src = e.target.result; }
         reader.readAsDataURL(input.files[0]);
     }
 }
@@ -457,8 +487,8 @@ async function switchProfileTab(tabName) {
     const btnFriends = document.getElementById('tab-friends');
     const btnRequests = document.getElementById('tab-requests');
     const container = document.getElementById('profile-social-list');
-    if(!btnFriends || !btnRequests || !container) return;
-    if(tabName === 'friends') {
+    if (!btnFriends || !btnRequests || !container) return;
+    if (tabName === 'friends') {
         btnFriends.className = "pb-2 text-sm font-bold text-purple-400 border-b-2 border-purple-400";
         btnRequests.className = "pb-2 text-sm font-bold text-gray-500 hover:text-white";
         await fetchMyFriendsList(container);
@@ -473,37 +503,37 @@ async function fetchMyFriendsList(container) {
     container.innerHTML = '<div class="text-center text-xs text-gray-500 py-4 italic">Chargement...</div>';
     const friendIds = await getFriendIds();
     const otherFriendIds = friendIds.filter(id => id !== currentUser.id);
-    if(otherFriendIds.length === 0) { container.innerHTML = '<div class="text-center text-xs text-gray-500 py-4">Pas encore d\'amis.</div>'; return; }
+    if (otherFriendIds.length === 0) { container.innerHTML = '<div class="text-center text-xs text-gray-500 py-4">Pas encore d\'amis.</div>'; return; }
     const { data: profiles } = await supabaseClient.from('profiles').select('*').in('id', otherFriendIds);
     container.innerHTML = '';
-    if(profiles) profiles.forEach(p => {
-        const avatarHtml = p.avatar_url ? `<img src="${p.avatar_url}" class="w-10 h-10 rounded-full object-cover">` : `<div class="w-10 h-10 rounded-full bg-purple-600 flex items-center justify-center font-bold text-xs text-white">${p.username.substring(0,2).toUpperCase()}</div>`;
+    if (profiles) profiles.forEach(p => {
+        const avatarHtml = p.avatar_url ? `<img src="${p.avatar_url}" class="w-10 h-10 rounded-full object-cover">` : `<div class="w-10 h-10 rounded-full bg-purple-600 flex items-center justify-center font-bold text-xs text-white">${p.username.substring(0, 2).toUpperCase()}</div>`;
         container.insertAdjacentHTML('beforeend', `<div class="flex items-center justify-between bg-gray-900/50 p-3 rounded-2xl border border-white/5 mb-2"><div class="flex items-center gap-3">${avatarHtml}<div class="text-left"><p class="text-sm font-bold text-white">${p.username}</p><p class="text-[10px] text-gray-500 truncate w-24">${p.status_text || 'En ligne'}</p></div></div><div class="flex gap-2"><button onclick="openDirectChat('${p.id}', '${p.username}')" class="p-2 bg-purple-600/20 text-purple-400 rounded-xl hover:bg-purple-600"><i data-lucide="message-circle" class="w-4 h-4"></i></button><button onclick="removeFriend('${p.id}')" class="p-2 bg-red-600/10 text-red-400 rounded-xl hover:bg-red-600"><i data-lucide="user-minus" class="w-4 h-4"></i></button></div></div>`);
     });
-    if(typeof lucide !== 'undefined') lucide.createIcons();
+    if (typeof lucide !== 'undefined') lucide.createIcons();
     const countEl = document.getElementById('stats-friends-count');
-    if(countEl) countEl.innerText = otherFriendIds.length;
+    if (countEl) countEl.innerText = otherFriendIds.length;
 }
 
 async function fetchMyRequestsList(container) {
     container.innerHTML = '<div class="text-center text-xs text-gray-500 py-4 italic">Chargement...</div>';
     const { data: requests } = await supabaseClient.from('friendships').select('*').eq('receiver_id', currentUser.id).eq('status', 'pending');
-    if(!requests || requests.length === 0) { container.innerHTML = '<div class="text-center text-xs text-gray-500 py-4">Aucune demande.</div>'; document.getElementById('profile-req-badge').classList.add('hidden'); return; }
+    if (!requests || requests.length === 0) { container.innerHTML = '<div class="text-center text-xs text-gray-500 py-4">Aucune demande.</div>'; document.getElementById('profile-req-badge').classList.add('hidden'); return; }
     document.getElementById('profile-req-badge').innerText = requests.length;
     document.getElementById('profile-req-badge').classList.remove('hidden');
     const requesterIds = requests.map(r => r.requester_id);
     const { data: profiles } = await supabaseClient.from('profiles').select('*').in('id', requesterIds);
     container.innerHTML = '';
-    if(profiles) requests.forEach(req => {
+    if (profiles) requests.forEach(req => {
         const p = profiles.find(prof => prof.id === req.requester_id);
-        if(!p) return;
-        const avatarHtml = p.avatar_url ? `<img src="${p.avatar_url}" class="w-10 h-10 rounded-full object-cover">` : `<div class="w-10 h-10 rounded-full bg-gray-700 flex items-center justify-center font-bold text-xs">${p.username.substring(0,2).toUpperCase()}</div>`;
+        if (!p) return;
+        const avatarHtml = p.avatar_url ? `<img src="${p.avatar_url}" class="w-10 h-10 rounded-full object-cover">` : `<div class="w-10 h-10 rounded-full bg-gray-700 flex items-center justify-center font-bold text-xs">${p.username.substring(0, 2).toUpperCase()}</div>`;
         container.insertAdjacentHTML('beforeend', `<div class="flex items-center justify-between bg-gray-900/50 p-3 rounded-xl border border-white/5 mb-2"><div class="flex items-center gap-3">${avatarHtml}<p class="text-sm font-bold text-white">${p.username}</p></div><div class="flex gap-2"><button onclick="handleFriendRequest('${req.id}', true)" class="px-4 py-1.5 bg-green-600 text-white text-xs font-bold rounded-lg">Accepter</button><button onclick="handleFriendRequest('${req.id}', false)" class="px-4 py-1.5 bg-red-600/20 text-red-400 text-xs font-bold rounded-lg">Refuser</button></div></div>`);
     });
 }
 
 async function removeFriend(friendId) {
-    if(!confirm("Retirer cet ami ?")) return;
+    if (!confirm("Retirer cet ami ?")) return;
     await supabaseClient.from('friendships').delete().or(`and(requester_id.eq.${currentUser.id},receiver_id.eq.${friendId}),and(requester_id.eq.${friendId},receiver_id.eq.${currentUser.id})`);
     switchProfileTab('friends'); updateFriendCount(currentUser.id);
 }
@@ -513,7 +543,7 @@ async function removeFriend(friendId) {
 // ==========================================
 function openDirectChat(userId, username) {
     startChat({ id: userId, username: username });
-    if(window.innerWidth < 768) {
+    if (window.innerWidth < 768) {
         document.getElementById('conversations-sidebar').classList.add('hidden');
         document.getElementById('chat-detail').classList.remove('hidden');
         document.getElementById('chat-detail').classList.add('flex');
@@ -522,7 +552,7 @@ function openDirectChat(userId, username) {
 
 async function loadConversations() {
     const container = document.getElementById('messages-list');
-    if(!container) return;
+    if (!container) return;
     const { data: messages } = await supabaseClient.from('messages').select('*').or(`sender_id.eq.${currentUser.id},receiver_id.eq.${currentUser.id}`).not('receiver_id', 'is', null).order('created_at', { ascending: false });
     if (!messages || messages.length === 0) { container.innerHTML = '<div class="text-gray-500 text-center mt-4 text-xs italic">Aucune discussion.</div>'; return; }
 
@@ -531,17 +561,17 @@ async function loadConversations() {
     for (const msg of messages) {
         const otherUserId = msg.sender_id === currentUser.id ? msg.receiver_id : msg.sender_id;
         if (!otherUserId || uniqueConversations[otherUserId]) continue;
-        uniqueConversations[otherUserId] = { userId: otherUserId, lastMessage: msg.content, time: new Date(msg.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) };
+        uniqueConversations[otherUserId] = { userId: otherUserId, lastMessage: msg.content, time: new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) };
     }
     const conversationArray = Object.values(uniqueConversations);
 
-    if(conversationArray.length > 0) {
+    if (conversationArray.length > 0) {
         const ids = conversationArray.map(c => c.userId);
         const { data: profiles } = await supabaseClient.from('profiles').select('id, username, avatar_url').in('id', ids);
         container.innerHTML = conversationArray.map(conv => {
             const p = profiles.find(x => x.id === conv.userId);
             const name = p ? p.username : "Ami";
-            const avatarDisplay = p && p.avatar_url ? `<img src="${p.avatar_url}" class="w-10 h-10 rounded-full object-cover">` : `<div class="w-10 h-10 bg-purple-600 rounded-full flex items-center justify-center font-bold text-xs text-white">${name.substring(0,2).toUpperCase()}</div>`;
+            const avatarDisplay = p && p.avatar_url ? `<img src="${p.avatar_url}" class="w-10 h-10 rounded-full object-cover">` : `<div class="w-10 h-10 bg-purple-600 rounded-full flex items-center justify-center font-bold text-xs text-white">${name.substring(0, 2).toUpperCase()}</div>`;
             return `
             <div onclick="openDirectChat('${conv.userId}', '${name.replace(/'/g, "\\'")}')" class="p-3 hover:bg-white/5 rounded-2xl cursor-pointer flex items-center space-x-3 border-b border-white/5 transition-colors">
                 <div class="relative">
@@ -567,19 +597,19 @@ function startChat(targetProfile) {
     const headerAvatar = document.getElementById('chat-header-avatar');
     const headerInitials = document.getElementById('chat-header-initials');
 
-    supabaseClient.from('profiles').select('*').eq('id', targetProfile.id).single().then(({data}) => {
-         if(data && data.avatar_url) {
-             headerAvatar.src = data.avatar_url;
-             headerAvatar.classList.remove('hidden');
-             headerInitials.classList.add('hidden');
-         } else {
-             headerAvatar.classList.add('hidden');
-             headerInitials.classList.remove('hidden');
-             headerInitials.innerText = targetProfile.username.substring(0,2).toUpperCase();
-         }
+    supabaseClient.from('profiles').select('*').eq('id', targetProfile.id).single().then(({ data }) => {
+        if (data && data.avatar_url) {
+            headerAvatar.src = data.avatar_url;
+            headerAvatar.classList.remove('hidden');
+            headerInitials.classList.add('hidden');
+        } else {
+            headerAvatar.classList.add('hidden');
+            headerInitials.classList.remove('hidden');
+            headerInitials.innerText = targetProfile.username.substring(0, 2).toUpperCase();
+        }
     });
     const input = document.getElementById('chat-input');
-    if(input) { input.disabled = false; input.focus(); }
+    if (input) { input.disabled = false; input.focus(); }
     fetchMessages();
 }
 
@@ -607,17 +637,17 @@ function resetChat() {
 
 async function fetchMessages() {
     const container = document.getElementById('chat-history');
-    if(!container || !activeChatUser) return;
+    if (!container || !activeChatUser) return;
     const { data } = await supabaseClient.from('messages').select('*').or(`and(sender_id.eq.${currentUser.id},receiver_id.eq.${activeChatUser.id}),and(sender_id.eq.${activeChatUser.id},receiver_id.eq.${currentUser.id})`).order('created_at', { ascending: true });
     container.innerHTML = '';
 
-    if(data && data.length > 0) {
+    if (data && data.length > 0) {
         let lastSenderId = null;
 
         data.forEach(msg => {
             const isMe = msg.sender_id === currentUser.id;
             const isSameSender = lastSenderId === msg.sender_id;
-            const time = new Date(msg.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+            const time = new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
             const bubbleClass = isMe
                 ? 'bg-purple-600 text-white rounded-tr-sm'
@@ -644,7 +674,7 @@ async function sendChatMessage() {
     const input = document.getElementById('chat-input');
     if (!activeChatUser || !input || !input.value.trim()) return;
     const { error } = await supabaseClient.from('messages').insert([{ content: input.value, sender_id: currentUser.id, sender_email: currentUser.email, sender_name: userProfile.username, receiver_id: activeChatUser.id }]);
-    if(!error) { input.value = ''; fetchMessages(); loadConversations(); }
+    if (!error) { input.value = ''; fetchMessages(); loadConversations(); }
 }
 
 // ==========================================
@@ -654,7 +684,7 @@ function handleImageSelect(input) {
     if (input.files && input.files[0]) {
         selectedImageFile = input.files[0];
         const reader = new FileReader();
-        reader.onload = function(e) { document.getElementById('image-preview').src = e.target.result; document.getElementById('image-preview-container').classList.remove('hidden'); }
+        reader.onload = function (e) { document.getElementById('image-preview').src = e.target.result; document.getElementById('image-preview-container').classList.remove('hidden'); }
         reader.readAsDataURL(input.files[0]);
     }
 }
@@ -676,7 +706,7 @@ async function publishPost() {
             const { data } = supabaseClient.storage.from('post-images').getPublicUrl(fileName);
             imageUrl = data.publicUrl;
         }
-        await supabaseClient.from('posts').insert([{ user_id: currentUser.id, content: input.value, user_name: userProfile.username, image_url: imageUrl, avatar_initials: userProfile.username.substring(0,2).toUpperCase() }]);
+        await supabaseClient.from('posts').insert([{ user_id: currentUser.id, content: input.value, user_name: userProfile.username, image_url: imageUrl, avatar_initials: userProfile.username.substring(0, 2).toUpperCase() }]);
         input.value = ''; removeImage(); fetchPosts();
     } catch (error) { alert("Erreur : " + error.message); } finally { btn.innerHTML = 'Publier'; btn.disabled = false; }
 }
@@ -686,8 +716,8 @@ const postsPerPage = 10;
 
 async function fetchPosts(append = false) {
     const container = document.getElementById('posts-container');
-    if(!container) return;
-    
+    if (!container) return;
+
     // Reset de la page si on ne fait pas un "Charger plus"
     if (!append) {
         currentPostsPage = 0;
@@ -696,7 +726,7 @@ async function fetchPosts(append = false) {
 
     try {
         const friendIds = await getFriendIds();
-        
+
         // Calcul des limites pour la pagination
         const from = currentPostsPage * postsPerPage;
         const to = from + postsPerPage - 1;
@@ -709,11 +739,11 @@ async function fetchPosts(append = false) {
             .range(from, to); // Pagination ajoutée ici
 
         if (postError) throw postError;
-        
+
         const { data: allLikes } = await supabaseClient.from('likes').select('post_id, user_id');
 
         if (!append) container.innerHTML = '';
-        
+
         if ((!posts || posts.length === 0) && !append) {
             container.innerHTML = `<div class="text-center py-10 px-4 animate-view"><p class="text-gray-500 italic">Aucune publication... 🍃</p></div>`;
             return;
@@ -721,21 +751,21 @@ async function fetchPosts(append = false) {
 
         posts.forEach(post => {
             const isMyPost = post.user_id === currentUser.id;
-            const date = new Date(post.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+            const date = new Date(post.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
             const userAvatarUrl = post.profiles && post.profiles.avatar_url;
             const avatarHtml = userAvatarUrl ? `<img src="${userAvatarUrl}" class="w-9 h-9 rounded-full object-cover border-2 border-purple-500/20 shadow-lg">` : `<div class="w-9 h-9 bg-gradient-to-tr from-purple-600 to-blue-600 rounded-full flex items-center justify-center font-bold text-white text-[10px] shadow-lg">${post.avatar_initials || "??"}</div>`;
             const postLikes = allLikes ? allLikes.filter(l => l.post_id === post.id) : [];
             const isAmened = postLikes.some(l => l.user_id === currentUser.id);
             const amenColor = isAmened ? 'text-pink-500 font-bold' : 'text-gray-400 hover:text-pink-400';
             const amenIconClass = isAmened ? 'fill-pink-500 text-pink-500' : 'text-gray-400';
-            
+
             // DESIGN PREMIUM (NEON & GLOW)
             container.insertAdjacentHTML('beforeend', `
                 <div class="premium-card rounded-2xl p-4 mb-5 animate-view" id="post-${post.id}">
                     <div class="flex justify-between items-start mb-3">
                         <div class="flex items-center space-x-3">${avatarHtml}<div><h3 class="font-bold text-white text-sm tracking-wide">${post.user_name}</h3><p class="text-[10px] text-gray-500">${date}</p></div></div>
                         <div class="flex gap-2">
-                             <button onclick="sharePost('${post.id}', '${post.content.substring(0,20)}...')" class="text-gray-600 hover:text-blue-400 transition-colors"><i data-lucide="share-2" class="w-4 h-4"></i></button>
+                             <button onclick="sharePost('${post.id}', '${post.content.substring(0, 20)}...')" class="text-gray-600 hover:text-blue-400 transition-colors"><i data-lucide="share-2" class="w-4 h-4"></i></button>
                              ${isMyPost ? `<button onclick="deletePost('${post.id}')" class="text-gray-600 hover:text-red-500 transition-colors"><i data-lucide="trash-2" class="w-4 h-4"></i></button>` : ''}
                         </div>
                     </div>
@@ -761,11 +791,11 @@ async function fetchPosts(append = false) {
         if (posts.length === postsPerPage) {
             const loadMoreBtn = `<button id="btn-load-more" onclick="loadMorePosts()" class="w-full py-4 text-gray-500 text-xs hover:text-white transition-colors">Afficher plus de publications...</button>`;
             const oldBtn = document.getElementById('btn-load-more');
-            if(oldBtn) oldBtn.remove();
+            if (oldBtn) oldBtn.remove();
             container.insertAdjacentHTML('beforeend', loadMoreBtn);
         }
 
-        if(typeof lucide !== 'undefined') lucide.createIcons();
+        if (typeof lucide !== 'undefined') lucide.createIcons();
     } catch (err) { console.error("Erreur fetchPosts:", err); }
 }
 
@@ -784,7 +814,7 @@ function sharePost(id, text) {
 }
 
 async function deletePost(id) {
-    if(!confirm("Supprimer ce post ?")) return;
+    if (!confirm("Supprimer ce post ?")) return;
     try {
         const { data: post } = await supabaseClient.from('posts').select('image_url').eq('id', id).single();
         if (post && post.image_url) {
@@ -792,7 +822,7 @@ async function deletePost(id) {
             await supabaseClient.storage.from('post-images').remove([`${currentUser.id}/${fileName}`]);
         }
         const { error } = await supabaseClient.from('posts').delete().eq('id', id).eq('user_id', currentUser.id);
-        if(!error) {
+        if (!error) {
             document.getElementById(`post-${id}`).remove();
         } else { throw error; }
     } catch (e) {
@@ -819,9 +849,9 @@ async function toggleComments(postId) {
 
 async function sendComment(postId) {
     const input = document.getElementById(`input-comment-${postId}`);
-    const content = input.value.trim(); if(!content) return;
+    const content = input.value.trim(); if (!content) return;
     const { error } = await supabaseClient.from('comments').insert([{ post_id: postId, user_id: currentUser.id, user_name: userProfile.username, content: content }]);
-    if(!error) { input.value = ''; const section = document.getElementById(`comments-section-${postId}`); section.classList.add('hidden'); toggleComments(postId); }
+    if (!error) { input.value = ''; const section = document.getElementById(`comments-section-${postId}`); section.classList.add('hidden'); toggleComments(postId); }
     else { alert("Erreur : " + error.message); }
 }
 
@@ -830,9 +860,9 @@ async function sendComment(postId) {
 // ==========================================
 async function fetchHelpRequests() {
     const container = document.getElementById('help-list');
-    if(!container) return;
+    if (!container) return;
     const { data: requests } = await supabaseClient.from('help_requests').select('*').order('created_at', { ascending: false }).limit(3);
-    if(requests && requests.length > 0) {
+    if (requests && requests.length > 0) {
         container.innerHTML = requests.map(req => `
             <div class="bg-gray-900/50 p-3 rounded-xl border border-white/5 flex gap-3 items-center">
                 <div class="bg-blue-900/30 p-2.5 rounded-full h-fit flex-shrink-0"><i data-lucide="hand-heart" class="w-4 h-4 text-blue-400"></i></div>
@@ -844,12 +874,12 @@ async function fetchHelpRequests() {
             </div>
         `).join('');
     } else { container.innerHTML = '<div class="text-center text-[10px] text-gray-500 py-2">Aucune demande.</div>'; }
-    if(typeof lucide !== 'undefined') lucide.createIcons();
+    if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
 async function askForHelp() {
     const title = prompt("Titre de votre demande (ex: Déménagement)");
-    if(!title) return;
+    if (!title) return;
     const desc = prompt("Description courte");
     await supabaseClient.from('help_requests').insert([{ user_id: currentUser.id, user_name: userProfile.username, title: title, description: desc || "" }]);
     fetchHelpRequests();
@@ -862,7 +892,7 @@ async function fetchEvents() {
         { id: 3, title: "Étude Biblique", date: "20 FÉV", location: "En ligne", icon: "video", color: "blue" }
     ];
     const container = document.getElementById('events-list');
-    if(!container) return;
+    if (!container) return;
 
     container.innerHTML = events.map(evt => `
         <div class="min-w-[150px] bg-gray-800 rounded-2xl p-3 border border-white/5 relative overflow-hidden group shrink-0">
@@ -874,11 +904,11 @@ async function fetchEvents() {
             </div>
         </div>
     `).join('');
-    if(typeof lucide !== 'undefined') lucide.createIcons();
+    if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
 async function fetchPrayers() {
-    const container = document.getElementById('prayers-list'); if(!container) return;
+    const container = document.getElementById('prayers-list'); if (!container) return;
     const { data: prayers } = await supabaseClient.from('prayers').select('*').order('created_at', { ascending: false });
     container.innerHTML = (prayers && prayers.length > 0) ? prayers.map(p => `<div class="bg-gray-900/60 p-3 rounded-xl border border-pink-500/10 flex justify-between items-center mb-2"><div class="flex-1"><p class="text-[10px] font-bold text-pink-400 mb-0.5">${p.user_name}</p><p class="text-xs italic">"${p.content}"</p></div><button onclick="prayFor('${p.id}', ${p.count})" class="ml-3 flex flex-col items-center"><div class="bg-gray-800 p-2 rounded-full border border-gray-600 hover:border-pink-500 transition-all text-sm">🙏</div><span class="text-[9px] font-bold mt-1">${p.count}</span></button></div>`).join('') : '<div class="text-center text-[10px] text-gray-500 py-4 italic">Soyez le premier ! 🙏</div>';
 }
@@ -909,13 +939,13 @@ function subscribeToRealtime() {
 async function updateFriendCount(userId) {
     const { count: c1 } = await supabaseClient.from('friendships').select('*', { count: 'exact', head: true }).eq('requester_id', userId).eq('status', 'accepted');
     const { count: c2 } = await supabaseClient.from('friendships').select('*', { count: 'exact', head: true }).eq('receiver_id', userId).eq('status', 'accepted');
-    const el = document.getElementById('stats-friends-count'); if(el) el.innerText = (c1 || 0) + (c2 || 0);
+    const el = document.getElementById('stats-friends-count'); if (el) el.innerText = (c1 || 0) + (c2 || 0);
 }
 
 function showNotification(senderName, message) {
     const container = document.getElementById('notification-container');
     const audio = document.getElementById('notif-sound');
-    if(audio) audio.play().catch(() => {});
+    if (audio) audio.play().catch(() => { });
     const notif = document.createElement('div');
     notif.className = "bg-gray-800 border-l-4 border-purple-500 text-white p-3 rounded-xl shadow-2xl mb-2 animate-fade-in";
     notif.innerHTML = `<h4 class="font-bold text-xs text-purple-400">${senderName}</h4><p class="text-xs text-gray-300 truncate">${message}</p>`;
@@ -931,12 +961,12 @@ async function fetchNotifications() {
         badge.classList.remove('hidden');
         const ids = requests.map(r => r.requester_id);
         const { data: profiles } = await supabaseClient.from('profiles').select('id, username').in('id', ids);
-        if(list) list.innerHTML = requests.map(req => {
+        if (list) list.innerHTML = requests.map(req => {
             const p = profiles.find(x => x.id === req.requester_id);
             return `<div class="p-3 border-b border-white/5 flex items-center justify-between"><span class="text-xs font-bold text-white">${p ? p.username : 'Ami'}</span><div class="flex gap-2"><button onclick="handleFriendRequest('${req.id}', true)" class="text-green-400"><i data-lucide="check" class="w-4 h-4"></i></button></div></div>`;
         }).join('');
-        if(typeof lucide !== 'undefined') lucide.createIcons();
-    } else { badge.classList.add('hidden'); if(list) list.innerHTML = '<div class="p-4 text-center text-xs text-gray-500">🍃</div>'; }
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+    } else { badge.classList.add('hidden'); if (list) list.innerHTML = '<div class="p-4 text-center text-xs text-gray-500">🍃</div>'; }
 }
 
 async function handleFriendRequest(id, accepted) {
@@ -1020,7 +1050,7 @@ let uploadedBgImage = null;
 // Initialisation au chargement
 document.addEventListener('DOMContentLoaded', () => {
     canvas = document.getElementById('verse-canvas');
-    if(canvas) {
+    if (canvas) {
         ctx = canvas.getContext('2d');
         // On dessine une première fois au démarrage
         setTimeout(drawCanvas, 500);
@@ -1048,9 +1078,9 @@ function setBackground(type, value) {
 function handleBgUpload(input) {
     if (input.files && input.files[0]) {
         const reader = new FileReader();
-        reader.onload = function(e) {
+        reader.onload = function (e) {
             uploadedBgImage = new Image();
-            uploadedBgImage.onload = function() {
+            uploadedBgImage.onload = function () {
                 currentBgType = 'image';
                 drawCanvas();
             };
@@ -1069,31 +1099,31 @@ function drawCanvas() {
     // --- 1. RÉCUPÉRATION SÉCURISÉE DES VALEURS ---
     // On utilise l'opérateur ?. et || pour éviter les erreurs "null" si un élément manque dans le HTML
     const text = document.getElementById('verse-text-input')?.value || "";
-    
+
     // Texte Basic
     const color = document.getElementById('text-color-picker')?.value || "#ffffff";
     const fontSize = parseInt(document.getElementById('font-size-picker')?.value) || 30;
     const fontFamily = document.getElementById('font-family-picker')?.value || "sans-serif";
     const lineHeightMultiplier = parseFloat(document.getElementById('line-height-slider')?.value) || 1.2;
-    
+
     // Texte Effets
     const strokeColor = document.getElementById('stroke-color-picker')?.value || "#000000";
     const strokeWidth = parseFloat(document.getElementById('stroke-width-slider')?.value) || 0;
-    
+
     // Fond Filtres
     const overlayOpacity = document.getElementById('overlay-slider')?.value || 0.4;
     const blurAmount = document.getElementById('blur-slider')?.value || 0;
     const grayscaleAmount = document.getElementById('grayscale-slider')?.value || 0;
 
     // --- 2. DESSIN DU FOND AVEC FILTRES ---
-    ctx.clearRect(0, 0, canvas.width, canvas.height); 
-    
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
     // Amélioration du lissage d'image
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = 'high';
 
     ctx.filter = `blur(${blurAmount}px) grayscale(${grayscaleAmount}%)`;
-    
+
     if (currentBgType === 'color') {
         ctx.fillStyle = currentBgValue;
         ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -1122,14 +1152,14 @@ function drawCanvas() {
             ctx.lineWidth = strokeWidth;
             ctx.lineJoin = 'round';
         }
-        
+
         ctx.shadowColor = "rgba(0, 0, 0, 0.5)";
         ctx.shadowBlur = 6; // Augmenté pour un look plus premium
         ctx.shadowOffsetX = 2;
         ctx.shadowOffsetY = 2;
 
         // --- AMÉLIORATION DU WORD WRAP (Prend en compte les retours à la ligne manuels) ---
-        const maxWidth = canvas.width - 80; 
+        const maxWidth = canvas.width - 80;
         const paragraphs = text.split('\n'); // Support des touches "Entrée"
         let lines = [];
 
@@ -1153,7 +1183,7 @@ function drawCanvas() {
         const lineHeight = fontSize * lineHeightMultiplier;
         const totalHeight = lines.length * lineHeight;
         let startY = (canvas.height - totalHeight) / 2 + (lineHeight / 2);
-        
+
         let startX = canvas.width / 2;
         if (currentTextAlign === 'left') startX = 40;
         if (currentTextAlign === 'right') startX = canvas.width - 40;
@@ -1173,7 +1203,7 @@ function drawCanvas() {
 
 async function fetchReels() {
     const container = document.getElementById('reels-container');
-    if(!container) return;
+    if (!container) return;
 
     container.innerHTML = '<div class="col-span-full text-center text-gray-500 mt-10 animate-pulse">Chargement des versets...</div>';
 
@@ -1200,7 +1230,7 @@ async function fetchReels() {
                 // VIDÉO
                 let videoId = reel.video_url.split('v=')[1] || reel.video_url.split('/').pop();
                 const ampersandPosition = videoId.indexOf('&');
-                if(ampersandPosition !== -1) videoId = videoId.substring(0, ampersandPosition);
+                if (ampersandPosition !== -1) videoId = videoId.substring(0, ampersandPosition);
                 contentHtml = `<iframe class="w-full aspect-[9/16] rounded-2xl shadow-lg border border-white/5" src="https://www.youtube.com/embed/${videoId}?controls=0&rel=0" frameborder="0" allowfullscreen></iframe>`;
             }
             // MODIFICATION ICI : On retire "bg-gray-800" pour "bg-transparent"
@@ -1225,7 +1255,7 @@ async function fetchReels() {
                 </div>
             `);
         });
-        if(typeof lucide !== 'undefined') lucide.createIcons();
+        if (typeof lucide !== 'undefined') lucide.createIcons();
     } else {
         container.innerHTML = '<div class="col-span-full text-center text-gray-600 mt-10">Aucun verset pour le moment.</div>';
     }
@@ -1246,11 +1276,11 @@ async function publishVerseCard() {
             // 3. Upload vers Supabase Storage
             const fileName = `verses/${currentUser.id}_${Date.now()}.png`;
             const { error: uploadError } = await supabaseClient.storage.from('post-images').upload(fileName, blob);
-            
+
             if (uploadError) throw uploadError;
-            
+
             const { data } = supabaseClient.storage.from('post-images').getPublicUrl(fileName);
-            
+
             // 4. Création du Post dans la base de données
             // On l'ajoute comme un "Reel" (Verset)
             const { error: dbError } = await supabaseClient.from('reels').insert([{
@@ -1274,63 +1304,63 @@ async function publishVerseCard() {
         }
 
         let isBiblePlaying = false;
-function toggleBibleAudio() {
-    const btn = document.querySelector('.btn-audio-bible');
-    const icon = btn.querySelector('i');
-    
-    isBiblePlaying = !isBiblePlaying;
-    
-    if (isBiblePlaying) {
-        btn.classList.add('playing');
-        // Ici, on simule ou on lance un flux audio
-        console.log("Lecture audio activée...");
-        showNotification("Lecture audio démarrée", "info");
-    } else {
-        btn.classList.remove('playing');
-        console.log("Lecture audio arrêtée.");
-    }
-    
-    // Mise à jour de l'icône via Lucide
-    icon.setAttribute('data-lucide', isBiblePlaying ? 'pause' : 'volume-2');
-    lucide.createIcons();
-}
+        function toggleBibleAudio() {
+            const btn = document.querySelector('.btn-audio-bible');
+            const icon = btn.querySelector('i');
 
-function showNotification(message, type = 'success') {
-    const container = document.getElementById('notification-container');
-    const notif = document.createElement('div');
-    const bgColor = type === 'success' ? 'bg-green-600' : (type === 'error' ? 'bg-red-600' : 'bg-purple-600');
-    
-    notif.className = `${bgColor} text-white px-4 py-3 rounded-xl shadow-lg flex items-center gap-2 animate-view`;
-    notif.innerHTML = `
+            isBiblePlaying = !isBiblePlaying;
+
+            if (isBiblePlaying) {
+                btn.classList.add('playing');
+                // Ici, on simule ou on lance un flux audio
+                console.log("Lecture audio activée...");
+                showNotification("Lecture audio démarrée", "info");
+            } else {
+                btn.classList.remove('playing');
+                console.log("Lecture audio arrêtée.");
+            }
+
+            // Mise à jour de l'icône via Lucide
+            icon.setAttribute('data-lucide', isBiblePlaying ? 'pause' : 'volume-2');
+            lucide.createIcons();
+        }
+
+        function showNotification(message, type = 'success') {
+            const container = document.getElementById('notification-container');
+            const notif = document.createElement('div');
+            const bgColor = type === 'success' ? 'bg-green-600' : (type === 'error' ? 'bg-red-600' : 'bg-purple-600');
+
+            notif.className = `${bgColor} text-white px-4 py-3 rounded-xl shadow-lg flex items-center gap-2 animate-view`;
+            notif.innerHTML = `
         <i data-lucide="${type === 'success' ? 'check-circle' : 'info'}" class="w-4 h-4"></i>
         <span class="text-sm font-bold">${message}</span>
     `;
-    
-    container.appendChild(notif);
-    lucide.createIcons();
 
-    setTimeout(() => {
-        notif.style.opacity = '0';
-        setTimeout(() => notif.remove(), 500);
-    }, 3000);
-}
+            container.appendChild(notif);
+            lucide.createIcons();
 
-async function searchUsers(query) {
-    const container = document.getElementById('search-results-container');
-    if (!query || query.length < 2) {
-        container.innerHTML = '';
-        return;
-    }
+            setTimeout(() => {
+                notif.style.opacity = '0';
+                setTimeout(() => notif.remove(), 500);
+            }, 3000);
+        }
 
-    const { data: users, error } = await supabase
-        .from('profiles')
-        .select('id, username, avatar_url')
-        .ilike('username', `%${query}%`)
-        .limit(5);
+        async function searchUsers(query) {
+            const container = document.getElementById('search-results-container');
+            if (!query || query.length < 2) {
+                container.innerHTML = '';
+                return;
+            }
 
-    if (error) return;
+            const { data: users, error } = await supabase
+                .from('profiles')
+                .select('id, username, avatar_url')
+                .ilike('username', `%${query}%`)
+                .limit(5);
 
-    container.innerHTML = users.map(user => `
+            if (error) return;
+
+            container.innerHTML = users.map(user => `
         <div onclick="viewPublicProfile('${user.id}')" class="flex items-center gap-3 p-3 bg-gray-800 hover:bg-gray-700 cursor-pointer border-b border-white/5 first:rounded-t-xl last:rounded-b-xl">
             <div class="w-8 h-8 rounded-full bg-purple-600 flex items-center justify-center text-xs font-bold">
                 ${user.avatar_url ? `<img src="${user.avatar_url}" class="w-full h-full rounded-full object-cover">` : user.username.charAt(0)}
@@ -1338,7 +1368,7 @@ async function searchUsers(query) {
             <span class="text-sm font-medium text-white">${user.username}</span>
         </div>
     `).join('');
-}
+        }
 
     });
 }
