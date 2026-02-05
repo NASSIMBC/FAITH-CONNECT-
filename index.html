@@ -308,7 +308,7 @@
                         <h2 id="profile-page-name" class="text-2xl font-black">Mon Profil</h2>
                         <p id="profile-page-bio" class="text-gray-400 text-sm mt-2 max-w-md mx-auto">...</p>
 
-                        <div class="grid grid-cols-3 gap-4 mt-8 border-t border-white/5 pt-6">
+                        <div class="grid grid-cols-3 gap-4 mt-8 pt-6 border-t border-white/5">
                             <div>
                                 <p class="font-black text-xl" id="stat-posts">0</p>
                                 <p class="text-[10px] text-gray-500 uppercase">Posts</p>
@@ -322,60 +322,79 @@
                                 <p class="text-[10px] text-gray-500 uppercase">Prières</p>
                             </div>
                         </div>
-
-                        <button onclick="App.Auth.logout()"
-                            class="absolute top-6 right-6 text-red-400 hover:text-red-300"><i data-lucide="log-out"
-                                class="w-5 h-5"></i></button>
                     </div>
-                </section>
 
-            </main>
-
-            <!-- RIGHT SIDEBAR (Events & Prayers) -->
-            <aside class="hidden lg:block w-80 sticky top-6 h-fit space-y-6">
-                <!-- Events Widget -->
-                <div class="glass-panel p-5 rounded-[24px]">
-                    <h3 class="font-bold mb-4 flex items-center justify-between">
-                        <span>Événements</span>
-                        <span class="text-[10px] bg-white/10 px-2 py-1 rounded-full">Bientôt</span>
-                    </h3>
-                    <div id="widget-events-list" class="space-y-3">
-                        <!-- Events injected -->
+                    <!-- Profile Tabs -->
+                    <div class="glass-panel p-2 rounded-[24px] mb-4 flex">
+                        <button onclick="App.UI.switchProfileTab('posts')" id="tab-profile-posts"
+                            class="flex-1 py-3 text-sm font-bold bg-white/10 rounded-xl text-white transition">Mes
+                            Posts</button>
+                        <button onclick="App.UI.switchProfileTab('friends')" id="tab-profile-friends"
+                            class="flex-1 py-3 text-sm font-bold text-gray-400 hover:text-white transition">Amis</button>
                     </div>
-                </div>
 
-                <!-- Prayer Widget -->
-                <div class="glass-panel p-5 rounded-[24px]">
-                    <h3 class="font-bold mb-4">Mur de Prière 🙏</h3>
-                    <div id="widget-prayers-list" class="space-y-3 max-h-60 overflow-y-auto scrollbar-hide"></div>
-                    <div class="mt-4 flex gap-2">
-                        <input id="widget-prayer-input" type="text" placeholder="Je prie pour..."
-                            class="input-field flex-1 text-xs px-3 py-2 rounded-lg">
-                        <button onclick="App.Features.Prayers.add()"
-                            class="bg-primary/20 hover:bg-primary/30 text-primary p-2 rounded-lg"><i data-lucide="send"
-                                class="w-4 h-4"></i></button>
+                    <!-- Profile Content -->
+                    <div id="profile-posts-container" class="space-y-4 pb-20">
+                        <!-- User posts injected here -->
+                        <div class="text-center text-gray-500 py-10 text-xs">Chargement...</div>
                     </div>
-                </div>
-            </aside>
 
+                    <div id="profile-friends-container" class="hidden grid grid-cols-2 md:grid-cols-3 gap-3 pb-20">
+                        <!-- Friends injected here -->
+                    </div>
+
+                    <button onclick="App.Auth.logout()"
+                        class="absolute top-6 right-6 text-red-400 hover:text-red-300"><i data-lucide="log-out"
+                            class="w-5 h-5"></i></button>
         </div>
+        </section>
 
-        <!-- MOBILE BOTTOM NAV -->
-        <nav class="md:hidden fixed bottom-0 left-0 right-0 glass-nav px-6 py-4 pb-6 flex justify-between z-50">
-            <button onclick="App.UI.navigateTo('home')" class="nav-item text-gray-400 active" id="mob-nav-home"><i
-                    data-lucide="home"></i></button>
-            <button onclick="App.UI.navigateTo('reels')" class="nav-item text-gray-400" id="mob-nav-reels"><i
-                    data-lucide="play-circle"></i></button>
-            <button onclick="App.Features.Feed.openCreator()"
-                class="bg-primary text-white p-3 rounded-full -mt-8 shadow-glow"><i data-lucide="plus"></i></button>
-            <button onclick="App.UI.navigateTo('bible')" class="nav-item text-gray-400" id="mob-nav-bible"><i
-                    data-lucide="book"></i></button>
-            <button onclick="App.UI.navigateTo('messages')" class="nav-item text-gray-400 relative"
-                id="mob-nav-messages">
-                <i data-lucide="message-circle"></i>
-                <span class="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full hidden" id="mob-msg-badge"></span>
-            </button>
-        </nav>
+        </main>
+
+        <!-- RIGHT SIDEBAR (Events & Prayers) -->
+        <aside class="hidden lg:block w-80 sticky top-6 h-fit space-y-6">
+            <!-- Events Widget -->
+            <div class="glass-panel p-5 rounded-[24px]">
+                <h3 class="font-bold mb-4 flex items-center justify-between">
+                    <span>Événements</span>
+                    <span class="text-[10px] bg-white/10 px-2 py-1 rounded-full">Bientôt</span>
+                </h3>
+                <div id="widget-events-list" class="space-y-3">
+                    <!-- Events injected -->
+                </div>
+            </div>
+
+            <!-- Prayer Widget -->
+            <div class="glass-panel p-5 rounded-[24px]">
+                <h3 class="font-bold mb-4">Mur de Prière 🙏</h3>
+                <div id="widget-prayers-list" class="space-y-3 max-h-60 overflow-y-auto scrollbar-hide"></div>
+                <div class="mt-4 flex gap-2">
+                    <input id="widget-prayer-input" type="text" placeholder="Je prie pour..."
+                        class="input-field flex-1 text-xs px-3 py-2 rounded-lg">
+                    <button onclick="App.Features.Prayers.add()"
+                        class="bg-primary/20 hover:bg-primary/30 text-primary p-2 rounded-lg"><i data-lucide="send"
+                            class="w-4 h-4"></i></button>
+                </div>
+            </div>
+        </aside>
+
+    </div>
+
+    <!-- MOBILE BOTTOM NAV -->
+    <nav class="md:hidden fixed bottom-0 left-0 right-0 glass-nav px-6 py-4 pb-6 flex justify-between z-50">
+        <button onclick="App.UI.navigateTo('home')" class="nav-item text-gray-400 active" id="mob-nav-home"><i
+                data-lucide="home"></i></button>
+        <button onclick="App.UI.navigateTo('reels')" class="nav-item text-gray-400" id="mob-nav-reels"><i
+                data-lucide="play-circle"></i></button>
+        <button onclick="App.Features.Feed.openCreator()"
+            class="bg-primary text-white p-3 rounded-full -mt-8 shadow-glow"><i data-lucide="plus"></i></button>
+        <button onclick="App.UI.navigateTo('bible')" class="nav-item text-gray-400" id="mob-nav-bible"><i
+                data-lucide="book"></i></button>
+        <button onclick="App.UI.navigateTo('messages')" class="nav-item text-gray-400 relative" id="mob-nav-messages">
+            <i data-lucide="message-circle"></i>
+            <span class="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full hidden" id="mob-msg-badge"></span>
+        </button>
+    </nav>
 
     </div>
 
