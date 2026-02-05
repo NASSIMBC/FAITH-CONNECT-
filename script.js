@@ -102,11 +102,6 @@ function switchView(viewName) {
             el.classList.add('hidden');
             el.classList.remove('animate-view'); // Reset l'animation
         }
-        const btn = document.getElementById('nav-' + v);
-        if (btn) {
-            btn.classList.remove('text-purple-400', 'scale-110'); // Reset l'effet de zoom
-            btn.classList.add('text-gray-500');
-        }
     });
 
     // 2. Afficher la nouvelle vue avec Animation
@@ -117,40 +112,23 @@ function switchView(viewName) {
         target.classList.add('animate-view');
     }
 
-    // 3. Activer le bouton du menu (Mobile et Desktop)
-    ['nav-', 'nav-desktop-'].forEach(prefix => {
-        const activeBtn = document.getElementById(prefix + viewName);
-        if (activeBtn) {
-            activeBtn.classList.remove('text-gray-500'); // Ou autre classe par défaut si différente
-            // Pour le desktop, on peut avoir besoin de gérer le bg aussi si on veut
-            // Mais pour l'instant on garde la cohérence avec le code précédent : text-purple-400
-            activeBtn.classList.add('text-purple-400', 'scale-110', 'transition-transform', 'duration-200');
-
-            // Si c'est le bouton desktop, on peut ajouter un background subtil si on veut
-            if (prefix === 'nav-desktop-') {
-                activeBtn.classList.add('bg-white/10', 'text-white');
-                activeBtn.classList.remove('text-gray-300');
-            }
-        }
-    });
-
-    // Reset des autres boutons (Mobile et Desktop)
+    // 3. Reset tous les boutons desktop d'abord
     ['home', 'reels', 'bible', 'messages', 'profile', 'public-profile'].forEach(v => {
-        if (v !== viewName) {
-            ['nav-', 'nav-desktop-'].forEach(prefix => {
-                const btn = document.getElementById(prefix + v);
-                if (btn) {
-                    btn.classList.remove('text-purple-400', 'scale-110', 'bg-white/10', 'text-white'); // Reset styles actifs
-                    // Appliquer styles inactifs
-                    if (prefix === 'nav-desktop-') {
-                        btn.classList.add('text-gray-300');
-                    } else {
-                        btn.classList.add('text-gray-500');
-                    }
-                }
-            });
+        const desktopBtn = document.getElementById('nav-desktop-' + v);
+        if (desktopBtn) {
+            // Retirer tous les styles actifs
+            desktopBtn.classList.remove('bg-gradient-to-r', 'from-purple-600/20', 'to-indigo-600/20', 'text-white', 'shadow-lg', 'shadow-purple-500/20');
+            // Remettre les styles inactifs
+            desktopBtn.classList.add('text-gray-400');
         }
     });
+
+    // 4. Activer le bouton desktop actuel avec gradient
+    const activeDesktopBtn = document.getElementById('nav-desktop-' + viewName);
+    if (activeDesktopBtn) {
+        activeDesktopBtn.classList.remove('text-gray-400');
+        activeDesktopBtn.classList.add('bg-gradient-to-r', 'from-purple-600/20', 'to-indigo-600/20', 'text-white', 'shadow-lg', 'shadow-purple-500/20');
+    }
 
     // Logiques spécifiques inchangées
     const reelsContainer = document.getElementById('reels-container');
