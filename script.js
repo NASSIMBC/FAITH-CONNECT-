@@ -212,7 +212,16 @@ const App = {
             }
         },
 
-        toggleNotifs() { alert("Centre de notifications à venir !"); }
+        toggleNotifs() { alert("Centre de notifications à venir !"); },
+
+        toggleMobileSearch() {
+            const overlay = document.getElementById('mobile-search-overlay');
+            const input = document.getElementById('mobile-search-input');
+            if (overlay) {
+                overlay.classList.toggle('hidden');
+                if (!overlay.classList.contains('hidden') && input) input.focus();
+            }
+        }
     },
 
     // --- FONCTIONNALITÉS MÉTIERS ---
