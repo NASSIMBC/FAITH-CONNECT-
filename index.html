@@ -17,6 +17,8 @@
         href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&family=Lora:ital,wght@0,400;0,700;1,400&display=swap"
         rel="stylesheet">
     <!-- Styles CSS personnalisés -->
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="mobile.css">
     <style>
         body {
             background-color: #0A0A0A;
@@ -412,24 +414,48 @@
             </div> <!-- End Content Area -->
         </main>
 
-        <!-- Barre de Navigation (Mobile) -->
-        <nav
-            class="fixed bottom-0 left-0 right-0 z-40 bg-black/80 backdrop-blur-sm border-t border-white/5 p-2 flex justify-around md:hidden">
-            <button id="nav-home" onclick="switchView('home')" class="flex flex-col items-center w-16 p-2 rounded-lg"><i
-                    data-lucide="home"></i><span class="text-xs">Accueil</span></button>
-            <button id="nav-reels" onclick="switchView('reels')"
-                class="flex flex-col items-center w-16 p-2 rounded-lg"><i data-lucide="film"></i><span
-                    class="text-xs">Versets</span></button>
-            <button id="nav-bible" onclick="switchView('bible')"
-                class="flex flex-col items-center w-16 p-2 rounded-lg"><i data-lucide="book-open"></i><span
-                    class="text-xs">Bible</span></button>
-            <button id="nav-messages" onclick="switchView('messages')"
-                class="flex flex-col items-center w-16 p-2 rounded-lg relative"><i
-                    data-lucide="message-square"></i><span class="text-xs">Messages</span><span id="msg-badge"
-                    class="absolute top-1 right-3 w-2 h-2 bg-purple-400 rounded-full hidden"></span></button>
-            <button id="nav-profile" onclick="switchView('profile')"
-                class="flex flex-col items-center w-16 p-2 rounded-lg"><i data-lucide="user"></i><span
-                    class="text-xs">Profil</span></button>
+        <!-- Barre de Navigation Mobile Moderne -->
+        <nav class="mobile-bottom-nav md:hidden">
+            <button id="nav-home" onclick="switchView('home')" class="mobile-nav-item">
+                <div class="mobile-nav-icon">
+                    <i data-lucide="home"></i>
+                </div>
+                <span class="mobile-nav-label">Accueil</span>
+                <div class="mobile-nav-indicator"></div>
+            </button>
+
+            <button id="nav-reels" onclick="switchView('reels')" class="mobile-nav-item">
+                <div class="mobile-nav-icon">
+                    <i data-lucide="film"></i>
+                </div>
+                <span class="mobile-nav-label">Versets</span>
+                <div class="mobile-nav-indicator"></div>
+            </button>
+
+            <button id="nav-bible" onclick="switchView('bible')" class="mobile-nav-item">
+                <div class="mobile-nav-icon">
+                    <i data-lucide="book-open"></i>
+                </div>
+                <span class="mobile-nav-label">Bible</span>
+                <div class="mobile-nav-indicator"></div>
+            </button>
+
+            <button id="nav-messages" onclick="switchView('messages')" class="mobile-nav-item">
+                <div class="mobile-nav-icon">
+                    <i data-lucide="message-square"></i>
+                    <span id="msg-badge" class="mobile-nav-badge hidden"></span>
+                </div>
+                <span class="mobile-nav-label">Messages</span>
+                <div class="mobile-nav-indicator"></div>
+            </button>
+
+            <button id="nav-profile" onclick="switchView('profile')" class="mobile-nav-item">
+                <div class="mobile-nav-icon">
+                    <i data-lucide="user"></i>
+                </div>
+                <span class="mobile-nav-label">Profil</span>
+                <div class="mobile-nav-indicator"></div>
+            </button>
         </nav>
     </div>
 
