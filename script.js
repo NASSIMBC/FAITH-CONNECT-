@@ -96,7 +96,7 @@ function switchView(viewName) {
     console.log('🔄 switchView appelée avec:', viewName);
 
     // 1. Cacher toutes les vues et reset les styles
-    ['home', 'reels', 'bible', 'messages', 'profile', 'public-profile'].forEach(v => {
+    ['home', 'reels', 'bible', 'messages', 'profile', 'public-profile', 'groups'].forEach(v => {
         const el = document.getElementById('view-' + v);
         if (el) {
             el.classList.add('hidden');
@@ -113,7 +113,7 @@ function switchView(viewName) {
     }
 
     // 3. Reset tous les boutons desktop d'abord
-    ['home', 'reels', 'bible', 'messages', 'profile', 'public-profile'].forEach(v => {
+    ['home', 'reels', 'bible', 'messages', 'profile', 'public-profile', 'groups'].forEach(v => {
         const desktopBtn = document.getElementById('nav-desktop-' + v);
         if (desktopBtn) {
             // Retirer tous les styles actifs
@@ -146,6 +146,8 @@ function switchView(viewName) {
     const reelsContainer = document.getElementById('reels-container');
     if (viewName === 'reels') {
         fetchReels();
+    } else if (viewName === 'groups') {
+        fetchGroups();
     } else {
         if (reelsContainer) reelsContainer.innerHTML = '';
     }
@@ -169,7 +171,8 @@ async function loadAppData() {
         fetchHelpRequests(),
         fetchEvents(),
         loadConversations(),
-        fetchNotifications()
+        fetchNotifications(),
+        loadDailyVerse()
     ]);
     resetChat();
     subscribeToRealtime();
@@ -942,31 +945,79 @@ async function askForHelp() {
 }
 
 async function fetchEvents() {
+    // 3 événements fictifs pour l'exemple
     const events = [
-        { id: 1, title: "Soirée Louange", date: "12 FÉV", location: "Église Centrale", icon: "music", color: "purple" },
-        { id: 2, title: "Maraude", date: "15 FÉV", location: "Gare du Nord", icon: "heart", color: "pink" },
-        { id: 3, title: "Étude Biblique", date: "20 FÉV", location: "En ligne", icon: "video", color: "blue" }
+        { id: 1, title: "Soirée Louange", date: "12 FÉV", location: "Église Centrale", icon: "music", color: "purple", description: "Une soirée de louange et d'adoration.", isoDate: "20260212T190000" },
+        { id: 2, title: "Maraude", date: "15 FÉV", location: "Gare du Nord", icon: "heart", color: "pink", description: "Distribution de repas aux sans-abris.", isoDate: "20260215T200000" },
+        { id: 3, title: "Étude Biblique", date: "20 FÉV", location: "En ligne", icon: "video", color: "blue", description: "Étude sur l'épître aux Romains.", isoDate: "20260220T183000" }
     ];
     const container = document.getElementById('events-list');
     if (!container) return;
 
     container.innerHTML = events.map(evt => `
-        <div class="min-w-[150px] bg-gray-800 rounded-2xl p-3 border border-white/5 relative overflow-hidden group shrink-0">
-            <div class="absolute top-0 right-0 p-2 bg-${evt.color}-600 rounded-bl-xl text-[10px] font-bold text-white shadow-lg">${evt.date}</div>
-            <div class="mt-7">
-                <h4 class="font-bold text-white text-sm leading-tight">${evt.title}</h4>
-                <p class="text-[10px] text-gray-400 mt-1 flex items-center gap-1"><i data-lucide="${evt.icon}" class="w-3 h-3"></i> ${evt.location}</p>
-                <button onclick="alert('Inscrit !')" class="mt-3 w-full py-1.5 bg-white/5 hover:bg-${evt.color}-600/20 rounded-lg text-[10px] text-${evt.color}-300 font-bold transition-colors border border-white/5">Participer</button>
+        <div class="min-w-[160px] bg-gray-900 rounded-2xl p-3 border border-white/5 relative overflow-hidden group shrink-0 hover:border-${evt.color}-500/30 transition-colors">
+            <div class="absolute top-0 right-0 p-2 bg-${evt.color}-600 rounded-bl-xl text-[10px] font-bold text-white shadow-lg z-10">${evt.date}</div>
+            <div class="mt-7 relative z-10">
+                <h4 class="font-bold text-white text-sm leading-tight mb-1">${evt.title}</h4>
+                <p class="text-[10px] text-gray-400 flex items-center gap-1 mb-3"><i data-lucide="${evt.icon}" class="w-3 h-3 text-${evt.color}-400"></i> ${evt.location}</p>
+                
+                <div class="flex gap-2">
+                    <button onclick="addToCalendar('${evt.title}', '${evt.description}', '${evt.location}', '${evt.isoDate}')" 
+                        class="flex-1 py-1.5 bg-gray-800 hover:bg-white/10 rounded-lg text-[10px] text-gray-300 font-bold transition-colors border border-white/5 flex items-center justify-center gap-1" title="Ajouter au calendrier">
+                        <i data-lucide="calendar-plus" class="w-3 h-3"></i>
+                    </button>
+                    <button onclick="alert('Inscrit !')" 
+                        class="flex-1 py-1.5 bg-${evt.color}-600/20 hover:bg-${evt.color}-600 text-${evt.color}-400 hover:text-white rounded-lg text-[10px] font-bold transition-all border border-${evt.color}-500/20">
+                        Participer
+                    </button>
+                </div>
             </div>
+            <!-- Glow effect -->
+            <div class="absolute -bottom-10 -right-10 w-24 h-24 bg-${evt.color}-600/10 rounded-full blur-2xl group-hover:bg-${evt.color}-600/20 transition-all"></div>
         </div>
     `).join('');
     if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
+function addToCalendar(title, desc, loc, date) {
+    // Génération simple d'un lien ICS
+    const icsContent = `BEGIN:VCALENDAR
+VERSION:2.0
+BEGIN:VEVENT
+SUMMARY:${title}
+DESCRIPTION:${desc}
+LOCATION:${loc}
+DTSTART:${date}
+DTEND:${date}
+END:VEVENT
+END:VCALENDAR`;
+
+    const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
+    const link = document.createElement('a');
+    link.href = window.URL.createObjectURL(blob);
+    link.setAttribute('download', `${title.replace(/\s+/g, '_')}.ics`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
 async function fetchPrayers() {
     const container = document.getElementById('prayers-list'); if (!container) return;
     const { data: prayers } = await supabaseClient.from('prayers').select('*').order('created_at', { ascending: false });
-    container.innerHTML = (prayers && prayers.length > 0) ? prayers.map(p => `<div class="bg-gray-900/60 p-3 rounded-xl border border-pink-500/10 flex justify-between items-center mb-2"><div class="flex-1"><p class="text-[10px] font-bold text-pink-400 mb-0.5">${p.user_name}</p><p class="text-xs italic">"${p.content}"</p></div><button onclick="prayFor('${p.id}', ${p.count})" class="ml-3 flex flex-col items-center"><div class="bg-gray-800 p-2 rounded-full border border-gray-600 hover:border-pink-500 transition-all text-sm">🙏</div><span class="text-[9px] font-bold mt-1">${p.count}</span></button></div>`).join('') : '<div class="text-center text-[10px] text-gray-500 py-4 italic">Soyez le premier ! 🙏</div>';
+    container.innerHTML = (prayers && prayers.length > 0) ? prayers.map(p => `
+        <div class="bg-gray-900/60 p-3 rounded-xl border border-pink-500/10 flex justify-between items-center mb-2 hover:border-pink-500/30 transition-colors group">
+            <div class="flex-1">
+                <p class="text-[10px] font-bold text-pink-400 mb-0.5">${p.user_name}</p>
+                <p class="text-xs italic text-gray-300">"${p.content}"</p>
+            </div>
+            <button onclick="prayFor('${p.id}', ${p.count}, this)" class="ml-3 flex flex-col items-center group/btn">
+                <div class="bg-gray-800 p-2 rounded-full border border-gray-600 group-hover/btn:border-pink-500 group-hover/btn:bg-pink-500/10 transition-all text-sm relative">
+                    🙏
+                    <div class="absolute inset-0 rounded-full bg-pink-500/20 scale-0 group-active/btn:scale-150 transition-transform duration-300"></div>
+                </div>
+                <span class="text-[9px] font-bold mt-1 text-gray-500 group-hover/btn:text-pink-400 transition-colors prayer-count-${p.id}">${p.count}</span>
+            </button>
+        </div>`).join('') : '<div class="text-center text-[10px] text-gray-500 py-4 italic">Soyez le premier ! 🙏</div>';
 }
 
 async function addPrayer() {
@@ -975,7 +1026,23 @@ async function addPrayer() {
     input.value = ''; fetchPrayers();
 }
 
-async function prayFor(id, current) { await supabaseClient.from('prayers').update({ count: (current || 0) + 1 }).eq('id', id); fetchPrayers(); }
+
+async function prayFor(id, current, btnElement) {
+    // Animation immédiate
+    if (btnElement) {
+        const icon = btnElement.querySelector('div');
+        icon.classList.add('scale-125');
+        setTimeout(() => icon.classList.remove('scale-125'), 200);
+
+        // Optimistic UI update
+        const countSpan = btnElement.querySelector(`span`);
+        if (countSpan) countSpan.innerText = (current || 0) + 1;
+    }
+
+    await supabaseClient.from('prayers').update({ count: (current || 0) + 1 }).eq('id', id);
+    // On ne re-fetch pas tout de suite pour ne pas casser l'animation, ou on le fait discrètement
+    // fetchPrayers(); 
+}
 
 function subscribeToRealtime() {
     supabaseClient.channel('global-updates').on('postgres_changes', { event: '*', schema: 'public' }, async (payload) => {
@@ -1427,4 +1494,174 @@ async function publishVerseCard() {
         }
 
     });
+}
+
+// ==========================================
+// 15. GESTION DES GROUPES
+// ==========================================
+async function fetchGroups() {
+    const myGroupsContainer = document.getElementById('my-groups-list');
+    const exploreContainer = document.getElementById('explore-groups-list');
+
+    if (!myGroupsContainer || !exploreContainer) return;
+
+    myGroupsContainer.innerHTML = '<div class="col-span-full text-center text-xs text-gray-500 animate-pulse">Chargement...</div>';
+    exploreContainer.innerHTML = '<div class="col-span-full text-center text-xs text-gray-500 animate-pulse">Chargement...</div>';
+
+    // Simulation de données (En attendant la table 'groups' sur Supabase)
+    // TODO: Créer table 'groups' (id, name, description, image_url, member_count)
+    // TODO: Créer table 'group_members' (group_id, user_id, role)
+
+    // Pour l'instant, on mock
+    setTimeout(() => {
+        const mockGroups = [
+            { id: 1, name: "Jeunes Pro Paris", desc: "Rencontres bi-mensuelles pour les 25-35 ans.", count: 42, img: "https://images.unsplash.com/photo-1523240795612-9a054b0db644?auto=format&fit=crop&q=80&w=300", isMember: true },
+            { id: 2, name: "Étude Romains", desc: "Lecture suivie de l'épître aux Romains.", count: 12, img: "https://images.unsplash.com/photo-1491841550275-ad7854e35ca6?auto=format&fit=crop&q=80&w=300", isMember: false },
+            { id: 3, name: "Louange Team", desc: "Pour les musiciens et chantres.", count: 8, img: "https://images.unsplash.com/photo-1516280440614-6697288d5d38?auto=format&fit=crop&q=80&w=300", isMember: true },
+            { id: 4, name: "Solidarité SDF", desc: "Organisation des maraudes du samedi.", count: 25, img: "https://images.unsplash.com/photo-1593113598332-cd288d649433?auto=format&fit=crop&q=80&w=300", isMember: false },
+        ];
+
+        renderGroups(mockGroups);
+    }, 500);
+}
+
+function renderGroups(groups) {
+    const myGroupsContainer = document.getElementById('my-groups-list');
+    const exploreContainer = document.getElementById('explore-groups-list');
+
+    if (!myGroupsContainer || !exploreContainer) return;
+
+    const myGroups = groups.filter(g => g.isMember);
+    const exploreGroups = groups.filter(g => !g.isMember);
+
+    // Render "Mes Groupes"
+    if (myGroups.length > 0) {
+        myGroupsContainer.innerHTML = myGroups.map(g => createGroupCard(g, true)).join('');
+    } else {
+        myGroupsContainer.innerHTML = '<div class="col-span-full text-center text-xs text-gray-500 italic py-4">Vous n\'avez rejoint aucun groupe.</div>';
+    }
+
+    // Render "Explorer"
+    if (exploreGroups.length > 0) {
+        exploreContainer.innerHTML = exploreGroups.map(g => createGroupCard(g, false)).join('');
+    } else {
+        exploreContainer.innerHTML = '<div class="col-span-full text-center text-xs text-gray-500 italic py-4">Aucun autre groupe disponible.</div>';
+    }
+
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function createGroupCard(group, isMember) {
+    return `
+    <div class="bg-gray-900 border border-white/5 rounded-2xl overflow-hidden hover:border-purple-500/30 transition-all group">
+        <div class="h-24 bg-gray-800 relative">
+            <img src="${group.img}" class="w-full h-full object-cover opacity-60 group-hover:opacity-80 transition-opacity">
+            <div class="absolute inset-0 bg-gradient-to-t from-gray-900 via-transparent to-transparent"></div>
+        </div>
+        <div class="p-4 relative -mt-6">
+            <div class="flex justify-between items-start">
+                <h4 class="font-bold text-white text-lg leading-tight mb-1">${group.name}</h4>
+                ${isMember ? '<span class="bg-green-500/20 text-green-400 text-[10px] font-bold px-2 py-1 rounded-full uppercase">Membre</span>' : ''}
+            </div>
+            <p class="text-xs text-gray-400 mb-3">${group.desc}</p>
+            
+            <div class="flex justify-between items-center border-t border-white/5 pt-3">
+                <div class="flex items-center gap-1 text-gray-500 text-xs">
+                    <i data-lucide="users" class="w-3 h-3"></i>
+                    <span>${group.count} membres</span>
+                </div>
+                <button onclick="${isMember ? `openGroupChat(${group.id})` : `joinGroup(${group.id})`}" 
+                    class="${isMember ? 'bg-gray-800 hover:bg-gray-700 text-white' : 'bg-purple-600 hover:bg-purple-500 text-white'} px-3 py-1.5 rounded-lg text-xs font-bold transition-colors">
+                    ${isMember ? 'Ouvrir' : 'Rejoindre'}
+                </button>
+            </div>
+        </div>
+    </div>
+    `;
+}
+
+function openGroupChat(groupId) {
+    // Redirige vers la messagerie (simulation)
+    alert("Ouverture du chat de groupe #" + groupId + " (Fonctionnalité à venir)");
+    // Idéalement : switchView('messages') et charger la conv de groupe
+}
+
+function joinGroup(groupId) {
+    // Simulation
+    if (confirm("Rejoindre ce groupe ?")) {
+        alert("Vous avez rejoint le groupe !");
+        fetchGroups(); // En vrai, faudrait update la DB
+    }
+}
+
+function createGroup() {
+    prompt("Nom du nouveau groupe ?");
+    alert("Demande de création envoyée !");
+}
+
+// ==========================================
+// 14. VERSET DU JOUR
+// ==========================================
+async function loadDailyVerse() {
+    const card = document.getElementById('daily-verse-card');
+    if (!card) return;
+
+    // 1. Vérifier si on a déjà un verset pour aujourd'hui en cache (localStorage)
+    const today = new Date().toDateString();
+    const cachedData = localStorage.getItem('daily_verse');
+
+    if (cachedData) {
+        const { date, text, ref } = JSON.parse(cachedData);
+        if (date === today) {
+            displayDailyVerse(text, ref);
+            return;
+        }
+    }
+
+    // 2. Sinon, fetch depuis l'API
+    try {
+        // On utilise une liste de versets populaires par défaut (fallback) pour chrétiens
+        const manualVerses = [
+            { t: "Car je connais les projets que j'ai formés sur vous, dit l'Éternel, projets de paix et non de malheur, afin de vous donner un avenir et de l'espérance.", r: "Jérémie 29:11" },
+            { t: "Je puis tout par celui qui me fortifie.", r: "Philippiens 4:13" },
+            { t: "L'Éternel est mon berger: je ne manquerai de rien.", r: "Psaumes 23:1" },
+            { t: "Car Dieu a tant aimé le monde qu'il a donné son Fils unique, afin que quiconque croit en lui ne périsse point, mais qu'il ait la vie éternelle.", r: "Jean 3:16" },
+            { t: "Confie-toi en l'Éternel de tout ton cœur, et ne t'appuie pas sur ta sagesse.", r: "Proverbes 3:5" },
+            { t: "Soyez forts et courageux. Ne craignez point et ne soyez point effrayés devant eux.", r: "Deutéronome 31:6" }
+        ];
+
+        // Simulation d'aléatoire basé sur la date pour que tout le monde ait le même
+        const dayOfYear = Math.floor((new Date() - new Date(new Date().getFullYear(), 0, 0)) / 1000 / 60 / 60 / 24);
+        const verse = manualVerses[dayOfYear % manualVerses.length];
+
+        // Sauvegarde
+        localStorage.setItem('daily_verse', JSON.stringify({ date: today, text: verse.t, ref: verse.r }));
+
+        displayDailyVerse(verse.t, verse.r);
+
+    } catch (e) {
+        console.error("Erreur Daily Verse", e);
+        card.classList.add('hidden');
+    }
+}
+
+function displayDailyVerse(text, ref) {
+    const card = document.getElementById('daily-verse-card');
+    const textEl = document.getElementById('daily-verse-text');
+    const refEl = document.getElementById('daily-verse-ref');
+
+    if (textEl) textEl.innerText = `"${text}"`;
+    if (refEl) refEl.innerText = ref;
+    if (card) card.classList.remove('hidden');
+}
+
+function shareDailyVerse() {
+    const text = document.getElementById('daily-verse-text').innerText;
+    const ref = document.getElementById('daily-verse-ref').innerText;
+    if (navigator.share) {
+        navigator.share({ title: 'Verset du Jour', text: `${text} - ${ref}`, url: window.location.href });
+    } else {
+        alert("Copié dans le presse-papier !");
+        navigator.clipboard.writeText(`${text} - ${ref}`);
+    }
 }
