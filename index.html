@@ -135,6 +135,18 @@
                         <i data-lucide="message-circle" class="group-hover:text-orange-400 transition"></i> <span
                             class="font-semibold text-sm">Messages</span>
                     </button>
+                    <button onclick="App.UI.navigateTo('prayers')"
+                        class="nav-btn-desktop w-full flex items-center gap-4 px-4 py-3 rounded-2xl text-gray-400 hover:text-white hover:bg-white/5 transition group"
+                        id="desk-nav-prayers">
+                        <i data-lucide="heart-handshake" class="group-hover:text-pink-400 transition"></i> <span
+                            class="font-semibold text-sm">Prières</span>
+                    </button>
+                    <button onclick="App.UI.navigateTo('events')"
+                        class="nav-btn-desktop w-full flex items-center gap-4 px-4 py-3 rounded-2xl text-gray-400 hover:text-white hover:bg-white/5 transition group"
+                        id="desk-nav-events">
+                        <i data-lucide="calendar" class="group-hover:text-yellow-400 transition"></i> <span
+                            class="font-semibold text-sm">Événements</span>
+                    </button>
                 </nav>
 
                 <div class="mt-auto">
@@ -267,6 +279,44 @@
                     </div>
                     <div id="groups-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                         <!-- Groups injected -->
+                    </div>
+                </section>
+
+                <!-- VIEW: PRAYERS -->
+                <section id="view-prayers" class="page-view hidden p-4 md:p-0">
+                    <div class="glass-panel p-6 rounded-[32px] mb-6">
+                        <h2 class="text-2xl font-bold mb-2 flex items-center gap-2">Mur de Prière <span
+                                class="text-sm bg-pink-500/20 text-pink-400 px-2 py-1 rounded-full">En direct</span>
+                        </h2>
+                        <p class="text-gray-400 text-sm mb-6">Portez-vous les uns les autres dans la prière.</p>
+
+                        <div class="flex gap-2">
+                            <input id="main-prayer-input" type="text" placeholder="Partagez votre sujet de prière..."
+                                class="input-field flex-1 px-4 py-3 rounded-xl">
+                            <button onclick="App.Features.Prayers.addMain()"
+                                class="btn-primary px-6 rounded-xl font-bold">Publier</button>
+                        </div>
+                    </div>
+                    <div id="prayers-container" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <!-- Prayers injected -->
+                        <div class="text-center text-gray-500 py-10 col-span-full">Chargement des prières...</div>
+                    </div>
+                </section>
+
+                <!-- VIEW: EVENTS -->
+                <section id="view-events" class="page-view hidden p-4 md:p-0">
+                    <div class="glass-panel p-6 rounded-[32px] mb-6 flex justify-between items-center">
+                        <div>
+                            <h2 class="text-2xl font-bold mb-1">Événements Chrétiens</h2>
+                            <p class="text-gray-400 text-sm">Ne manquez aucun rassemblement.</p>
+                        </div>
+                        <button
+                            class="bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-xl text-sm font-bold transition">Proposer
+                            un événement</button>
+                    </div>
+                    <div id="events-container" class="space-y-4">
+                        <!-- Events injected -->
+                        <div class="text-center text-gray-500 py-10">Chargement des événements...</div>
                     </div>
                 </section>
 
