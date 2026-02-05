@@ -111,11 +111,11 @@
                         <i data-lucide="home" class="group-hover:text-purple-400 transition"></i> <span
                             class="font-semibold text-sm">Accueil</span>
                     </button>
-                    <button onclick="App.UI.navigateTo('reels')"
+                    <button onclick="App.UI.navigateTo('marketplace')"
                         class="nav-btn-desktop w-full flex items-center gap-4 px-4 py-3 rounded-2xl text-gray-400 hover:text-white hover:bg-white/5 transition group"
-                        id="desk-nav-reels">
-                        <i data-lucide="play-circle" class="group-hover:text-pink-400 transition"></i> <span
-                            class="font-semibold text-sm">Versets</span>
+                        id="desk-nav-marketplace">
+                        <i data-lucide="shopping-bag" class="group-hover:text-pink-400 transition"></i> <span
+                            class="font-semibold text-sm">Marketplace</span>
                     </button>
                     <button onclick="App.UI.navigateTo('bible')"
                         class="nav-btn-desktop w-full flex items-center gap-4 px-4 py-3 rounded-2xl text-gray-400 hover:text-white hover:bg-white/5 transition group"
@@ -228,10 +228,39 @@
                     </div>
                 </section>
 
-                <!-- VIEW: REELS (Shorts) -->
-                <section id="view-reels" class="page-view hidden p-1 md:p-0">
-                    <div id="reels-grid" class="columns-2 md:columns-3 gap-4 space-y-4">
-                        <!-- Reels injected by JS -->
+                <!-- VIEW: MARKETPLACE -->
+                <section id="view-marketplace" class="page-view hidden p-4 md:p-0">
+                    <div class="glass-panel p-6 rounded-[32px] mb-6">
+                        <h2 class="text-2xl font-bold mb-4 flex items-center gap-2">
+                            <i data-lucide="shopping-bag" class="text-pink-400"></i> Marketplace Chrétien
+                        </h2>
+                        <div class="flex gap-2 mb-4">
+                            <div class="relative flex-1">
+                                <i data-lucide="search"
+                                    class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 w-4 h-4"></i>
+                                <input type="text" placeholder="Rechercher un livre, un t-shirt..."
+                                    class="input-field w-full pl-10 pr-4 py-2 rounded-xl text-sm">
+                            </div>
+                            <button class="bg-white/10 p-2 rounded-xl text-white hover:bg-white/20"><i
+                                    data-lucide="sliders-horizontal" class="w-5 h-5"></i></button>
+                        </div>
+                        <div class="flex gap-2 overflow-x-auto pb-2 custom-scrollbar">
+                            <button
+                                class="px-4 py-1 bg-primary text-white rounded-full text-xs font-bold whitespace-nowrap">Tout</button>
+                            <button
+                                class="px-4 py-1 bg-white/5 hover:bg-white/10 text-gray-300 rounded-full text-xs font-bold whitespace-nowrap transition">Livres</button>
+                            <button
+                                class="px-4 py-1 bg-white/5 hover:bg-white/10 text-gray-300 rounded-full text-xs font-bold whitespace-nowrap transition">Vêtements</button>
+                            <button
+                                class="px-4 py-1 bg-white/5 hover:bg-white/10 text-gray-300 rounded-full text-xs font-bold whitespace-nowrap transition">Artisanat</button>
+                            <button
+                                class="px-4 py-1 bg-white/5 hover:bg-white/10 text-gray-300 rounded-full text-xs font-bold whitespace-nowrap transition">Musique</button>
+                        </div>
+                    </div>
+
+                    <div id="marketplace-grid" class="grid grid-cols-2 md:grid-cols-3 gap-4 pb-20">
+                        <!-- Products injected -->
+                        <div class="col-span-full text-center py-10 text-gray-500">Chargement des articles...</div>
                     </div>
                 </section>
 
@@ -432,8 +461,8 @@
     <nav class="md:hidden fixed bottom-0 left-0 right-0 glass-nav px-6 py-4 pb-6 flex justify-between z-50">
         <button onclick="App.UI.navigateTo('home')" class="nav-item text-gray-400 active" id="mob-nav-home"><i
                 data-lucide="home"></i></button>
-        <button onclick="App.UI.navigateTo('reels')" class="nav-item text-gray-400" id="mob-nav-reels"><i
-                data-lucide="play-circle"></i></button>
+        <button onclick="App.UI.navigateTo('marketplace')" class="nav-item text-gray-400" id="mob-nav-marketplace"><i
+                data-lucide="shopping-bag"></i></button>
         <button onclick="App.Features.Feed.openCreator()"
             class="bg-primary text-white p-3 rounded-full -mt-8 shadow-glow"><i data-lucide="plus"></i></button>
         <button onclick="App.UI.navigateTo('bible')" class="nav-item text-gray-400" id="mob-nav-bible"><i
