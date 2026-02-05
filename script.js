@@ -423,6 +423,7 @@ const App = {
                 const FUNCTION_URL = 'https://uduajuxobmywmkjnawjn.supabase.co/functions/v1/faith-ai';
                 if (!question) return;
 
+                console.log("Faith AI Request:", FUNCTION_URL);
                 // Indicateur de chargement
                 const loadingId = 'ai-loading-' + Date.now();
                 container.innerHTML += `<div id="${loadingId}" class="flex items-center gap-2 text-purple-300 text-xs animate-pulse mt-4">Faith AI réfléchit...</div>`;
@@ -430,16 +431,20 @@ const App = {
                 input.value = '';
 
                 try {
-                    const response = await fetch(FUNCTION_URL, {
+                    const res = await fetch(FUNCTION_URL, {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
-                            // C'EST ICI LA CORRECTION DE L'ERREUR 401 :
                             'Authorization': `Bearer ${SUPABASE_KEY}`
                         },
                         body: JSON.stringify({ question: question })
                     });
-                    const data = await response.json();
+
+                    if (res.status === 401) {
+                        throw new Error("Authentification refusée (401). Vérifiez la clé API.");
+                    }
+
+                    const data = await res.json();
 
                     // Retrait du chargement
                     const loadingEl = document.getElementById(loadingId);
@@ -468,8 +473,8 @@ const App = {
 
         // 2. BIBLE READER (FULL API)
         Bible: {
-            currentVersion: 'LSG',
-            currentBookId: 43, // Default: Jean
+            currentVersion: 'KJV', // Switch to KJV as default (LSG seems unstable)
+            currentBookId: 43, // John
             currentChapter: 1,
             booksData: [], // Cache des livres
 
