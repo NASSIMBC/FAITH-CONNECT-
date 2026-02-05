@@ -549,19 +549,23 @@ async function loadConversations() {
         container.innerHTML = conversationArray.map(conv => {
             const p = profiles.find(x => x.id === conv.userId);
             const name = p ? p.username : "Ami";
-            const avatarDisplay = p && p.avatar_url ? `<img src="${p.avatar_url}" class="w-10 h-10 rounded-full object-cover">` : `<div class="w-10 h-10 bg-purple-600 rounded-full flex items-center justify-center font-bold text-xs text-white">${name.substring(0, 2).toUpperCase()}</div>`;
+            const initials = name.substring(0, 2).toUpperCase();
+            const avatarHtml = p && p.avatar_url
+                ? `<img src="${p.avatar_url}" alt="${name}">`
+                : `<div class="avatar-placeholder">${initials}</div>`;
+
             return `
-            <div onclick="openDirectChat('${conv.userId}', '${name.replace(/'/g, "\\'")}')" class="p-3 hover:bg-white/5 rounded-2xl cursor-pointer flex items-center space-x-3 border-b border-white/5 transition-colors">
-                <div class="relative">
-                    ${avatarDisplay}
-                    <div class="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 border-2 border-gray-900 rounded-full"></div>
+            <div onclick="openDirectChat('${conv.userId}', '${name.replace(/'/g, "\\'")}')" class="conversation-item">
+                <div class="conversation-avatar">
+                    ${avatarHtml}
+                    <div class="online-indicator"></div>
                 </div>
-                <div class="flex-1 min-w-0">
-                    <div class="flex justify-between items-baseline mb-0.5">
-                        <h4 class="font-bold text-sm text-white truncate">${name}</h4>
-                        <span class="text-[10px] text-gray-500">${conv.time}</span>
-                    </div>
-                    <p class="text-xs text-gray-400 truncate">${conv.lastMessage}</p>
+                <div class="conversation-info">
+                    <div class="conversation-name">${name}</div>
+                    <div class="conversation-preview">${conv.lastMessage}</div>
+                </div>
+                <div class="conversation-meta">
+                    <div class="conversation-time">${conv.time}</div>
                 </div>
             </div>`;
         }).join('');
@@ -620,32 +624,39 @@ async function fetchMessages() {
     container.innerHTML = '';
 
     if (data && data.length > 0) {
-        let lastSenderId = null;
+        // Récupérer le profil de l'autre utilisateur pour l'avatar
+        const { data: otherProfile } = await supabaseClient.from('profiles').select('username, avatar_url').eq('id', activeChatUser.id).single();
+        const otherInitials = activeChatUser.username ? activeChatUser.username.substring(0, 2).toUpperCase() : "??";
+        const myInitials = userProfile.username ? userProfile.username.substring(0, 2).toUpperCase() : "ME";
 
         data.forEach(msg => {
             const isMe = msg.sender_id === currentUser.id;
-            const isSameSender = lastSenderId === msg.sender_id;
             const time = new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-            const bubbleClass = isMe
-                ? 'bg-purple-600 text-white rounded-tr-sm'
-                : 'bg-gray-800 text-gray-200 rounded-tl-sm';
+            // Avatar HTML
+            let avatarHtml = '';
+            if (!isMe) {
+                if (otherProfile && otherProfile.avatar_url) {
+                    avatarHtml = `<div class="message-avatar"><img src="${otherProfile.avatar_url}" alt="Avatar"></div>`;
+                } else {
+                    avatarHtml = `<div class="message-avatar"><div class="avatar-placeholder">${otherInitials}</div></div>`;
+                }
+            }
 
-            const marginClass = isSameSender ? 'mt-1' : 'mt-4';
             container.insertAdjacentHTML('beforeend', `
-                <div class="flex ${isMe ? 'justify-end' : 'justify-start'} ${marginClass} group">
-                    <div class="max-w-[75%]">
-                        <div class="${bubbleClass} px-4 py-2 rounded-2xl text-sm shadow-sm relative">
-                            ${msg.content}
-                            <span class="text-[9px] opacity-60 block text-right mt-1 w-full ${isMe ? 'text-purple-200' : 'text-gray-400'}">${time}</span>
-                        </div>
+                <div class="message-wrapper ${isMe ? 'sent' : 'received'}">
+                    ${avatarHtml}
+                    <div class="message-bubble ${isMe ? 'sent' : 'received'}">
+                        <div class="message-content">${msg.content}</div>
+                        <div class="message-time">${time}</div>
                     </div>
                 </div>
             `);
-            lastSenderId = msg.sender_id;
         });
         container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
-    } else { container.innerHTML = '<div class="text-center text-gray-600 text-xs mt-10 italic">Dites bonjour ! 👋</div>'; }
+    } else {
+        container.innerHTML = '<div class="messenger-empty"><div class="messenger-empty-icon">💬</div><div class="messenger-empty-text">Dites bonjour ! 👋</div></div>';
+    }
 }
 
 async function sendChatMessage() {
