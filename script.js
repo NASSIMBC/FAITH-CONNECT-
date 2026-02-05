@@ -876,7 +876,9 @@ const App = {
                 const input = document.getElementById('chat-input');
 
                 if (window.innerWidth < 768) {
-                    document.getElementById('msg-area').classList.remove('hidden');
+                    const msgArea = document.getElementById('msg-area');
+                    msgArea.classList.remove('hidden');
+                    msgArea.classList.add('flex'); // Ensure flex layout for column direction
                     document.getElementById('msg-sidebar').classList.add('hidden');
 
                     // Fullscreen Mode: Hide Mobile Nav & Expand View
@@ -919,7 +921,9 @@ const App = {
             },
 
             closeMobileChat() {
-                document.getElementById('msg-area').classList.add('hidden');
+                const msgArea = document.getElementById('msg-area');
+                msgArea.classList.add('hidden');
+                msgArea.classList.remove('flex'); // Cleanup
                 document.getElementById('msg-sidebar').classList.remove('hidden');
                 this.activeContactId = null;
 
