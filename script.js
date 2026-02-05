@@ -121,6 +121,12 @@ function switchView(viewName) {
             // Remettre les styles inactifs
             desktopBtn.classList.add('text-gray-400');
         }
+
+        // Reset mobile nav aussi
+        const mobileBtn = document.getElementById('nav-' + v);
+        if (mobileBtn) {
+            mobileBtn.classList.remove('active');
+        }
     });
 
     // 4. Activer le bouton desktop actuel avec gradient
@@ -128,6 +134,12 @@ function switchView(viewName) {
     if (activeDesktopBtn) {
         activeDesktopBtn.classList.remove('text-gray-400');
         activeDesktopBtn.classList.add('bg-gradient-to-r', 'from-purple-600/20', 'to-indigo-600/20', 'text-white', 'shadow-lg', 'shadow-purple-500/20');
+    }
+
+    // 5. Activer le bouton mobile avec classe active
+    const activeMobileBtn = document.getElementById('nav-' + viewName);
+    if (activeMobileBtn) {
+        activeMobileBtn.classList.add('active');
     }
 
     // Logiques spécifiques inchangées
