@@ -423,39 +423,6 @@
 
         </main>
 
-        <!-- RIGHT SIDEBAR (Events & Prayers) -->
-        <aside class="hidden lg:block w-80 sticky top-6 h-fit space-y-6">
-            <!-- Events Widget -->
-            <!-- Events Widget (Linked) -->
-            <div class="glass-panel p-5 rounded-[24px] cursor-pointer hover:border-primary/50 transition border border-transparent"
-                onclick="App.UI.navigateTo('events')">
-                <h3 class="font-bold mb-4 flex items-center justify-between">
-                    <span>Événements</span>
-                    <i data-lucide="arrow-right" class="w-4 h-4 text-gray-500"></i>
-                </h3>
-                <div id="widget-events-list" class="space-y-3 pointer-events-none">
-                    <!-- Events injected -->
-                </div>
-            </div>
-
-            <!-- Prayer Widget (Linked) -->
-            <div class="glass-panel p-5 rounded-[24px]">
-                <h3 class="font-bold mb-4 cursor-pointer hover:text-primary transition"
-                    onclick="App.UI.navigateTo('prayers')">Mur de Prière 🙏</h3>
-                <div id="widget-prayers-list" class="space-y-3 max-h-60 overflow-y-auto scrollbar-hide mb-4"
-                    onclick="App.UI.navigateTo('prayers')"></div>
-
-                <!-- Input stays functional without navigating -->
-                <div class="mt-4 flex gap-2" onclick="event.stopPropagation()">
-                    <input id="widget-prayer-input" type="text" placeholder="Je prie pour..."
-                        class="input-field flex-1 text-xs px-3 py-2 rounded-lg">
-                    <button onclick="App.Features.Prayers.add()"
-                        class="bg-primary/20 hover:bg-primary/30 text-primary p-2 rounded-lg"><i data-lucide="send"
-                            class="w-4 h-4"></i></button>
-                </div>
-            </div>
-        </aside>
-
     </div>
 
     <!-- MOBILE BOTTOM NAV -->
