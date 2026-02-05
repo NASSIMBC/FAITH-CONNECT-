@@ -562,6 +562,36 @@
         </div>
     </div>
 
+    <!-- MODAL: SELL ITEM -->
+    <div id="modal-sell"
+        class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm hidden">
+        <div class="glass-panel w-full max-w-sm p-6 rounded-[32px] m-4 animate-slide-in-up">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-xl font-bold">Vendre un article</h3>
+                <button onclick="App.UI.modals.closeAll()" class="p-2 hover:bg-white/10 rounded-full"><i
+                        data-lucide="x"></i></button>
+            </div>
+            <div class="space-y-4">
+                <div
+                    class="h-32 bg-gray-800 rounded-xl flex items-center justify-center border-2 border-dashed border-white/10 cursor-pointer hover:border-primary/50 transition">
+                    <div class="text-center text-gray-500">
+                        <i data-lucide="image" class="w-8 h-8 mx-auto mb-2 opacity-50"></i>
+                        <span class="text-xs">Ajouter une photo</span>
+                    </div>
+                </div>
+                <input type="text" id="sell-title" placeholder="Titre de l'article"
+                    class="input-field w-full px-4 py-3 rounded-xl">
+                <div class="flex gap-2 relative">
+                    <input type="number" id="sell-price" placeholder="Prix"
+                        class="input-field w-full px-4 py-3 rounded-xl">
+                    <span class="absolute right-4 top-3.5 text-gray-400 font-bold">€</span>
+                </div>
+                <button onclick="App.Features.Marketplace.publish()"
+                    class="btn-primary w-full py-3 rounded-xl font-bold">Mettre en vente</button>
+            </div>
+        </div>
+    </div>
+
     <!-- MODAL: FAITH AI -->
     <button onclick="App.UI.modals.faithAI.open()"
         class="fixed bottom-24 right-6 md:bottom-10 md:right-10 bg-gradient-to-r from-purple-600 to-indigo-600 p-4 rounded-full shadow-glow-primary z-40 hover:scale-110 transition-transform group">
