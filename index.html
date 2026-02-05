@@ -127,8 +127,56 @@
                     accept="image/*">
 
                 <div class="grid grid-cols-1 md:grid-cols-12 gap-6 p-4">
+                    <!-- Navigation Desktop (Sidebar) -->
+                    <div class="hidden md:flex flex-col md:col-span-2 lg:col-span-3 sticky top-4 h-[calc(100vh-2rem)]">
+                        <!-- Logo -->
+                        <div class="mb-8 px-4">
+                            <h1 class="text-2xl font-black text-white">Faith<span class="text-purple-400">Circle</span>
+                            </h1>
+                        </div>
+
+                        <!-- Menu -->
+                        <nav class="space-y-2 flex-1">
+                            <button onclick="switchView('home')"
+                                class="w-full flex items-center gap-4 px-4 py-3 rounded-xl hover:bg-white/5 text-gray-300 hover:text-white transition-colors">
+                                <i data-lucide="home"></i>
+                                <span class="font-bold text-lg hidden lg:inline">Accueil</span>
+                            </button>
+                            <button onclick="switchView('reels')"
+                                class="w-full flex items-center gap-4 px-4 py-3 rounded-xl hover:bg-white/5 text-gray-300 hover:text-white transition-colors">
+                                <i data-lucide="film"></i>
+                                <span class="font-bold text-lg hidden lg:inline">Versets</span>
+                            </button>
+                            <button onclick="switchView('bible')"
+                                class="w-full flex items-center gap-4 px-4 py-3 rounded-xl hover:bg-white/5 text-gray-300 hover:text-white transition-colors">
+                                <i data-lucide="book-open"></i>
+                                <span class="font-bold text-lg hidden lg:inline">Bible</span>
+                            </button>
+                            <button onclick="switchView('messages')"
+                                class="w-full flex items-center gap-4 px-4 py-3 rounded-xl hover:bg-white/5 text-gray-300 hover:text-white transition-colors">
+                                <i data-lucide="message-square"></i>
+                                <span class="font-bold text-lg hidden lg:inline">Messages</span>
+                            </button>
+                            <button onclick="switchView('profile')"
+                                class="w-full flex items-center gap-4 px-4 py-3 rounded-xl hover:bg-white/5 text-gray-300 hover:text-white transition-colors">
+                                <i data-lucide="user"></i>
+                                <span class="font-bold text-lg hidden lg:inline">Profil</span>
+                            </button>
+                        </nav>
+
+                        <!-- Mini Profil Sidebar -->
+                        <div class="mt-auto border-t border-white/10 pt-4 px-4">
+                            <button onclick="switchView('profile')"
+                                class="flex items-center gap-3 w-full hover:bg-white/5 p-2 rounded-xl transition-colors">
+                                <div
+                                    class="w-8 h-8 rounded-full bg-purple-700 flex items-center justify-center font-bold text-xs text-white">
+                                    MOI</div>
+                                <span class="font-bold text-sm text-white hidden lg:inline">Mon Profil</span>
+                            </button>
+                        </div>
+                    </div>
                     <!-- Colonne Principale (Posts) -->
-                    <div class="md:col-span-8 lg:col-span-6 md:col-start-3 lg:col-start-4">
+                    <div class="md:col-span-8 lg:col-span-6">
                         <!-- Créateur de post -->
                         <div class="premium-card p-4 mb-6">
                             <textarea id="new-post-input"
