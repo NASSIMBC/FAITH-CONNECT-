@@ -1,0 +1,524 @@
+// ==========================================
+// ENHANCED MESSAGING FEATURES
+// ==========================================
+
+// Global variables
+let isRecordingVoice = false;
+let mediaRecorder = null;
+let audioChunks = [];
+let recordingStartTime = null;
+let recordingInterval = null;
+
+// ==========================================
+// NAVIGATION
+// ==========================================
+
+function goBackToConversations() {
+    // Hide chat area, show conversations list
+    const chatArea = document.querySelector('.messenger-chat');
+    const sidebar = document.querySelector('.messenger-sidebar');
+
+    if (window.innerWidth < 768) {
+        if (chatArea) chatArea.classList.add('hidden-mobile');
+        if (sidebar) sidebar.classList.add('active');
+    }
+
+    // Reset active chat
+    activeChatUser = null;
+
+    // Reload conversations
+    loadConversations();
+}
+
+// ==========================================
+// HEADER ACTIONS
+// ==========================================
+
+function initiateVoiceCall(userId) {
+    showNotification('📞 Appel vocal non disponible pour le moment', 'info');
+    // TODO: Implement WebRTC voice call
+}
+
+function initiateVideoCall(userId) {
+    showNotification('📹 Appel vidéo non disponible pour le moment', 'info');
+    // TODO: Implement WebRTC video call
+}
+
+function toggleOptionsMenu() {
+    const modal = document.getElementById('options-modal');
+    if (modal) {
+        modal.classList.toggle('hidden');
+    } else {
+        createOptionsModal();
+    }
+}
+
+function createOptionsModal() {
+    const modal = document.createElement('div');
+    modal.id = 'options-modal';
+    modal.className = 'options-modal';
+    modal.innerHTML = `
+        <div class="options-modal-content animate-slide-in">
+            <div class="options-modal-header">
+                <h3 class="options-modal-title">Options</h3>
+                <button onclick="closeOptionsModal()" class="options-modal-close">
+                    <i data-lucide="x"></i>
+                </button>
+            </div>
+            <div class="options-list">
+                <div class="option-item" onclick="muteConversation()">
+                    <div class="option-icon"><i data-lucide="bell-off"></i></div>
+                    <div class="option-info">
+                        <div class="option-title">Muet</div>
+                        <div class="option-description">Désactiver les notifications</div>
+                    </div>
+                </div>
+                <div class="option-item" onclick="searchInConversation()">
+                    <div class="option-icon"><i data-lucide="search"></i></div>
+                    <div class="option-info">
+                        <div class="option-title">Rechercher</div>
+                        <div class="option-description">Chercher dans la conversation</div>
+                    </div>
+                </div>
+                <div class="option-item" onclick="viewUserProfile()">
+                    <div class="option-icon"><i data-lucide="user"></i></div>
+                    <div class="option-info">
+                        <div class="option-title">Voir le profil</div>
+                        <div class="option-description">Informations utilisateur</div>
+                    </div>
+                </div>
+                <div class="option-item" onclick="changeTheme()">
+                    <div class="option-icon"><i data-lucide="palette"></i></div>
+                    <div class="option-info">
+                        <div class="option-title">Thème</div>
+                        <div class="option-description">Changer la couleur</div>
+                    </div>
+                </div>
+                <div class="option-item" onclick="blockUser()">
+                    <div class="option-icon"><i data-lucide="ban"></i></div>
+                    <div class="option-info">
+                        <div class="option-title">Bloquer</div>
+                        <div class="option-description">Bloquer cet utilisateur</div>
+                    </div>
+                </div>
+                <div class="option-item" onclick="reportUser()">
+                    <div class="option-icon"><i data-lucide="alert-triangle"></i></div>
+                    <div class="option-info">
+                        <div class="option-title">Signaler</div>
+                        <div class="option-description">Signaler un problème</div>
+                    </div>
+                </div>
+                <div class="option-item" onclick="deleteConversation()">
+                    <div class="option-icon" style="color: #EF4444;"><i data-lucide="trash-2"></i></div>
+                    <div class="option-info">
+                        <div class="option-title" style="color: #EF4444;">Supprimer</div>
+                        <div class="option-description">Supprimer la conversation</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+
+    // Close on backdrop click
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) closeOptionsModal();
+    });
+
+    // Reinitialize icons
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function closeOptionsModal() {
+    const modal = document.getElementById('options-modal');
+    if (modal) modal.remove();
+}
+
+// ==========================================
+// VOICE MESSAGES
+// ==========================================
+
+async function startVoiceRecording() {
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        mediaRecorder = new MediaRecorder(stream);
+        audioChunks = [];
+
+        mediaRecorder.ondataavailable = (event) => {
+            audioChunks.push(event.data);
+        };
+
+        mediaRecorder.onstop = async () => {
+            const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+            await sendVoiceMessage(audioBlob);
+
+            // Stop all tracks
+            stream.getTracks().forEach(track => track.stop());
+        };
+
+        mediaRecorder.start();
+        isRecordingVoice = true;
+        recordingStartTime = Date.now();
+
+        // Update UI
+        const voiceBtn = document.querySelector('.voice-btn');
+        if (voiceBtn) voiceBtn.classList.add('recording');
+
+        // Show recording indicator
+        showRecordingIndicator();
+
+        // Start timer
+        recordingInterval = setInterval(updateRecordingTime, 100);
+
+        // Auto-stop after 60 seconds
+        setTimeout(() => {
+            if (isRecordingVoice) stopVoiceRecording();
+        }, 60000);
+
+    } catch (error) {
+        console.error('Error accessing microphone:', error);
+        showNotification('❌ Impossible d\'accéder au microphone', 'error');
+    }
+}
+
+function stopVoiceRecording() {
+    if (mediaRecorder && isRecordingVoice) {
+        mediaRecorder.stop();
+        isRecordingVoice = false;
+
+        // Update UI
+        const voiceBtn = document.querySelector('.voice-btn');
+        if (voiceBtn) voiceBtn.classList.remove('recording');
+
+        // Hide recording indicator
+        hideRecordingIndicator();
+
+        // Stop timer
+        if (recordingInterval) {
+            clearInterval(recordingInterval);
+            recordingInterval = null;
+        }
+    }
+}
+
+function showRecordingIndicator() {
+    const inputContainer = document.querySelector('.messenger-input-enhanced');
+    if (!inputContainer) return;
+
+    const indicator = document.createElement('div');
+    indicator.id = 'voice-recording-indicator';
+    indicator.className = 'voice-recording-indicator';
+    indicator.innerHTML = `
+        <div class="recording-dot"></div>
+        <div class="recording-time">0:00</div>
+        <div class="cancel-recording" onclick="cancelVoiceRecording()">← Glisser pour annuler</div>
+    `;
+    inputContainer.prepend(indicator);
+}
+
+function hideRecordingIndicator() {
+    const indicator = document.getElementById('voice-recording-indicator');
+    if (indicator) indicator.remove();
+}
+
+function updateRecordingTime() {
+    if (!recordingStartTime) return;
+
+    const elapsed = Math.floor((Date.now() - recordingStartTime) / 1000);
+    const minutes = Math.floor(elapsed / 60);
+    const seconds = elapsed % 60;
+    const timeStr = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+
+    const timeEl = document.querySelector('.recording-time');
+    if (timeEl) timeEl.textContent = timeStr;
+}
+
+function cancelVoiceRecording() {
+    if (mediaRecorder && isRecordingVoice) {
+        // Stop without sending
+        mediaRecorder.stop();
+        isRecordingVoice = false;
+        audioChunks = [];
+
+        // Update UI
+        const voiceBtn = document.querySelector('.voice-btn');
+        if (voiceBtn) voiceBtn.classList.remove('recording');
+
+        hideRecordingIndicator();
+
+        if (recordingInterval) {
+            clearInterval(recordingInterval);
+            recordingInterval = null;
+        }
+
+        showNotification('🎤 Enregistrement annulé', 'info');
+    }
+}
+
+async function sendVoiceMessage(audioBlob) {
+    if (!activeChatUser || !currentUser) return;
+
+    try {
+        // TODO: Upload audio to storage
+        // For now, create a local URL
+        const audioUrl = URL.createObjectURL(audioBlob);
+        const duration = Math.floor((Date.now() - recordingStartTime) / 1000);
+
+        // Insert into database
+        const { error } = await supabaseClient.from('messages').insert({
+            sender_id: currentUser.id,
+            receiver_id: activeChatUser.id,
+            content: `[Message vocal ${duration}s]`,
+            type: 'voice',
+            media_url: audioUrl, // In production, upload to storage first
+            created_at: new Date().toISOString()
+        });
+
+        if (error) throw error;
+
+        // Refresh messages
+        fetchMessages();
+        showNotification('🎤 Message vocal envoyé', 'success');
+
+    } catch (error) {
+        console.error('Error sending voice message:', error);
+        showNotification('❌ Erreur lors de l\'envoi', 'error');
+    }
+}
+
+// ==========================================
+// PHOTO MESSAGES
+// ==========================================
+
+function openPhotoUpload() {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.onchange = (e) => handlePhotoSelect(e.target.files[0]);
+    input.click();
+}
+
+function handlePhotoSelect(file) {
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        showPhotoPreview(e.target.result, file);
+    };
+    reader.readAsDataURL(file);
+}
+
+function showPhotoPreview(imageUrl, file) {
+    const modal = document.createElement('div');
+    modal.className = 'photo-preview-modal';
+    modal.innerHTML = `
+        <div class="photo-preview-header">
+            <button onclick="closePhotoPreview()" class="photo-preview-close">
+                <i data-lucide="x"></i>
+            </button>
+        </div>
+        <img src="${imageUrl}" class="photo-preview-image" alt="Preview">
+        <div class="photo-preview-caption">
+            <input type="text" id="photo-caption-input" placeholder="Ajouter une légende..." />
+        </div>
+        <div class="photo-preview-actions">
+            <button onclick="closePhotoPreview()" class="btn-ghost">Annuler</button>
+            <button onclick="sendPhotoMessage('${imageUrl}')" class="btn-gradient">Envoyer</button>
+        </div>
+    `;
+    document.body.appendChild(modal);
+
+    // Store file reference
+    modal.photoFile = file;
+
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function closePhotoPreview() {
+    const modal = document.querySelector('.photo-preview-modal');
+    if (modal) modal.remove();
+}
+
+async function sendPhotoMessage(imageUrl) {
+    if (!activeChatUser || !currentUser) return;
+
+    const caption = document.getElementById('photo-caption-input')?.value || '';
+
+    try {
+        // TODO: Upload image to storage
+        // For now, use the data URL
+
+        const { error } = await supabaseClient.from('messages').insert({
+            sender_id: currentUser.id,
+            receiver_id: activeChatUser.id,
+            content: caption || '[Photo]',
+            type: 'photo',
+            media_url: imageUrl, // In production, upload to storage first
+            created_at: new Date().toISOString()
+        });
+
+        if (error) throw error;
+
+        closePhotoPreview();
+        fetchMessages();
+        showNotification('📷 Photo envoyée', 'success');
+
+    } catch (error) {
+        console.error('Error sending photo:', error);
+        showNotification('❌ Erreur lors de l\'envoi', 'error');
+    }
+}
+
+// ==========================================
+// ATTACH MENU
+// ==========================================
+
+function toggleAttachMenu() {
+    const existing = document.getElementById('attach-menu');
+    if (existing) {
+        existing.remove();
+        return;
+    }
+
+    const attachBtn = document.querySelector('.attach-btn');
+    if (!attachBtn) return;
+
+    const menu = document.createElement('div');
+    menu.id = 'attach-menu';
+    menu.className = 'attach-menu animate-slide-in';
+    menu.innerHTML = `
+        <div class="attach-menu-item" onclick="openPhotoUpload(); closeAttachMenu();">
+            <div class="attach-menu-icon"><i data-lucide="image"></i></div>
+            <span>Photo</span>
+        </div>
+        <div class="attach-menu-item" onclick="openCameraCapture(); closeAttachMenu();">
+            <div class="attach-menu-icon"><i data-lucide="camera"></i></div>
+            <span>Appareil photo</span>
+        </div>
+        <div class="attach-menu-item" onclick="openFileUpload(); closeAttachMenu();">
+            <div class="attach-menu-icon"><i data-lucide="file"></i></div>
+            <span>Fichier</span>
+        </div>
+    `;
+
+    attachBtn.parentElement.style.position = 'relative';
+    attachBtn.parentElement.appendChild(menu);
+
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+
+    // Close on outside click
+    setTimeout(() => {
+        document.addEventListener('click', closeAttachMenuOnOutsideClick);
+    }, 100);
+}
+
+function closeAttachMenu() {
+    const menu = document.getElementById('attach-menu');
+    if (menu) menu.remove();
+    document.removeEventListener('click', closeAttachMenuOnOutsideClick);
+}
+
+function closeAttachMenuOnOutsideClick(e) {
+    const menu = document.getElementById('attach-menu');
+    const attachBtn = document.querySelector('.attach-btn');
+    if (menu && !menu.contains(e.target) && e.target !== attachBtn) {
+        closeAttachMenu();
+    }
+}
+
+function openCameraCapture() {
+    showNotification('📷 Appareil photo non disponible', 'info');
+    // TODO: Implement camera capture
+}
+
+function openFileUpload() {
+    showNotification('📁 Partage de fichiers non disponible', 'info');
+    // TODO: Implement file upload
+}
+
+// ==========================================
+// OPTIONS FUNCTIONS
+// ==========================================
+
+function muteConversation() {
+    showNotification('🔇 Conversation en sourdine', 'success');
+    closeOptionsModal();
+    // TODO: Implement mute functionality
+}
+
+function searchInConversation() {
+    showNotification('🔍 Recherche non disponible', 'info');
+    closeOptionsModal();
+    // TODO: Implement search
+}
+
+function viewUserProfile() {
+    if (activeChatUser) {
+        switchView('public-profile');
+        // TODO: Load user profile
+    }
+    closeOptionsModal();
+}
+
+function changeTheme() {
+    showNotification('🎨 Thèmes non disponibles', 'info');
+    closeOptionsModal();
+    // TODO: Implement theme changer
+}
+
+function blockUser() {
+    if (confirm('Voulez-vous vraiment bloquer cet utilisateur ?')) {
+        showNotification('🚫 Utilisateur bloqué', 'success');
+        closeOptionsModal();
+        // TODO: Implement block functionality
+    }
+}
+
+function reportUser() {
+    if (confirm('Voulez-vous signaler cet utilisateur ?')) {
+        showNotification('⚠️ Utilisateur signalé', 'success');
+        closeOptionsModal();
+        // TODO: Implement report functionality
+    }
+}
+
+function deleteConversation() {
+    if (confirm('Voulez-vous vraiment supprimer cette conversation ?')) {
+        showNotification('🗑️ Conversation supprimée', 'success');
+        goBackToConversations();
+        closeOptionsModal();
+        // TODO: Implement delete functionality
+    }
+}
+
+// ==========================================
+// UTILITY FUNCTIONS
+// ==========================================
+
+function showNotification(message, type = 'info') {
+    const container = document.getElementById('notification-container');
+    if (!container) return;
+
+    const notification = document.createElement('div');
+    notification.className = `notification notification-${type} animate-slide-in`;
+    notification.textContent = message;
+    notification.style.cssText = `
+        background: ${type === 'success' ? 'rgba(16, 185, 129, 0.9)' : type === 'error' ? 'rgba(239, 68, 68, 0.9)' : 'rgba(99, 102, 241, 0.9)'};
+        color: white;
+        padding: 12px 20px;
+        border-radius: 8px;
+        margin-bottom: 8px;
+        font-size: 14px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    `;
+
+    container.appendChild(notification);
+
+    setTimeout(() => {
+        notification.style.opacity = '0';
+        notification.style.transform = 'translateX(100px)';
+        setTimeout(() => notification.remove(), 300);
+    }, 3000);
+}
+
+console.log('✨ Enhanced messaging features loaded!');
