@@ -116,51 +116,74 @@
         </div>
 
         <main class="grid grid-cols-1 md:grid-cols-12 gap-6 p-4 pb-24 md:pb-4">
-            <!-- Navigation Desktop (Sidebar) - Persistent -->
-            <div class="max-md:hidden md:flex flex-col md:col-span-2 lg:col-span-3 sticky top-4 h-[calc(100vh-2rem)]">
-                <!-- Logo -->
-                <div class="mb-8 px-4">
-                    <h1 class="text-2xl font-black text-white">Faith<span class="text-purple-400">Circle</span>
+            <!-- Navigation Desktop (Sidebar) - Glassmorphism -->
+            <div
+                class="max-md:hidden md:flex flex-col md:col-span-2 lg:col-span-3 sticky top-4 h-[calc(100vh-2rem)] glass-sidebar rounded-2xl p-4">
+                <!-- Logo avec gradient -->
+                <div class="mb-8 px-2">
+                    <h1 class="text-2xl font-black">
+                        <span
+                            class="bg-gradient-to-r from-purple-400 via-pink-400 to-purple-600 bg-clip-text text-transparent">Faith</span><span
+                            class="text-white">Circle</span>
                     </h1>
+                    <p class="text-xs text-gray-500 mt-1">Votre communauté spirituelle</p>
                 </div>
 
-                <!-- Menu -->
+                <!-- Menu avec effets modernes -->
                 <nav class="space-y-2 flex-1">
                     <button id="nav-desktop-home" onclick="switchView('home')"
-                        class="w-full flex items-center gap-4 px-4 py-3 rounded-xl hover:bg-white/5 text-gray-300 hover:text-white transition-colors">
-                        <i data-lucide="home"></i>
-                        <span class="font-bold text-lg hidden lg:inline">Accueil</span>
+                        class="group w-full flex items-center gap-4 px-4 py-3.5 rounded-xl transition-all duration-300 text-gray-400 hover:text-white hover:bg-white/5 relative overflow-hidden">
+                        <i data-lucide="home" class="w-5 h-5 relative z-10"></i>
+                        <span class="font-semibold text-base hidden lg:inline relative z-10">Accueil</span>
+                        <div
+                            class="absolute inset-0 bg-gradient-to-r from-purple-600/0 to-indigo-600/0 group-hover:from-purple-600/10 group-hover:to-indigo-600/10 transition-all duration-300">
+                        </div>
                     </button>
                     <button id="nav-desktop-reels" onclick="switchView('reels')"
-                        class="w-full flex items-center gap-4 px-4 py-3 rounded-xl hover:bg-white/5 text-gray-300 hover:text-white transition-colors">
-                        <i data-lucide="film"></i>
-                        <span class="font-bold text-lg hidden lg:inline">Versets</span>
+                        class="group w-full flex items-center gap-4 px-4 py-3.5 rounded-xl transition-all duration-300 text-gray-400 hover:text-white hover:bg-white/5 relative overflow-hidden">
+                        <i data-lucide="film" class="w-5 h-5 relative z-10"></i>
+                        <span class="font-semibold text-base hidden lg:inline relative z-10">Versets</span>
+                        <div
+                            class="absolute inset-0 bg-gradient-to-r from-purple-600/0 to-indigo-600/0 group-hover:from-purple-600/10 group-hover:to-indigo-600/10 transition-all duration-300">
+                        </div>
                     </button>
                     <button id="nav-desktop-bible" onclick="switchView('bible')"
-                        class="w-full flex items-center gap-4 px-4 py-3 rounded-xl hover:bg-white/5 text-gray-300 hover:text-white transition-colors">
-                        <i data-lucide="book-open"></i>
-                        <span class="font-bold text-lg hidden lg:inline">Bible</span>
+                        class="group w-full flex items-center gap-4 px-4 py-3.5 rounded-xl transition-all duration-300 text-gray-400 hover:text-white hover:bg-white/5 relative overflow-hidden">
+                        <i data-lucide="book-open" class="w-5 h-5 relative z-10"></i>
+                        <span class="font-semibold text-base hidden lg:inline relative z-10">Bible</span>
+                        <div
+                            class="absolute inset-0 bg-gradient-to-r from-purple-600/0 to-indigo-600/0 group-hover:from-purple-600/10 group-hover:to-indigo-600/10 transition-all duration-300">
+                        </div>
                     </button>
                     <button id="nav-desktop-messages" onclick="switchView('messages')"
-                        class="w-full flex items-center gap-4 px-4 py-3 rounded-xl hover:bg-white/5 text-gray-300 hover:text-white transition-colors">
-                        <i data-lucide="message-square"></i>
-                        <span class="font-bold text-lg hidden lg:inline">Messages</span>
+                        class="group w-full flex items-center gap-4 px-4 py-3.5 rounded-xl transition-all duration-300 text-gray-400 hover:text-white hover:bg-white/5 relative overflow-hidden">
+                        <i data-lucide="message-square" class="w-5 h-5 relative z-10"></i>
+                        <span class="font-semibold text-base hidden lg:inline relative z-10">Messages</span>
+                        <div
+                            class="absolute inset-0 bg-gradient-to-r from-purple-600/0 to-indigo-600/0 group-hover:from-purple-600/10 group-hover:to-indigo-600/10 transition-all duration-300">
+                        </div>
                     </button>
                     <button id="nav-desktop-profile" onclick="switchView('profile')"
-                        class="w-full flex items-center gap-4 px-4 py-3 rounded-xl hover:bg-white/5 text-gray-300 hover:text-white transition-colors">
-                        <i data-lucide="user"></i>
-                        <span class="font-bold text-lg hidden lg:inline">Profil</span>
+                        class="group w-full flex items-center gap-4 px-4 py-3.5 rounded-xl transition-all duration-300 text-gray-400 hover:text-white hover:bg-white/5 relative overflow-hidden">
+                        <i data-lucide="user" class="w-5 h-5 relative z-10"></i>
+                        <span class="font-semibold text-base hidden lg:inline relative z-10">Profil</span>
+                        <div
+                            class="absolute inset-0 bg-gradient-to-r from-purple-600/0 to-indigo-600/0 group-hover:from-purple-600/10 group-hover:to-indigo-600/10 transition-all duration-300">
+                        </div>
                     </button>
                 </nav>
 
-                <!-- Mini Profil Sidebar -->
-                <div class="mt-auto border-t border-white/10 pt-4 px-4">
+                <!-- Mini Profil avec gradient -->
+                <div class="mt-auto border-t border-white/10 pt-4 px-2">
                     <button onclick="switchView('profile')"
-                        class="flex items-center gap-3 w-full hover:bg-white/5 p-2 rounded-xl transition-colors">
+                        class="flex items-center gap-3 w-full hover:bg-white/5 p-3 rounded-xl transition-all duration-300 group">
                         <div
-                            class="w-8 h-8 rounded-full bg-purple-700 flex items-center justify-center font-bold text-xs text-white">
+                            class="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center font-bold text-sm text-white shadow-lg group-hover:shadow-purple-500/50 transition-shadow">
                             MOI</div>
-                        <span class="font-bold text-sm text-white hidden lg:inline">Mon Profil</span>
+                        <div class="hidden lg:block text-left">
+                            <span class="font-semibold text-sm text-white block">Mon Profil</span>
+                            <span class="text-xs text-gray-500">Voir mon profil</span>
+                        </div>
                     </button>
                 </div>
             </div>
