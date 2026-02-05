@@ -445,45 +445,157 @@ const App = {
             }
         },
 
-        // 2. BIBLE READER
-        Bible: { // Simplifié pour version 2.0
-            currentBook: 43, // Jean
-            currentChap: 1,
-            books: ["Matthieu", "Marc", "Luc", "Jean", "Actes", "Romains"], // Liste courte pour démo
+        // 2. BIBLE READER (FULL API)
+        Bible: {
+            currentVersion: 'LSG',
+            currentBookId: 43, // Default: Jean
+            currentChapter: 1,
+            booksData: [], // Cache des livres
 
-            init() {
-                const nav = document.getElementById('bible-books-nav');
-                if (!nav) return;
-                nav.innerHTML = this.books.map((b, i) =>
-                    `<button onclick="App.Features.Bible.load(${40 + i}, 1, '${b}')" class="whitespace-nowrap px-4 py-2 bg-white/5 rounded-full text-xs hover:bg-primary hover:text-white transition">${b}</button>`
-                ).join('');
-                this.load(43, 1, "Jean");
+            async init() {
+                // Charger la liste des livres pour la version par défaut
+                await this.fetchBooks();
             },
 
-            async load(bookId, chap, bookName) {
-                this.currentBook = bookId;
-                this.currentChap = chap;
-                const container = document.getElementById('bible-content');
-                const title = document.getElementById('bible-current-ref');
+            async fetchBooks() {
+                const nav = document.getElementById('bible-books-nav');
+                if (!nav) return;
 
-                if (title) title.innerText = `${bookName} ${chap}`;
-                if (container) container.innerHTML = `<div class="text-center animate-pulse">Chargement de la Parole...</div>`;
+                nav.innerHTML = '<div class="text-xs text-gray-500 whitespace-nowrap px-4">Chargement de la bibliothèque...</div>';
 
                 try {
-                    const res = await fetch(`https://bolls.life/get-chapter/LSG/${bookId}/${chap}/`);
+                    // API Bolls.life
+                    const res = await fetch(`https://bolls.life/get-books/${this.currentVersion}/`);
+                    if (!res.ok) throw new Error('Erreur API');
+
                     const data = await res.json();
-                    if (data) {
-                        container.innerHTML = data.map(v =>
-                            `<span class="bible-verse-num">${v.verse}</span>${v.text} `
-                        ).join('');
+                    this.booksData = data; // stocker pour filtrage
+
+                    this.renderBooks(data);
+
+                    // Charger défaut si pas encore fait
+                    if (document.getElementById('bible-content').innerHTML.includes('Sélectionnez')) {
+                        // Trouver l'ID de Jean (souvent 43) ou le premier livre
+                        const john = data.find(b => b.name === 'Jean' || b.name === 'John') || data[0];
+                        if (john) this.load(john.bookid, 1, john.name);
                     }
+
                 } catch (e) {
-                    container.innerHTML = "Erreur de chargement. Vérifiez votre connexion.";
+                    console.error(e);
+                    nav.innerHTML = '<div class="text-xs text-red-400 px-4">Erreur chargement livres.</div>';
                 }
             },
 
-            prevChap() { if (this.currentChap > 1) this.load(this.currentBook, this.currentChap - 1, "Livre"); },
-            nextChap() { this.load(this.currentBook, this.currentChap + 1, "Livre"); }
+            renderBooks(books) {
+                const nav = document.getElementById('bible-books-nav');
+                if (!nav) return;
+
+                nav.innerHTML = books.map((b) =>
+                    `<button onclick="App.Features.Bible.load(${b.bookid}, 1, '${b.name.replace(/'/g, "\\'")}')" 
+                        class="whitespace-nowrap px-4 py-2 bg-white/5 rounded-full text-xs hover:bg-primary hover:text-white transition border border-white/5 flex-shrink-0 snap-start
+                        ${b.bookid === this.currentBookId ? 'bg-primary text-white ring-2 ring-purple-400/50' : ''}" id="book-btn-${b.bookid}">
+                        ${b.name}
+                    </button>`
+                ).join('');
+            },
+
+            filterBooks(type) {
+                // type: 'all', 'OT' (Old Testament < 40), 'NT' (New Testament >= 40)
+                // Note: Cette logique dépend des IDs standards (1-39 AT, 40-66 NT)
+                if (!this.booksData.length) return;
+
+                let filtered = this.booksData;
+                if (type === 'OT') filtered = this.booksData.filter(b => b.bookid <= 39);
+                if (type === 'NT') filtered = this.booksData.filter(b => b.bookid >= 40);
+
+                this.renderBooks(filtered);
+
+                // Mettre à jour les styles de boutons actifs pour les filtres (visuel rapide)
+                const btns = document.querySelectorAll('#view-bible button[onclick^="App.Features.Bible.filterBooks"]');
+                btns.forEach(btn => {
+                    if (btn.innerText.includes(type === 'all' ? 'Tous' : type === 'OT' ? 'Ancien' : 'Nouveau')) {
+                        btn.classList.add('text-white', 'border-b-2', 'border-primary');
+                        btn.classList.remove('text-gray-400');
+                    } else {
+                        btn.classList.remove('text-white', 'border-b-2', 'border-primary');
+                        btn.classList.add('text-gray-400');
+                    }
+                });
+            },
+
+            async load(bookId, chap, bookName) {
+                this.currentBookId = bookId;
+                this.currentChapter = chap;
+                this.currentBookName = bookName; // Sauvegarde nom
+
+                const container = document.getElementById('bible-content');
+                const title = document.getElementById('bible-current-ref');
+
+                // Update active book style
+                document.querySelectorAll('[id^="book-btn-"]').forEach(b => b.classList.remove('bg-primary', 'text-white', 'ring-2'));
+                const activeBtn = document.getElementById(`book-btn-${bookId}`);
+                if (activeBtn) activeBtn.classList.add('bg-primary', 'text-white', 'ring-2');
+
+                if (title) title.innerText = `${bookName} ${chap}`;
+                if (container) {
+                    container.innerHTML = `
+                        <div class="flex flex-col items-center justify-center h-40 animate-pulse">
+                            <i data-lucide="loader-2" class="w-8 h-8 text-primary animate-spin mb-4"></i>
+                            <span class="text-xs text-gray-500">Chargement de la Parole...</span>
+                        </div>`;
+                    if (typeof lucide !== 'undefined') lucide.createIcons();
+                }
+
+                try {
+                    const res = await fetch(`https://bolls.life/get-chapter/${this.currentVersion}/${bookId}/${chap}/`);
+                    if (!res.ok) throw new Error('Erreur Chapitre');
+
+                    const data = await res.json();
+
+                    if (data && data.length > 0) {
+                        container.innerHTML = data.map(v =>
+                            `<span class="bible-verse-num font-bold text-primary/50 mr-1 select-none text-xs" style="vertical-align: super;">${v.verse}</span><span class="hover:bg-white/5 transition rounded px-1">${v.text}</span> `
+                        ).join('');
+                    } else {
+                        container.innerHTML = '<div class="text-center text-gray-500 py-10">Fin du livre ou chapitre introuvable.</div>';
+                    }
+                    // Scroll top
+                    container.parentElement.scrollTop = 0;
+
+                } catch (e) {
+                    console.error(e);
+                    container.innerHTML = "<div class='text-center text-red-400 py-10'>Erreur de chargement. Vérifiez votre connexion.</div>";
+                }
+            },
+
+            async changeVersion(newVersion) {
+                this.currentVersion = newVersion;
+                // Recharger les livres (les noms peuvent changer selon la langue)
+                await this.fetchBooks();
+                // Recharger le chapitre courant
+                // Note: On garde l'ID du livre, ça devrait correspondre entre les versions majeures
+                await this.load(this.currentBookId, this.currentChapter, this.currentBookName || "Livre");
+            },
+
+            prevChap() {
+                if (this.currentChapter > 1) {
+                    this.load(this.currentBookId, this.currentChapter - 1, this.currentBookName);
+                } else {
+                    // Aller au livre précédent (chapitre max) - un peu complexe sans connaitre le max chaps, on simplifie
+                    // On pourrait aller au chap 1 du livre précédent
+                    if (this.currentBookId > 1) {
+                        // On doit trouver le nom du livre précédent
+                        const prevBook = this.booksData.find(b => b.bookid === this.currentBookId - 1);
+                        if (prevBook) this.load(prevBook.bookid, 1, prevBook.name);
+                    }
+                }
+            },
+
+            nextChap() {
+                // Pour savoir si c'est le dernier chapitre, faudrait vérifier la length du fetch précédent ou avoir les métadonnées
+                // On tente simplement +1, l'API renverra vide si existe pas (et on peut gérer)
+                this.load(this.currentBookId, this.currentChapter + 1, this.currentBookName);
+            }
         },
 
         // 3. PRAYERS
