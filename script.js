@@ -927,13 +927,13 @@ const App = {
                 const div = document.createElement('div');
                 div.className = `flex ${isMe ? 'justify-end' : 'justify-start'} mb-2 animate-slide-in-up`;
                 div.innerHTML = `
-                    <div class="max-w-[75%] px-4 py-2 rounded-2xl ${isMe ? 'bg-primary text-white rounded-br-none' : 'bg-gray-800 text-gray-200 rounded-bl-none'}">
-                        <p class="text-sm">${msg.content}</p>
+                    <div class="max-w-[75%] px-4 py-2 rounded-2xl ${isMe ? 'bg-primary text-white rounded-br-none' : 'bg-gray-800 text-gray-200 rounded-bl-none'} shadow-sm">
+                        <p class="text-sm break-words">${msg.content}</p>
                         <p class="text-[9px] opacity-50 text-right mt-1">${new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
                     </div>
                 `;
                 container.appendChild(div);
-                container.scrollTop = container.scrollHeight;
+                setTimeout(() => { container.scrollTop = container.scrollHeight; }, 50); // Delay for layout
             },
 
             async send() {
@@ -950,6 +950,7 @@ const App = {
                 if (error) alert("Erreur envoi: " + error.message);
                 else {
                     input.value = "";
+                    input.focus(); // Keep focus
                     this.renderMessage({
                         sender_id: App.state.user.id,
                         content: content,
