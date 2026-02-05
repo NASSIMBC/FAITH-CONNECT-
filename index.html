@@ -201,33 +201,71 @@
 
                 <!-- VIEW: BIBLE -->
                 <section id="view-bible" class="page-view hidden space-y-4 p-4 md:p-0">
-                    <div class="glass-panel p-4 rounded-[24px] flex gap-2 overflow-x-auto scrollbar-hide"
-                        id="bible-books-nav">
-                        <!-- Books injected -->
-                    </div>
                     <div
-                        class="glass-panel p-6 rounded-[24px] min-h-[60vh] max-h-[80vh] overflow-y-auto custom-scrollbar">
-                        <div class="flex justify-between items-center mb-6 border-b border-white/5 pb-4">
-                            <h2 id="bible-current-ref" class="text-xl font-bold font-serif">Jean 1</h2>
+                        class="glass-panel p-4 rounded-[24px] flex flex-col md:flex-row justify-between items-center gap-4">
+                        <h2 class="text-xl font-bold flex items-center gap-2"><i data-lucide="book"
+                                class="text-primary"></i> Sainte Bible</h2>
+                        <select id="bible-version-select" onchange="App.Features.Bible.changeVersion(this.value)"
+                            class="bg-black/30 border border-white/10 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-primary">
+                            <option value="LSG">Louis Segond 1910 (FR)</option>
+                            <option value="BDS">La Bible du Semeur (FR)</option>
+                            <option value="OST">Ostervald (FR)</option>
+                            <option value="KJV">King James Version (EN)</option>
+                            <option value="YLT">Young's Literal (EN)</option>
+                        </select>
+                    </div>
+
+                    <!-- Bible Navigation (Books) -->
+                    <div class="glass-panel p-4 rounded-[24px]">
+                        <!-- Tabs OT/NT -->
+                        <div class="flex gap-4 mb-4 border-b border-white/5 pb-2">
+                            <button onclick="App.Features.Bible.filterBooks('all')"
+                                class="text-xs font-bold text-white border-b-2 border-primary pb-1">Tous</button>
+                            <button onclick="App.Features.Bible.filterBooks('OT')"
+                                class="text-xs font-bold text-gray-400 hover:text-white transition">Ancien
+                                Testament</button>
+                            <button onclick="App.Features.Bible.filterBooks('NT')"
+                                class="text-xs font-bold text-gray-400 hover:text-white transition">Nouveau
+                                Testament</button>
+                        </div>
+                        <div id="bible-books-nav" class="flex gap-2 overflow-x-auto pb-2 custom-scrollbar snap-x">
+                            <!-- Books injected -->
+                            <div class="text-center w-full py-4 text-gray-500 text-xs">Chargement des livres...</div>
+                        </div>
+                    </div>
+
+                    <!-- Bible Content -->
+                    <div
+                        class="glass-panel p-6 rounded-[24px] min-h-[60vh] max-h-[80vh] overflow-y-auto custom-scrollbar relative">
+                        <div
+                            class="sticky top-0 bg-[#141423]/95 backdrop-blur-md z-10 py-2 mb-4 border-b border-white/5 flex justify-between items-center">
+                            <h2 id="bible-current-ref" class="text-xl font-bold font-serif text-white">Jean 1</h2>
                             <div class="flex gap-2">
                                 <button onclick="App.Features.Bible.prevChap()"
-                                    class="p-2 hover:bg-white/5 rounded-full"><i
+                                    class="p-2 hover:bg-white/10 rounded-full transition"><i
                                         data-lucide="chevron-left"></i></button>
                                 <button onclick="App.Features.Bible.nextChap()"
-                                    class="p-2 hover:bg-white/5 rounded-full"><i
+                                    class="p-2 hover:bg-white/10 rounded-full transition"><i
                                         data-lucide="chevron-right"></i></button>
                             </div>
                         </div>
-                        <div id="bible-content" class="bible-text text-justify">
-                            <p class="text-center text-gray-500 mt-10">Sélectionnez un livre...</p>
+                        <div id="bible-content"
+                            class="bible-text text-justify text-lg leading-loose selection:bg-primary/30">
+                            <p class="text-center text-gray-500 mt-10 animate-pulse">Sélectionnez un livre...</p>
                         </div>
                     </div>
                 </section>
 
                 <!-- VIEW: GROUPS -->
                 <section id="view-groups" class="page-view hidden p-4 md:p-0">
-                    <h2 class="text-2xl font-bold mb-4">Groupes & Cellules</h2>
-                    <div id="groups-container" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-2xl font-bold">Groupes & Pages</h2>
+                        <button onclick="App.Features.Groups.createModal()"
+                            class="btn-primary px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2">
+                            <i data-lucide="plus"></i> Créer
+                        </button>
+                    </div>
+                    <div id="groups-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                         <!-- Groups injected -->
                     </div>
                 </section>
