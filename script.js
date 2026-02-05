@@ -57,7 +57,16 @@ const App = {
         async signUp() {
             const email = document.getElementById('auth-email').value;
             const password = document.getElementById('auth-password').value;
-            const { error } = await sb.auth.signUp({ email, password });
+            const { error } = await sb.auth.signUp({
+                email,
+                password,
+                options: {
+                    data: {
+                        username: email.split('@')[0], // Default username
+                        avatar_url: `https://ui-avatars.com/api/?name=${email.split('@')[0]}&background=random`
+                    }
+                }
+            });
             if (error) alert("Erreur: " + error.message);
             else alert("Compte créé ! Vérifiez vos emails.");
         },
@@ -134,6 +143,10 @@ const App = {
             }
 
             App.state.view = viewName;
+
+            // Lazy Load Data
+            if (viewName === 'groups') App.Features.Groups.fetchAll();
+            if (viewName === 'messages') App.Features.Chat.loadList();
         },
 
         modals: {
@@ -188,8 +201,22 @@ const App = {
             this.Events.loadWidget();
             if (window.innerWidth > 768) App.Features.Chat.loadList();
 
-            // Subscriptions
-            // App.Data.subscribeRealtime(); // Assuming App.Data exists elsewhere or will be added
+            // Initialisation Groupes & Realtime
+            if (App.state.view === 'groups') this.Groups.fetchAll(); // Load if on groups view
+            this.Realtime.init();
+
+            // Search Listener (Chat Sidebar)
+            const searchInput = document.querySelector('#msg-sidebar input');
+            if (searchInput) {
+                searchInput.addEventListener('input', (e) => {
+                    const val = e.target.value.toLowerCase();
+                    const items = document.querySelectorAll('#conversations-list > div');
+                    items.forEach(item => {
+                        const name = item.querySelector('h4').innerText.toLowerCase();
+                        item.style.display = name.includes(val) ? 'flex' : 'none';
+                    });
+                });
+            }
         },
 
         // 1. FEED & POSTS
@@ -447,22 +474,24 @@ const App = {
             async publish() {
                 this.canvas.toBlob(async (blob) => {
                     const fileName = `verse_${Date.now()}.png`;
-                    const { error: uploadError } = await sb.storage.from('reels').upload(fileName, blob); // Use reels bucket
-                    if (uploadError) return alert(uploadError.message);
+                    // FIX: Using 'posts' bucket instead of 'reels' which might not exist
+                    const { error: uploadError } = await sb.storage.from('posts').upload(fileName, blob);
+                    if (uploadError) return alert("Erreur upload: " + uploadError.message);
 
-                    const { data: { publicUrl } } = sb.storage.from('reels').getPublicUrl(fileName);
+                    const { data: { publicUrl } } = sb.storage.from('posts').getPublicUrl(fileName);
 
-                    const { error } = await sb.from('reels').insert([{
+                    const { error } = await sb.from('posts').insert([{ // Inserting into posts for visibility
                         user_id: App.state.user.id,
                         type: 'image',
-                        url: publicUrl,
-                        caption: this.text
+                        image_url: publicUrl,
+                        content: this.text // Use caption as content
                     }]);
 
                     if (error) alert(error.message);
                     else {
-                        alert("Verset publié dans les Reels !");
+                        alert("Verset publié !");
                         App.UI.modals.closeAll();
+                        App.Features.Feed.loadPosts(); // Refresh feed
                     }
                 });
             }
@@ -728,14 +757,206 @@ const App = {
             }
         },
 
-        // 5. CHAT (Placeholder Architecture)
+        // 5. CHAT (MESSAGERIE COMPLÈTE & RECHERCHE)
         Chat: {
-            loadList() {
-                // To be implemented fully
-                const c = document.getElementById('conversations-list');
-                if (c) c.innerHTML = `<div class="p-4 text-center text-xs text-gray-500">Connectez-vous avec des amis pour commencer à discuter.</div>`;
+            activeContactId: null,
+
+            async loadList() {
+                this.loadConversations();
             },
-            send() { alert("Envoi de message..."); }
+
+            async loadConversations() {
+                const container = document.getElementById('conversations-list');
+                if (!container) return;
+
+                // 1. Récupérer tous les profils (Simulation d'amis pour l'instant)
+                const { data: profiles } = await sb.from('profiles').select('*').neq('id', App.state.user.id).limit(50);
+
+                if (profiles) {
+                    container.innerHTML = profiles.map(p => `
+                        <div onclick="App.Features.Chat.openChat('${p.id}', '${p.username}', '${p.avatar_url}')" 
+                             class="p-4 flex items-center gap-3 hover:bg-white/5 cursor-pointer border-b border-white/5 transition-colors">
+                            <div class="relative">
+                                <img src="${p.avatar_url || 'https://ui-avatars.com/api/?name=' + p.username}" class="w-10 h-10 rounded-full object-cover bg-gray-800">
+                                <span class="absolute bottom-0 right-0 w-3 h-3 bg-gray-500 rounded-full border-2 border-[#050510]" id="status-${p.id}"></span>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <div class="flex justify-between items-baseline">
+                                    <h4 class="font-bold text-sm text-white truncate">${p.username}</h4>
+                                </div>
+                                <p class="text-xs text-gray-400 truncate">Cliquez pour discuter</p>
+                            </div>
+                        </div>
+                    `).join('');
+                }
+            },
+
+            async openChat(userId, username, avatar) {
+                this.activeContactId = userId;
+
+                // UI Update
+                const header = document.getElementById('chat-header');
+                const msgsContainer = document.getElementById('chat-messages');
+                const input = document.getElementById('chat-input');
+
+                if (window.innerWidth < 768) {
+                    document.getElementById('msg-area').classList.remove('hidden');
+                    document.getElementById('msg-sidebar').classList.add('hidden');
+                }
+
+                if (header) header.innerHTML = `
+                    <div class="flex items-center gap-3">
+                        <button class="md:hidden p-1 mr-2" onclick="App.Features.Chat.closeMobileChat()"><i data-lucide="arrow-left"></i></button>
+                        <img src="${avatar || 'https://ui-avatars.com/api/?name=' + username}" class="w-8 h-8 rounded-full">
+                        <span class="font-bold text-white">${username}</span>
+                    </div>
+                `;
+
+                if (input) {
+                    input.disabled = false;
+                    input.focus();
+                }
+
+                msgsContainer.innerHTML = '<div class="text-center text-xs text-gray-500 py-10">Chargement...</div>';
+
+                const { data: messages } = await sb.from('messages')
+                    .select('*')
+                    .or(`and(sender_id.eq.${App.state.user.id},receiver_id.eq.${userId}),and(sender_id.eq.${userId},receiver_id.eq.${App.state.user.id})`)
+                    .order('created_at', { ascending: true });
+
+                msgsContainer.innerHTML = '';
+                if (messages && messages.length > 0) {
+                    messages.forEach(m => this.renderMessage(m));
+                } else {
+                    msgsContainer.innerHTML = '<div class="text-center text-xs text-gray-500 py-10">Aucun message. Dites bonjour ! 👋</div>';
+                }
+                msgsContainer.scrollTop = msgsContainer.scrollHeight;
+            },
+
+            closeMobileChat() {
+                document.getElementById('msg-area').classList.add('hidden');
+                document.getElementById('msg-sidebar').classList.remove('hidden');
+                this.activeContactId = null;
+            },
+
+            renderMessage(msg) {
+                // Clear "Empty" msg if exists
+                if (document.getElementById('chat-messages').innerHTML.includes('Aucun message')) {
+                    document.getElementById('chat-messages').innerHTML = '';
+                }
+
+                const isMe = msg.sender_id === App.state.user.id;
+                const container = document.getElementById('chat-messages');
+
+                const div = document.createElement('div');
+                div.className = `flex ${isMe ? 'justify-end' : 'justify-start'} mb-2 animate-slide-in-up`;
+                div.innerHTML = `
+                    <div class="max-w-[75%] px-4 py-2 rounded-2xl ${isMe ? 'bg-primary text-white rounded-br-none' : 'bg-gray-800 text-gray-200 rounded-bl-none'}">
+                        <p class="text-sm">${msg.content}</p>
+                        <p class="text-[9px] opacity-50 text-right mt-1">${new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+                    </div>
+                `;
+                container.appendChild(div);
+                container.scrollTop = container.scrollHeight;
+            },
+
+            async send() {
+                const input = document.getElementById('chat-input');
+                const content = input.value;
+                if (!content || !this.activeContactId) return;
+
+                const { error } = await sb.from('messages').insert([{
+                    sender_id: App.state.user.id,
+                    receiver_id: this.activeContactId,
+                    content: content
+                }]);
+
+                if (error) alert("Erreur envoi: " + error.message);
+                else {
+                    input.value = "";
+                    this.renderMessage({
+                        sender_id: App.state.user.id,
+                        content: content,
+                        created_at: new Date().toISOString()
+                    });
+                }
+            }
+        },
+
+        // 6. SEARCH & PROFILE
+        Search: {
+            async searchUser(query) {
+                // Implementer dans UI si besoin
+            }
+        },
+
+        // 7. GROUPS (FIXED)
+        Groups: {
+            async fetchAll() {
+                const container = document.getElementById('groups-container');
+                if (!container) return;
+
+                container.innerHTML = '<div class="col-span-full text-center text-xs text-gray-500 animate-pulse">Recherche des groupes...</div>';
+
+                const { data: groups, error } = await sb.from('groups').select('*');
+
+                if (error || !groups || groups.length === 0) {
+                    container.innerHTML = `
+                        <div class="col-span-full text-center py-10">
+                            <p class="text-gray-400 mb-4">Aucun groupe trouvé.</p>
+                            <button onclick="App.Features.Groups.createModal()" class="btn-primary px-4 py-2 rounded-xl">Créer le premier groupe</button>
+                        </div>
+                    `;
+                    return;
+                }
+
+                container.innerHTML = groups.map(g => `
+                    <div class="bg-gray-900 border border-white/5 rounded-2xl overflow-hidden hover:border-primary/50 transition-all group">
+                        <div class="h-24 bg-gray-800 relative">
+                             <div class="absolute inset-0 bg-gradient-to-t from-gray-900 via-transparent to-transparent"></div>
+                        </div>
+                        <div class="p-4 relative -mt-6">
+                            <h4 class="font-bold text-white text-lg leading-tight mb-1">${g.name}</h4>
+                            <p class="text-xs text-gray-400 mb-3 line-clamp-2">${g.description || 'Pas de description'}</p>
+                            <button class="w-full bg-white/5 hover:bg-primary py-2 rounded-lg text-xs font-bold transition-colors">Voir le groupe</button>
+                        </div>
+                    </div>
+                `).join('');
+            },
+
+            createModal() {
+                const name = prompt("Nom du groupe ou de la page :");
+                if (name) this.create(name);
+            },
+
+            async create(name) {
+                const { error } = await sb.from('groups').insert([{
+                    name: name,
+                    description: "Groupe créé par " + App.state.profile.username,
+                    created_by: App.state.user.id
+                }]);
+
+                if (error) alert("Erreur création : " + error.message);
+                else {
+                    alert("Groupe créé avec succès !");
+                    this.fetchAll();
+                }
+            }
+        },
+
+        // 8. REALTIME SUBSCRIPTIONS
+        Realtime: {
+            init() {
+                sb.channel('public:messages')
+                    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, payload => {
+                        const msg = payload.new;
+                        if (App.Features.Chat.activeContactId &&
+                            (msg.sender_id === App.Features.Chat.activeContactId)) {
+                            App.Features.Chat.renderMessage(msg);
+                        }
+                    })
+                    .subscribe();
+            }
         }
     }
 };
