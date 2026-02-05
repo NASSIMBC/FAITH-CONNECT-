@@ -147,6 +147,7 @@ const App = {
             // Lazy Load Data
             if (viewName === 'groups') App.Features.Groups.fetchAll();
             if (viewName === 'messages') App.Features.Chat.loadList();
+            if (viewName === 'profile') App.Features.ProfilePage.init();
         },
 
         modals: {
@@ -185,6 +186,26 @@ const App = {
                 contentV.classList.remove('hidden');
                 contentP.classList.add('hidden');
                 App.Features.VerseCreator.initCanvas();
+            }
+        },
+
+        switchProfileTab(tab) {
+            const btnP = document.getElementById('tab-profile-posts');
+            const btnF = document.getElementById('tab-profile-friends');
+            const contentP = document.getElementById('profile-posts-container');
+            const contentF = document.getElementById('profile-friends-container');
+
+            if (tab === 'posts') {
+                btnP.classList.add('bg-white/10', 'text-white'); btnP.classList.remove('text-gray-400');
+                btnF.classList.remove('bg-white/10', 'text-white'); btnF.classList.add('text-gray-400');
+                contentP.classList.remove('hidden');
+                contentF.classList.add('hidden');
+            } else {
+                btnF.classList.add('bg-white/10', 'text-white'); btnF.classList.remove('text-gray-400');
+                btnP.classList.remove('bg-white/10', 'text-white'); btnP.classList.add('text-gray-400');
+                contentF.classList.remove('hidden');
+                contentP.classList.add('hidden');
+                App.Features.ProfilePage.loadFriends();
             }
         },
 
@@ -956,6 +977,56 @@ const App = {
                         }
                     })
                     .subscribe();
+            }
+        },
+        // 9. PROFILE PAGE LOGIC
+        ProfilePage: {
+            async init() {
+                this.loadPosts();
+                this.loadStats();
+            },
+
+            async loadStats() {
+                // Count posts
+                const { count: postsCount } = await sb.from('posts').select('*', { count: 'exact', head: true }).eq('user_id', App.state.user.id);
+                document.getElementById('stat-posts').innerText = postsCount || 0;
+
+                // Count friends (Simulation: all users - 1)
+                const { count: usersCount } = await sb.from('profiles').select('*', { count: 'exact', head: true });
+                document.getElementById('stat-friends').innerText = (usersCount - 1) || 0;
+            },
+
+            async loadPosts() {
+                const container = document.getElementById('profile-posts-container');
+                if (!container) return;
+
+                const { data: posts } = await sb.from('posts').select('*, profiles(username, avatar_url)')
+                    .eq('user_id', App.state.user.id)
+                    .order('created_at', { ascending: false });
+
+                if (posts && posts.length > 0) {
+                    container.innerHTML = posts.map(post => App.Features.Feed.renderPost(post)).join('');
+                } else {
+                    container.innerHTML = `<div class="text-center text-gray-500 py-10">Vous n'avez rien publié encore.</div>`;
+                }
+            },
+
+            async loadFriends() {
+                const container = document.getElementById('profile-friends-container');
+                if (container.innerHTML.trim() !== "") return; // Avoid reload
+
+                const { data: users } = await sb.from('profiles').select('*').neq('id', App.state.user.id).limit(20);
+
+                if (users) {
+                    container.innerHTML = users.map(u => `
+                        <div class="glass-panel p-3 rounded-2xl flex flex-col items-center gap-2">
+                             <img src="${u.avatar_url || 'https://ui-avatars.com/api/?name=' + u.username}" class="w-12 h-12 rounded-full object-cover">
+                             <span class="text-xs font-bold text-white truncate max-w-full">${u.username}</span>
+                             <button onclick="App.Features.Chat.openChat('${u.id}', '${u.username}', '${u.avatar_url}'); App.UI.navigateTo('messages')" 
+                                     class="w-full bg-white/5 hover:bg-primary py-1.5 rounded-lg text-[10px] transition-colors">Message</button>
+                        </div>
+                    `).join('');
+                }
             }
         }
     }
