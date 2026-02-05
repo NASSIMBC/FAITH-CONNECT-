@@ -197,19 +197,67 @@ const App = {
             selectedImage: null,
 
             async loadDailyVerse() {
-                // Logique simplifiée avec versets statiques
+                // Versets Populaires (Liste locale robuste pour éviter les erreurs API)
                 const verses = [
+                    { t: "Car Dieu a tant aimé le monde qu'il a donné son Fils unique...", r: "Jean 3:16" },
                     { t: "L'Éternel est mon berger: je ne manquerai de rien.", r: "Psaumes 23:1" },
                     { t: "Je puis tout par celui qui me fortifie.", r: "Philippiens 4:13" },
-                    { t: "Car rien n'est impossible à Dieu.", r: "Luc 1:37" }
+                    { t: "Car rien n'est impossible à Dieu.", r: "Luc 1:37" },
+                    { t: "Ne t'ai-je pas donné cet ordre : Fortifie-toi et prends courage ?", r: "Josué 1:9" },
+                    { t: "Venez à moi, vous tous qui êtes fatigués et chargés...", r: "Matthieu 11:28" },
+                    { t: "Si Dieu est pour nous, qui sera contre nous ?", r: "Romains 8:31" },
+                    { t: "C'est par la grâce que vous êtes sauvés, par le moyen de la foi.", r: "Éphésiens 2:8" },
+                    { t: "Invoque-moi, et je te répondrai.", r: "Jérémie 33:3" },
+                    { t: "Lequel de vous, par ses inquiétudes, peut ajouter une coudée à la durée de sa vie?", r: "Matthieu 6:27" },
+                    { t: "Confie-toi en l'Éternel de tout ton cœur.", r: "Proverbes 3:5" },
+                    { t: "La paix de Dieu, qui surpasse toute intelligence, gardera vos cœurs.", r: "Philippiens 4:7" },
+                    { t: "Jésus lui dit: Je suis le chemin, la vérité, et la vie.", r: "Jean 14:6" }
                 ];
-                const today = new Date().getDay();
-                const verse = verses[today % verses.length];
+                // Jour de l'année pour rotation stable
+                const now = new Date();
+                const start = new Date(now.getFullYear(), 0, 0);
+                const diff = now - start;
+                const oneDay = 1000 * 60 * 60 * 24;
+                const dayOfYear = Math.floor(diff / oneDay);
+
+                const verse = verses[dayOfYear % verses.length];
 
                 const txt = document.getElementById('daily-verse-text');
                 const ref = document.getElementById('daily-verse-ref');
+                // Container pour ajouter bouton Copier/Partager si absent
+                const container = document.querySelector('#daily-verse-container .relative.z-10');
+
                 if (txt) txt.innerText = `"${verse.t}"`;
                 if (ref) ref.innerText = verse.r;
+
+                // Ajouter boutons d'action si pas déjà là
+                if (container && !document.getElementById('verse-actions')) {
+                    const actions = document.createElement('div');
+                    actions.id = 'verse-actions';
+                    actions.className = 'mt-4 flex gap-3';
+                    actions.innerHTML = `
+                        <button onclick="App.Features.Feed.copyVerse('${verse.t} ${verse.r}')" class="bg-white/10 hover:bg-white/20 p-2 rounded-full transition text-white" title="Copier"><i data-lucide="copy" class="w-4 h-4"></i></button>
+                        <button onclick="App.Features.Feed.shareVerse('${verse.t} ${verse.r}')" class="bg-white/10 hover:bg-white/20 p-2 rounded-full transition text-white" title="Partager"><i data-lucide="share-2" class="w-4 h-4"></i></button>
+                    `;
+                    container.appendChild(actions);
+                    if (typeof lucide !== 'undefined') lucide.createIcons();
+                }
+            },
+
+            copyVerse(text) {
+                navigator.clipboard.writeText(text).then(() => alert("Verset copié !"));
+            },
+
+            shareVerse(text) {
+                if (navigator.share) {
+                    navigator.share({
+                        title: 'Verset du Jour - Faith Connect',
+                        text: text,
+                        url: window.location.href
+                    }).catch(console.error);
+                } else {
+                    this.copyVerse(text);
+                }
             },
 
             async loadPosts() {
@@ -386,6 +434,14 @@ const App = {
                     this.bgImage = img;
                     this.draw();
                 }
+            },
+
+            async download() {
+                if (!this.canvas) return;
+                const link = document.createElement('a');
+                link.download = `verset-faithconnect-${Date.now()}.png`;
+                link.href = this.canvas.toDataURL();
+                link.click();
             },
 
             async publish() {
