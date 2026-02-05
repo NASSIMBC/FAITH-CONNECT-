@@ -780,6 +780,70 @@ const App = {
             }
         },
 
+        // 3. MARKETPLACE (Vente & Achat)
+        Marketplace: {
+            items: [
+                { t: "T-Shirt Foi", p: "25€", img: "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=500&auto=format&fit=crop&q=60", s: "FaithBrand" },
+                { t: "Bible Journaling", p: "30€", img: "https://images.unsplash.com/photo-1544947950-fa07a98d237f?w=500&auto=format&fit=crop&q=60", s: "LibrairieVie" },
+                { t: "Mug Verset", p: "12€", img: "https://images.unsplash.com/photo-1514228742587-6b1558fcca3d?w=500&auto=format&fit=crop&q=60", s: "CadeauxCiel" },
+                { t: "Bracelet Croix", p: "15€", img: "https://images.unsplash.com/photo-1611591437281-460bfbe1220a?w=500&auto=format&fit=crop&q=60", s: "BijouxSens" },
+                { t: "Hoodie Blessed", p: "45€", img: "https://images.unsplash.com/photo-1556906781-9a412961d289?w=500&auto=format&fit=crop&q=60", s: "ModeChretienne" },
+                { t: "Tableau Déco", p: "60€", img: "https://images.unsplash.com/photo-1513519245088-0e12902e5a38?w=500&auto=format&fit=crop&q=60", s: "ArtFoi" }
+            ],
+
+            load() {
+                const container = document.getElementById('marketplace-grid');
+                if (!container) return;
+
+                container.innerHTML = this.items.map(p => `
+                    <div class="glass-panel p-0 rounded-2xl overflow-hidden group cursor-pointer hover:border-primary/50 transition relative">
+                        <div class="absolute top-2 right-2 bg-black/60 text-white text-xs font-bold px-2 py-1 rounded-lg backdrop-blur-sm z-10">${p.p}</div>
+                        <div class="h-40 overflow-hidden">
+                            <img src="${p.img}" class="w-full h-full object-cover group-hover:scale-110 transition duration-500">
+                        </div>
+                        <div class="p-3">
+                            <h4 class="font-bold text-sm text-white truncate">${p.t}</h4>
+                            <p class="text-[10px] text-gray-400 flex items-center gap-1 mt-1">
+                                <i data-lucide="store" class="w-3 h-3"></i> ${p.s}
+                            </p>
+                            <button class="w-full mt-3 bg-white/10 hover:bg-primary text-xs font-bold py-2 rounded-lg transition-colors">Acheter</button>
+                        </div>
+                    </div>
+                `).join('');
+            },
+
+            openSellModal() {
+                const modal = document.getElementById('modal-sell');
+                if (modal) {
+                    modal.classList.remove('hidden');
+                    // Reset fields
+                    document.getElementById('sell-title').value = '';
+                    document.getElementById('sell-price').value = '';
+                }
+            },
+
+            publish() {
+                const title = document.getElementById('sell-title').value;
+                const price = document.getElementById('sell-price').value;
+                // Mock image for demo
+                const img = "https://images.unsplash.com/photo-1550989460-0adf9ea622e2?w=500&auto=format&fit=crop&q=60";
+
+                if (!title || !price) return alert("Veuillez remplir les champs.");
+
+                // Add to list
+                this.items.unshift({
+                    t: title,
+                    p: price + "€",
+                    img: img,
+                    s: App.state.profile.username || "Moi"
+                });
+
+                alert("Article mis en vente !");
+                App.UI.modals.closeAll();
+                this.load(); // Refresh grid
+            }
+        },
+
         // 4. EVENTS
         Events: {
             load() {
