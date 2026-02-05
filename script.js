@@ -878,6 +878,15 @@ const App = {
                 if (window.innerWidth < 768) {
                     document.getElementById('msg-area').classList.remove('hidden');
                     document.getElementById('msg-sidebar').classList.add('hidden');
+
+                    // Fullscreen Mode: Hide Mobile Nav & Expand View
+                    const nav = document.querySelector('.glass-nav.fixed.bottom-0'); // Mobile nav
+                    const view = document.getElementById('view-messages');
+                    if (nav) nav.classList.add('hidden');
+                    if (view) {
+                        view.classList.remove('bottom-[85px]', 'z-40');
+                        view.classList.add('bottom-0', 'z-50');
+                    }
                 }
 
                 if (header) header.innerHTML = `
@@ -913,6 +922,17 @@ const App = {
                 document.getElementById('msg-area').classList.add('hidden');
                 document.getElementById('msg-sidebar').classList.remove('hidden');
                 this.activeContactId = null;
+
+                // Restore Mobile Nav & View Height
+                if (window.innerWidth < 768) {
+                    const nav = document.querySelector('.glass-nav.fixed.bottom-0'); // Mobile nav
+                    const view = document.getElementById('view-messages');
+                    if (nav) nav.classList.remove('hidden');
+                    if (view) {
+                        view.classList.remove('bottom-0', 'z-50');
+                        view.classList.add('bottom-[85px]', 'z-40');
+                    }
+                }
             },
 
             renderMessage(msg) {
