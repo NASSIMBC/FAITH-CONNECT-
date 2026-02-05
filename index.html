@@ -1,745 +1,348 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="fr" class="scroll-smooth">
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FaithCircle - Votre Communauté</title>
-    <!-- TailwindCSS pour le style -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>FaithConnect</title>
+
+    <!-- Scripts & Libs -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Supabase & Lucide Icons -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
-    <!-- Polices Google pour un design moderne -->
+
+    <!-- Polices -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link
-        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&family=Lora:ital,wght@0,400;0,700;1,400&display=swap"
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=Lora:ital,wght@0,400;0,600;1,400&display=swap"
         rel="stylesheet">
-    <!-- Styles CSS personnalisés -->
+
+    <!-- Design System -->
     <link rel="stylesheet" href="style.css">
 
-    <style>
-        body {
-            background-color: #0A0A0A;
-            color: #E5E7EB;
-            font-family: 'Inter', sans-serif;
-            overscroll-behavior: none;
-        }
-
-        .font-serif {
-            font-family: 'Lora', serif;
-        }
-
-        .hidden {
-            display: none !important;
-        }
-
-        /* Animation pour le changement de vue */
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-                transform: translateY(10px);
-            }
-
-            to {
-                opacity: 1;
-                transform: translateY(0);
+    <!-- Tailwind Config pour les couleurs personnalisées -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        celestial: '#030014',
+                        primary: '#8B5CF6'
+                    },
+                    boxShadow: {
+                        'glow': '0 0 20px rgba(139, 92, 246, 0.3)'
+                    }
+                }
             }
         }
-
-        .animate-view {
-            animation: fadeIn 0.3s ease-out forwards;
-        }
-
-        /* Carte premium avec effet de lueur */
-        .premium-card {
-            background-color: #111111;
-            border: 1px solid rgba(255, 255, 255, 0.05);
-            box-shadow: 0 0 15px rgba(192, 132, 252, 0.05);
-        }
-
-        /* Scrollbar customisée */
-        .scrollbar-hide::-webkit-scrollbar {
-            display: none;
-        }
-
-        .scrollbar-hide {
-            -ms-overflow-style: none;
-            scrollbar-width: none;
-        }
-    </style>
+    </script>
 </head>
 
-<body class="antialiased">
+<body class="antialiased min-h-screen pb-20 md:pb-0 selection:bg-purple-500/30">
 
-    <!-- =========== PAGE DE CONNEXION =========== -->
-    <div id="login-page" class="flex flex-col items-center justify-center min-h-screen p-6">
-        <h1 class="text-4xl font-black text-white mb-2">Faith<span class="text-purple-400">Circle</span></h1>
-        <p class="text-gray-400 mb-8">Connectez-vous à votre communauté.</p>
-        <div class="w-full max-w-sm space-y-4">
-            <input type="email" id="login-email" placeholder="Adresse e-mail"
-                class="w-full bg-gray-900 border border-gray-700 text-white px-4 py-3 rounded-lg focus:outline-none focus:border-purple-500">
-            <input type="password" id="login-password" placeholder="Mot de passe"
-                class="w-full bg-gray-900 border border-gray-700 text-white px-4 py-3 rounded-lg focus:outline-none focus:border-purple-500">
-            <button onclick="handleLogin()"
-                class="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 rounded-lg transition-colors">Connexion</button>
-            <button onclick="handleSignUp()"
-                class="w-full border border-gray-600 hover:bg-gray-800 text-gray-300 font-bold py-3 rounded-lg transition-colors">Créer
-                un compte</button>
-        </div>
-    </div>
+    <!-- ================= AUTH SCREEN ================= -->
+    <section id="auth-screen" class="fixed inset-0 z-50 flex items-center justify-center bg-[#030014] p-6 hidden">
+        <div class="glass-panel w-full max-w-sm p-8 rounded-[32px] text-center relative overflow-hidden">
+            <!-- Background Blob -->
+            <div
+                class="absolute top-0 left-1/2 -translate-x-1/2 w-40 h-40 bg-purple-600/20 rounded-full blur-[50px] pointer-events-none">
+            </div>
 
-    <!-- =========== APPLICATION PRINCIPALE =========== -->
-    <div id="main-app" class="hidden">
+            <h1 class="text-4xl font-black mb-2 tracking-tight relative z-10">Faith<span
+                    class="text-purple-400">Connect</span></h1>
+            <p class="text-gray-400 mb-8 text-sm relative z-10">Rejoignez votre communauté spirituelle.</p>
 
-        <!-- Header Principal (Mobile) -->
-        <header
-            class="sticky top-0 z-40 bg-black/80 backdrop-blur-sm border-b border-white/5 md:hidden p-4 flex justify-between items-center">
-            <h1 class="text-xl font-bold text-white">Faith<span class="text-purple-400">Circle</span></h1>
-            <div class="flex items-center gap-4">
-                <div class="relative">
-                    <button onclick="toggleNotifDropdown()" class="text-gray-400 hover:text-white"><i
-                            data-lucide="bell"></i></button>
-                    <span id="notif-badge"
-                        class="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[10px] flex items-center justify-center rounded-full hidden"></span>
+            <div class="space-y-4 relative z-10">
+                <input type="email" id="auth-email" placeholder="Email"
+                    class="input-field w-full px-5 py-3.5 rounded-2xl text-sm">
+                <input type="password" id="auth-password" placeholder="Mot de passe"
+                    class="input-field w-full px-5 py-3.5 rounded-2xl text-sm">
+
+                <button onclick="App.Auth.login()" class="btn-primary w-full py-3.5 rounded-2xl font-bold text-sm">Se
+                    connecter</button>
+                <div class="flex items-center justify-between px-2">
+                    <hr class="flex-1 border-white/10">
+                    <span class="px-2 text-xs text-gray-500">OU</span>
+                    <hr class="flex-1 border-white/10">
                 </div>
-                <div id="current-user-avatar-small"
-                    class="w-8 h-8 rounded-full bg-purple-700 flex items-center justify-center font-bold text-xs"></div>
+                <button onclick="App.Auth.signUp()"
+                    class="w-full py-3.5 rounded-2xl font-bold text-sm bg-white/5 hover:bg-white/10 border border-white/10 transition">Créer
+                    un compte</button>
+            </div>
+        </div>
+    </section>
+
+    <!-- ================= MAIN APPLICATION ================= -->
+    <div id="app-conatiner" class="">
+
+        <!-- HEADER MOBILE (Sticky Top) -->
+        <header class="md:hidden sticky top-0 z-40 glass-nav px-5 py-3 flex justify-between items-center">
+            <h1 class="text-lg font-black tracking-tight">Faith<span class="text-purple-400">.</span></h1>
+            <div class="flex items-center gap-4">
+                <button class="relative text-gray-400 hover:text-white" onclick="App.UI.toggleNotifs()">
+                    <i data-lucide="bell" class="w-5 h-5"></i>
+                    <span id="notif-badge-mobile"
+                        class="absolute -top-0.5 -right-0.5 w-2 h-2 bg-red-500 rounded-full hidden"></span>
+                </button>
+                <div onclick="App.UI.navigateTo('profile')"
+                    class="w-8 h-8 rounded-full bg-gradient-to-tr from-purple-500 to-indigo-500 p-[2px] cursor-pointer">
+                    <img id="header-avatar" class="w-full h-full rounded-full object-cover bg-black"
+                        src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7">
+                </div>
             </div>
         </header>
 
-        <!-- Dropdown Notifications -->
-        <div id="notif-dropdown"
-            class="hidden absolute top-16 right-4 z-50 w-64 bg-gray-900 border border-white/10 rounded-lg shadow-2xl">
-            <div id="notif-list" class="max-h-80 overflow-y-auto">
-                <div class="p-4 text-center text-xs text-gray-500">🍃</div>
-            </div>
-        </div>
+        <div class="flex max-w-7xl mx-auto md:pt-6 md:px-6 gap-6">
 
-        <main class="grid grid-cols-1 md:grid-cols-12 gap-6 p-4 pb-24 md:pb-4">
-            <!-- Navigation Desktop (Sidebar) - Glassmorphism -->
-            <div
-                class="max-md:hidden md:flex flex-col md:col-span-2 lg:col-span-3 sticky top-4 h-[calc(100vh-2rem)] glass-sidebar rounded-2xl p-4">
-                <!-- Logo avec gradient -->
-                <div class="mb-8 px-2">
-                    <h1 class="text-2xl font-black">
-                        <span
-                            class="bg-gradient-to-r from-purple-400 via-pink-400 to-purple-600 bg-clip-text text-transparent">Faith</span><span
-                            class="text-white">Circle</span>
+            <!-- SIDEBAR DESKTOP (Navigation) -->
+            <aside
+                class="hidden md:flex flex-col w-64 h-[calc(100vh-3rem)] sticky top-6 glass-panel rounded-[32px] p-6">
+                <div class="mb-10 px-2">
+                    <h1 class="text-2xl font-black tracking-tight">Faith<span class="text-purple-400">Connect</span>
                     </h1>
-                    <p class="text-xs text-gray-500 mt-1">Votre communauté spirituelle</p>
+                    <p class="text-xs text-gray-500 mt-1 pl-1">V 2.0.0</p>
                 </div>
 
-                <!-- Menu avec effets modernes -->
                 <nav class="space-y-2 flex-1">
-                    <button id="nav-desktop-home" onclick="switchView('home')"
-                        class="group w-full flex items-center gap-4 px-4 py-3.5 rounded-xl transition-all duration-300 text-gray-400 hover:text-white hover:bg-white/5 relative overflow-hidden">
-                        <i data-lucide="home" class="w-5 h-5 relative z-10"></i>
-                        <span class="font-semibold text-base hidden lg:inline relative z-10">Accueil</span>
-                        <div
-                            class="absolute inset-0 bg-gradient-to-r from-purple-600/0 to-indigo-600/0 group-hover:from-purple-600/10 group-hover:to-indigo-600/10 transition-all duration-300">
-                        </div>
+                    <button onclick="App.UI.navigateTo('home')"
+                        class="nav-btn-desktop w-full flex items-center gap-4 px-4 py-3 rounded-2xl text-gray-400 hover:text-white hover:bg-white/5 transition group"
+                        id="desk-nav-home">
+                        <i data-lucide="home" class="group-hover:text-purple-400 transition"></i> <span
+                            class="font-semibold text-sm">Accueil</span>
                     </button>
-                    <button id="nav-desktop-reels" onclick="switchView('reels')"
-                        class="group w-full flex items-center gap-4 px-4 py-3.5 rounded-xl transition-all duration-300 text-gray-400 hover:text-white hover:bg-white/5 relative overflow-hidden">
-                        <i data-lucide="film" class="w-5 h-5 relative z-10"></i>
-                        <span class="font-semibold text-base hidden lg:inline relative z-10">Versets</span>
-                        <div
-                            class="absolute inset-0 bg-gradient-to-r from-purple-600/0 to-indigo-600/0 group-hover:from-purple-600/10 group-hover:to-indigo-600/10 transition-all duration-300">
-                        </div>
+                    <button onclick="App.UI.navigateTo('reels')"
+                        class="nav-btn-desktop w-full flex items-center gap-4 px-4 py-3 rounded-2xl text-gray-400 hover:text-white hover:bg-white/5 transition group"
+                        id="desk-nav-reels">
+                        <i data-lucide="play-circle" class="group-hover:text-pink-400 transition"></i> <span
+                            class="font-semibold text-sm">Versets</span>
                     </button>
-                    <button id="nav-desktop-bible" onclick="switchView('bible')"
-                        class="group w-full flex items-center gap-4 px-4 py-3.5 rounded-xl transition-all duration-300 text-gray-400 hover:text-white hover:bg-white/5 relative overflow-hidden">
-                        <i data-lucide="book-open" class="w-5 h-5 relative z-10"></i>
-                        <span class="font-semibold text-base hidden lg:inline relative z-10">Bible</span>
-                        <div
-                            class="absolute inset-0 bg-gradient-to-r from-purple-600/0 to-indigo-600/0 group-hover:from-purple-600/10 group-hover:to-indigo-600/10 transition-all duration-300">
-                        </div>
+                    <button onclick="App.UI.navigateTo('bible')"
+                        class="nav-btn-desktop w-full flex items-center gap-4 px-4 py-3 rounded-2xl text-gray-400 hover:text-white hover:bg-white/5 transition group"
+                        id="desk-nav-bible">
+                        <i data-lucide="book" class="group-hover:text-blue-400 transition"></i> <span
+                            class="font-semibold text-sm">Bible</span>
                     </button>
-                    <button id="nav-desktop-messages" onclick="switchView('messages')"
-                        class="group w-full flex items-center gap-4 px-4 py-3.5 rounded-xl transition-all duration-300 text-gray-400 hover:text-white hover:bg-white/5 relative overflow-hidden">
-                        <i data-lucide="message-square" class="w-5 h-5 relative z-10"></i>
-                        <span class="font-semibold text-base hidden lg:inline relative z-10">Messages</span>
-                        <div
-                            class="absolute inset-0 bg-gradient-to-r from-purple-600/0 to-indigo-600/0 group-hover:from-purple-600/10 group-hover:to-indigo-600/10 transition-all duration-300">
-                        </div>
+                    <button onclick="App.UI.navigateTo('groups')"
+                        class="nav-btn-desktop w-full flex items-center gap-4 px-4 py-3 rounded-2xl text-gray-400 hover:text-white hover:bg-white/5 transition group"
+                        id="desk-nav-groups">
+                        <i data-lucide="users" class="group-hover:text-green-400 transition"></i> <span
+                            class="font-semibold text-sm">Groupes</span>
                     </button>
-                    <button id="nav-desktop-groups" onclick="switchView('groups')"
-                        class="group w-full flex items-center gap-4 px-4 py-3.5 rounded-xl transition-all duration-300 text-gray-400 hover:text-white hover:bg-white/5 relative overflow-hidden">
-                        <i data-lucide="users" class="w-5 h-5 relative z-10"></i>
-                        <span class="font-semibold text-base hidden lg:inline relative z-10">Groupes</span>
-                        <div
-                            class="absolute inset-0 bg-gradient-to-r from-purple-600/0 to-indigo-600/0 group-hover:from-purple-600/10 group-hover:to-indigo-600/10 transition-all duration-300">
-                        </div>
-                    </button>
-                    <button id="nav-desktop-profile" onclick="switchView('profile')"
-                        class="group w-full flex items-center gap-4 px-4 py-3.5 rounded-xl transition-all duration-300 text-gray-400 hover:text-white hover:bg-white/5 relative overflow-hidden">
-                        <i data-lucide="user" class="w-5 h-5 relative z-10"></i>
-                        <span class="font-semibold text-base hidden lg:inline relative z-10">Profil</span>
-                        <div
-                            class="absolute inset-0 bg-gradient-to-r from-purple-600/0 to-indigo-600/0 group-hover:from-purple-600/10 group-hover:to-indigo-600/10 transition-all duration-300">
-                        </div>
+                    <button onclick="App.UI.navigateTo('messages')"
+                        class="nav-btn-desktop w-full flex items-center gap-4 px-4 py-3 rounded-2xl text-gray-400 hover:text-white hover:bg-white/5 transition group"
+                        id="desk-nav-messages">
+                        <i data-lucide="message-circle" class="group-hover:text-orange-400 transition"></i> <span
+                            class="font-semibold text-sm">Messages</span>
                     </button>
                 </nav>
 
-                <!-- Mini Profil avec gradient -->
-                <div class="mt-auto border-t border-white/10 pt-4 px-2">
-                    <button onclick="switchView('profile')"
-                        class="flex items-center gap-3 w-full hover:bg-white/5 p-3 rounded-xl transition-all duration-300 group">
-                        <div
-                            class="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center font-bold text-sm text-white shadow-lg group-hover:shadow-purple-500/50 transition-shadow">
-                            MOI</div>
-                        <div class="hidden lg:block text-left">
-                            <span class="font-semibold text-sm text-white block">Mon Profil</span>
-                            <span class="text-xs text-gray-500">Voir mon profil</span>
+                <div class="mt-auto">
+                    <button onclick="App.UI.navigateTo('profile')"
+                        class="flex items-center gap-3 w-full p-3 rounded-2xl hover:bg-white/5 transition">
+                        <img id="sidebar-avatar" class="w-10 h-10 rounded-full object-cover bg-gray-800"
+                            src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7">
+                        <div class="text-left overflow-hidden">
+                            <p id="sidebar-username" class="font-bold text-sm truncate">Chargement...</p>
+                            <p class="text-[10px] text-gray-500">Mon profil</p>
                         </div>
                     </button>
                 </div>
-            </div>
+            </aside>
 
-            <!-- Content Area -->
-            <div class="md:col-span-10 lg:col-span-9">
-                <!-- VUE HOME -->
-                <div id="view-home">
-                    <!-- Stories -->
-                    <div id="stories-container"
-                        class="p-4 flex items-center space-x-4 overflow-x-auto scrollbar-hide border-b border-white/5">
-                        <!-- Contenu généré par JS -->
-                    </div>
-                    <input type="file" id="btn-add-story-input" class="hidden" onchange="uploadStory(this)"
-                        accept="image/*">
+            <!-- MAIN CONTENT AREA -->
+            <main class="flex-1 w-full min-w-0">
 
-                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 pt-4">
-                        <!-- Colonne Principale (Posts) -->
-                        <div class="lg:col-span-2">
-                            <!-- Widget Verset du Jour -->
-                            <div id="daily-verse-card"
-                                class="premium-card p-6 mb-6 rounded-2xl relative overflow-hidden hidden animate-view">
-                                <div
-                                    class="absolute top-0 right-0 w-32 h-32 bg-purple-500/20 rounded-full blur-3xl -mr-10 -mt-10">
-                                </div>
-                                <div class="relative z-10">
-                                    <div class="flex justify-between items-center mb-2">
-                                        <h3 class="text-xs font-bold text-purple-400 uppercase tracking-widest"><i
-                                                data-lucide="sun" class="inline w-3 h-3 mr-1"></i> Verset du Jour</h3>
-                                        <button onclick="shareDailyVerse()"
-                                            class="text-gray-500 hover:text-white transition-colors"><i
-                                                data-lucide="share-2" class="w-4 h-4"></i></button>
-                                    </div>
-                                    <p id="daily-verse-text"
-                                        class="text-lg md:text-xl font-serif text-white italic leading-relaxed mb-3">
-                                        Loading...</p>
-                                    <p id="daily-verse-ref" class="text-xs text-gray-400 font-bold text-right">...</p>
-                                </div>
-                            </div>
+                <!-- VIEW: HOME (Feed) -->
+                <section id="view-home" class="page-view space-y-6 p-4 md:p-0">
 
-                            <!-- Créateur de post moderne -->
-                            <div class="premium-card p-5 mb-6 hover:shadow-purple-500/10 transition-shadow">
-                                <textarea id="new-post-input"
-                                    class="input-modern w-full text-white placeholder-gray-500 focus:outline-none resize-none rounded-xl px-4 py-3"
-                                    rows="3"
-                                    placeholder="✨ Partagez une pensée, une prière, une bénédiction..."></textarea>
-                                <!-- Aperçu image avec style moderne -->
-                                <div id="image-preview-container" class="hidden mt-3 relative">
-                                    <img id="image-preview" class="rounded-xl max-h-60 w-auto shadow-lg">
-                                    <button onclick="removeImage()"
-                                        class="absolute top-3 right-3 bg-black/70 backdrop-blur-sm p-2 rounded-full text-white hover:bg-red-500/80 transition-all"><i
-                                            data-lucide="x" class="w-4 h-4"></i></button>
-                                </div>
-                                <div class="flex justify-between items-center mt-4">
-                                    <input type="file" id="post-image-file" class="hidden"
-                                        onchange="handleImageSelect(this)" accept="image/*">
-                                    <button onclick="document.getElementById('post-image-file').click()"
-                                        class="text-gray-400 hover:text-purple-400 p-2 hover:bg-purple-500/10 rounded-lg transition-all"><i
-                                            data-lucide="image" class="w-5 h-5"></i></button>
-                                    <button id="btn-publish" onclick="publishPost()"
-                                        class="btn-gradient text-white font-semibold px-8 py-2.5 rounded-xl text-sm shadow-lg hover:shadow-purple-500/50 transition-all">Publier</button>
-                                </div>
-                            </div>
-
-                            <!-- Feed de Posts -->
-                            <div id="posts-container">
-                                <!-- Contenu généré par JS -->
-                            </div>
-                        </div>
-
-                        <!-- Colonne Droite (Entraide, Evénements) -->
-                        <div class="hidden lg:block lg:col-span-1">
-                            <div class="sticky top-4 space-y-6">
-                                <!-- Prières modernes -->
-                                <div class="premium-card p-4">
-                                    <h3 class="font-bold text-white mb-3 flex items-center gap-2">
-                                        <span class="text-lg">🙏</span> Mur de prière
-                                    </h3>
-                                    <div id="prayers-list" class="space-y-2 max-h-60 overflow-y-auto custom-scrollbar">
-                                    </div>
-                                    <div class="flex gap-2 mt-3">
-                                        <input id="prayer-input" placeholder="Je prie pour..."
-                                            class="input-modern flex-1 rounded-lg px-3 py-2 text-xs text-white">
-                                        <button onclick="addPrayer()"
-                                            class="p-2 btn-gradient rounded-lg shadow-lg hover:shadow-purple-500/50 transition-all"><i
-                                                data-lucide="send" class="w-4 h-4"></i></button>
-                                    </div>
-                                </div>
-                                <!-- Entraide -->
-                                <div>
-                                    <div class="flex justify-between items-center mb-3">
-                                        <h3 class="font-bold text-white">Entraide</h3>
-                                        <button onclick="askForHelp()"
-                                            class="text-xs text-purple-400 font-bold hover:underline">+
-                                            Demander</button>
-                                    </div>
-                                    <div id="help-list" class="space-y-2"></div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- VUE REELS -->
-                <div id="view-reels" class="hidden p-4">
-                    <div id="reels-container" class="masonry-container columns-2 md:columns-3 lg:columns-4 gap-4">
-                        <!-- Contenu généré par JS -->
-                    </div>
-                </div>
-
-                <!-- VUE BIBLE -->
-                <div id="view-bible" class="hidden p-4 space-y-6">
-                    <!-- Faith AI -->
-                    <div class="bg-gray-900 border border-white/10 rounded-2xl p-4">
-                        <h3 class="text-lg font-bold text-white mb-2 flex items-center gap-2"><i data-lucide="sparkles"
-                                class="text-purple-400"></i> Faith AI</h3>
-                        <p class="text-xs text-gray-400 mb-4">Posez une question sur un passage ou un thème biblique.
-                        </p>
-                        <div class="flex gap-2">
-                            <input type="text" id="ai-bible-input" placeholder="Ex: Explique-moi Jean 3:16"
-                                class="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-sm text-white focus:outline-none focus:border-purple-500">
-                            <button onclick="askFaithAI()" class="bg-purple-600 text-white px-4 rounded-lg font-bold"><i
-                                    data-lucide="send"></i></button>
-                        </div>
-                        <div id="ai-response-area" class="mt-4 hidden"></div>
-                    </div>
-
-                    <!-- Lecteur Bible -->
-                    <div class="bg-gray-900 border border-white/10 rounded-2xl p-4">
-                        <!-- Tabs AT/NT -->
-                        <div class="flex gap-2 mb-4">
-                            <button id="btn-at" onclick="showTestament('AT')">Ancien Testament</button>
-                            <button id="btn-nt" onclick="showTestament('NT')">Nouveau Testament</button>
-                        </div>
-
-                        <!-- Liste des livres -->
-                        <div id="bible-books-list" class="grid grid-cols-2 md:grid-cols-4 gap-2">
-                            <!-- Contenu généré par JS -->
-                        </div>
-
-                        <!-- Lecteur de chapitre -->
-                        <div id="bible-reader" class="hidden">
-                            <div class="flex justify-between items-center mb-4">
-                                <button onclick="closeBibleReader()" class="p-2 text-gray-400 hover:text-white"><i
-                                        data-lucide="arrow-left"></i></button>
-                                <h2 id="reader-title" class="font-bold text-lg text-white"></h2>
-                                <div></div> <!-- Spacer -->
-                            </div>
-                            <div id="reader-content" class="max-h-[60vh] overflow-y-auto scrollbar-hide"></div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- VUE MESSAGES -->
-                <!-- VUE MESSAGES -->
-                <div id="view-messages"
-                    class="hidden md:grid md:grid-cols-12 h-[calc(100vh-6rem)] md:h-[calc(100vh-2rem)]">
-                    <div class="messenger-container col-span-12 w-full h-full flex">
-                        <!-- Sidebar: Conversations List -->
+                    <!-- Daily Verse Widget (Re-designed) -->
+                    <div id="daily-verse-container"
+                        class="glass-panel p-6 rounded-[24px] relative overflow-hidden group hover:shadow-glow transition-all duration-500">
                         <div
-                            class="messenger-sidebar w-full md:w-80 lg:w-96 flex-shrink-0 border-r border-white/5 flex flex-col h-full bg-[#111] md:bg-transparent z-10">
-                            <!-- Search Bar -->
-                            <div class="messenger-search p-4 border-b border-white/5">
-                                <div class="relative">
-                                    <i data-lucide="search"
-                                        class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4"></i>
-                                    <input type="text" placeholder="Rechercher..." id="conversation-search"
-                                        class="w-full bg-gray-900 border border-gray-700 rounded-full pl-9 pr-4 py-2 text-sm text-white focus:outline-none focus:border-purple-500">
-                                </div>
-                            </div>
+                            class="absolute -right-10 -top-10 w-40 h-40 bg-purple-500/20 blur-[60px] rounded-full group-hover:bg-purple-500/30 transition-all">
+                        </div>
+                        <div class="relative z-10 flex flex-col items-center text-center">
+                            <span
+                                class="text-[10px] uppercase tracking-widest text-purple-400 font-bold mb-3 flex items-center gap-2">
+                                <i data-lucide="sun" class="w-3 h-3"></i> Verset du Jour
+                            </span>
+                            <p class="font-serif text-lg md:text-2xl text-white leading-relaxed italic mb-4"
+                                id="daily-verse-text">
+                                "Chargement de la parole..."
+                            </p>
+                            <p class="text-xs font-bold text-gray-400" id="daily-verse-ref"></p>
+                        </div>
+                    </div>
 
-                            <!-- Conversations List -->
-                            <div class="messenger-conversations flex-1 overflow-y-auto custom-scrollbar"
-                                id="conversations-list">
-                                <!-- Generated by loadConversations() -->
+                    <!-- Post Creator -->
+                    <div class="glass-panel p-4 rounded-[24px] flex items-center gap-4">
+                        <img id="feed-avatar" class="w-10 h-10 rounded-full object-cover bg-gray-800">
+                        <button onclick="App.Features.Feed.openCreator()"
+                            class="flex-1 text-left text-sm text-gray-500 bg-white/5 hover:bg-white/10 px-4 py-3 rounded-xl transition">
+                            Partagez une bénédiction...
+                        </button>
+                        <button class="text-purple-400 p-2 hover:bg-purple-500/20 rounded-full transition"><i
+                                data-lucide="image"></i></button>
+                    </div>
+
+                    <!-- Feed Stream -->
+                    <div id="feed-container" class="space-y-4 pb-20">
+                        <!-- Posts injected by JS -->
+                    </div>
+                </section>
+
+                <!-- VIEW: REELS (Shorts) -->
+                <section id="view-reels" class="page-view hidden p-1 md:p-0">
+                    <div id="reels-grid" class="columns-2 md:columns-3 gap-4 space-y-4">
+                        <!-- Reels injected by JS -->
+                    </div>
+                </section>
+
+                <!-- VIEW: BIBLE -->
+                <section id="view-bible" class="page-view hidden space-y-4 p-4 md:p-0">
+                    <div class="glass-panel p-4 rounded-[24px] flex gap-2 overflow-x-auto scrollbar-hide"
+                        id="bible-books-nav">
+                        <!-- Books injected -->
+                    </div>
+                    <div
+                        class="glass-panel p-6 rounded-[24px] min-h-[60vh] max-h-[80vh] overflow-y-auto custom-scrollbar">
+                        <div class="flex justify-between items-center mb-6 border-b border-white/5 pb-4">
+                            <h2 id="bible-current-ref" class="text-xl font-bold font-serif">Jean 1</h2>
+                            <div class="flex gap-2">
+                                <button onclick="App.Features.Bible.prevChap()"
+                                    class="p-2 hover:bg-white/5 rounded-full"><i
+                                        data-lucide="chevron-left"></i></button>
+                                <button onclick="App.Features.Bible.nextChap()"
+                                    class="p-2 hover:bg-white/5 rounded-full"><i
+                                        data-lucide="chevron-right"></i></button>
                             </div>
                         </div>
+                        <div id="bible-content" class="bible-text text-justify">
+                            <p class="text-center text-gray-500 mt-10">Sélectionnez un livre...</p>
+                        </div>
+                    </div>
+                </section>
 
+                <!-- VIEW: GROUPS -->
+                <section id="view-groups" class="page-view hidden p-4 md:p-0">
+                    <h2 class="text-2xl font-bold mb-4">Groupes & Cellules</h2>
+                    <div id="groups-container" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <!-- Groups injected -->
+                    </div>
+                </section>
+
+                <!-- VIEW: MESSAGES -->
+                <section id="view-messages" class="page-view hidden h-[calc(100vh-8rem)] md:h-[calc(100vh-4rem)]">
+                    <div class="glass-panel w-full h-full rounded-[24px] overflow-hidden flex">
+                        <!-- List (Sidebar) -->
+                        <div class="w-full md:w-80 border-r border-white/5 bg-gray-900/50 flex flex-col"
+                            id="msg-sidebar">
+                            <div class="p-4 border-b border-white/5">
+                                <input type="text" placeholder="Rechercher..."
+                                    class="input-field w-full px-4 py-2 rounded-xl text-xs">
+                            </div>
+                            <div id="conversations-list" class="flex-1 overflow-y-auto"></div>
+                        </div>
                         <!-- Chat Area -->
-                        <div class="messenger-chat flex-1 flex flex-col h-full relative" id="messenger-chat-area">
-                            <!-- Enhanced Header -->
-                            <div
-                                class="messenger-header-enhanced flex items-center justify-between p-3 md:p-4 border-b border-white/5 bg-[#111] md:bg-transparent">
-                                <!-- Back Button (Mobile) -->
-                                <button class="back-btn md:hidden" onclick="goBackToConversations()" title="Retour">
-                                    <i data-lucide="arrow-left"></i>
-                                </button>
-
-                                <!-- User Info -->
-                                <div class="header-user-info flex-1 ml-2">
-                                    <div class="flex items-center gap-3">
-                                        <div class="relative">
-                                            <div class="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white font-bold overflow-hidden"
-                                                id="chat-avatar">
-                                                <!-- Avatar or initials -->
-                                            </div>
-                                            <div class="online-indicator hidden" id="chat-online-indicator"></div>
-                                        </div>
-                                        <div>
-                                            <div class="font-semibold text-white text-sm md:text-base"
-                                                id="chat-with-name">Sélectionnez un ami</div>
-                                            <div class="text-xs text-gray-400" id="chat-status">Hors ligne</div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <!-- Action Buttons -->
-                                <div class="header-actions flex items-center gap-1 md:gap-2">
-                                    <button class="call-btn" onclick="initiateVoiceCall()" title="Appel vocal">
-                                        <i data-lucide="phone"></i>
-                                    </button>
-                                    <button class="video-btn" onclick="initiateVideoCall()" title="Appel vidéo">
-                                        <i data-lucide="video"></i>
-                                    </button>
-                                    <button class="menu-btn" onclick="toggleOptionsMenu()" title="Options">
-                                        <i data-lucide="more-vertical"></i>
-                                    </button>
-                                </div>
+                        <div class="hidden md:flex flex-1 flex-col bg-[#050510]" id="msg-area">
+                            <div id="chat-header" class="p-4 border-b border-white/5 flex items-center justify-between">
+                                <span class="font-bold">Sélectionnez une discussion</span>
                             </div>
-
-                            <!-- Messages Area -->
-                            <div class="messenger-messages flex-1 overflow-y-auto p-4 custom-scrollbar scroll-smooth"
-                                id="chat-history">
-                                <!-- Empty State -->
-                                <div
-                                    class="messenger-empty flex flex-col items-center justify-center h-full text-gray-500">
-                                    <div class="messenger-empty-icon text-4xl mb-3">💬</div>
-                                    <div class="messenger-empty-text">Cliquez sur une discussion</div>
-                                </div>
-                            </div>
-
-                            <!-- Enhanced Input Zone -->
-                            <div
-                                class="messenger-input-enhanced p-2 md:p-4 border-t border-white/5 bg-[#111] md:bg-transparent">
-                                <div class="input-controls flex items-end gap-2">
-                                    <!-- Attach Button -->
-                                    <button class="attach-btn text-gray-400 hover:text-purple-400 p-2"
-                                        onclick="toggleAttachMenu()" title="Joindre">
-                                        <i data-lucide="plus"></i>
-                                    </button>
-
-                                    <!-- Camera Button -->
-                                    <button class="camera-btn text-gray-400 hover:text-purple-400 p-2 hidden sm:block"
-                                        onclick="openPhotoUpload()" title="Photo">
-                                        <i data-lucide="camera"></i>
-                                    </button>
-
-                                    <!-- Message Input Wrapper -->
-                                    <div
-                                        class="message-input-wrapper flex-1 bg-gray-900 rounded-2xl flex items-end p-2 md:px-4 md:py-2">
-                                        <textarea
-                                            class="message-input w-full bg-transparent border-none focus:ring-0 text-white text-sm resize-none max-h-32 py-2"
-                                            id="chat-input" placeholder="Écrivez un message..." rows="1"
-                                            disabled></textarea>
-
-                                        <!-- Voice Button -->
-                                        <button class="voice-btn text-gray-400 hover:text-red-400 p-2"
-                                            onmousedown="startVoiceRecording()" onmouseup="stopVoiceRecording()"
-                                            ontouchstart="startVoiceRecording()" ontouchend="stopVoiceRecording()"
-                                            title="Maintenir pour enregistrer">
-                                            <i data-lucide="mic"></i>
-                                        </button>
-                                    </div>
-
-                                    <!-- Emoji Button -->
-                                    <button class="emoji-btn text-gray-400 hover:text-yellow-400 p-2 hidden sm:block"
-                                        onclick="toggleEmojiPicker()" title="Emoji">
-                                        <i data-lucide="smile"></i>
-                                    </button>
-
-                                    <!-- Send Button -->
-                                    <button
-                                        class="send-btn-enhanced bg-gradient-to-r from-purple-600 to-pink-600 text-white p-3 rounded-full shadow-lg hover:shadow-purple-500/30 transition-shadow"
-                                        onclick="sendMessage()" title="Envoyer">
-                                        <i data-lucide="send"></i>
-                                    </button>
-                                </div>
+                            <div id="chat-messages" class="flex-1 overflow-y-auto p-4 space-y-4"></div>
+                            <div class="p-4 border-t border-white/5 flex gap-2">
+                                <input id="chat-input" type="text" class="input-field flex-1 rounded-xl px-4 py-2"
+                                    placeholder="Message..." disabled>
+                                <button onclick="App.Features.Chat.send()" class="btn-primary p-2 rounded-xl"><i
+                                        data-lucide="send"></i></button>
                             </div>
                         </div>
                     </div>
+                </section>
 
-                    <!-- Hidden File Inputs -->
-                    <input type="file" id="photo-file-input" accept="image/*" style="display: none;"
-                        onchange="handlePhotoSelect(this.files[0])">
-                    <input type="file" id="file-input" accept="*/*" style="display: none;"
-                        onchange="handleFileSelect(this.files[0])">
-                </div>
+                <!-- VIEW: PROFILE -->
+                <section id="view-profile" class="page-view hidden p-4 md:p-0">
+                    <div class="glass-panel p-6 rounded-[32px] text-center relative overflow-hidden mb-6">
+                        <div class="w-24 h-24 mx-auto rounded-full p-1 bg-gradient-to-tr from-purple-500 to-pink-500 mb-4 cursor-pointer"
+                            onclick="App.UI.modals.editProfile.open()">
+                            <img id="profile-page-avatar" class="w-full h-full rounded-full object-cover bg-black">
+                        </div>
+                        <h2 id="profile-page-name" class="text-2xl font-black">Mon Profil</h2>
+                        <p id="profile-page-bio" class="text-gray-400 text-sm mt-2 max-w-md mx-auto">...</p>
 
-                <!-- VUE PROFIL -->
-                <div id="view-profile" class="hidden p-4 space-y-6">
-                    <!-- Header Profil -->
-                    <div class="flex flex-col items-center">
-                        <div id="profile-avatar-big"
-                            class="w-24 h-24 rounded-full bg-purple-800 flex items-center justify-center font-bold text-4xl mb-4 border-4 border-gray-800">
+                        <div class="grid grid-cols-3 gap-4 mt-8 border-t border-white/5 pt-6">
+                            <div>
+                                <p class="font-black text-xl" id="stat-posts">0</p>
+                                <p class="text-[10px] text-gray-500 uppercase">Posts</p>
+                            </div>
+                            <div>
+                                <p class="font-black text-xl" id="stat-friends">0</p>
+                                <p class="text-[10px] text-gray-500 uppercase">Amis</p>
+                            </div>
+                            <div>
+                                <p class="font-black text-xl" id="stat-prayers">0</p>
+                                <p class="text-[10px] text-gray-500 uppercase">Prières</p>
+                            </div>
                         </div>
-                        <h2 id="profile-name" class="text-2xl font-bold"></h2>
-                        <p id="profile-email" class="text-sm text-gray-500"></p>
-                        <p id="profile-bio" class="text-center text-sm text-gray-400 mt-2 max-w-md"></p>
-                        <div class="flex items-center gap-4 mt-4">
-                            <button onclick="openEditModal()"
-                                class="bg-gray-800 hover:bg-gray-700 text-white text-xs font-bold py-2 px-4 rounded-full">Modifier
-                                le profil</button>
-                            <button onclick="logout()"
-                                class="text-red-400 hover:underline text-xs font-bold">Déconnexion</button>
-                        </div>
+
+                        <button onclick="App.Auth.logout()"
+                            class="absolute top-6 right-6 text-red-400 hover:text-red-300"><i data-lucide="log-out"
+                                class="w-5 h-5"></i></button>
                     </div>
-                    <!-- Stats -->
-                    <div class="grid grid-cols-3 gap-4 text-center">
-                        <div>
-                            <p id="stats-posts-count" class="text-xl font-bold">0</p>
-                            <p class="text-xs text-gray-500">Posts</p>
-                        </div>
-                        <div>
-                            <p id="stats-friends-count" class="text-xl font-bold">0</p>
-                            <p class="text-xs text-gray-500">Amis</p>
-                        </div>
-                        <div>
-                            <p id="stats-amens-count" class="text-xl font-bold">0</p>
-                            <p class="text-xs text-gray-500">Amens</p>
-                        </div>
-                    </div>
+                </section>
 
-                    <!-- Contenu Social (Amis, Demandes) -->
-                    <div class="bg-gray-900/50 rounded-2xl p-4">
-                        <div class="flex border-b border-white/10 mb-4">
-                            <button id="tab-friends" onclick="switchProfileTab('friends')"
-                                class="flex-1 pb-2 text-sm font-bold">Amis</button>
-                            <button id="tab-requests" onclick="switchProfileTab('requests')"
-                                class="flex-1 pb-2 text-sm font-bold relative">
-                                Demandes
-                                <span id="profile-req-badge"
-                                    class="absolute top-0 right-4 w-5 h-5 bg-red-500 text-white text-[10px] flex items-center justify-center rounded-full hidden"></span>
-                            </button>
-                        </div>
-                        <div id="profile-social-list" class="space-y-2 max-h-96 overflow-y-auto scrollbar-hide">
-                            <!-- Contenu généré par JS -->
-                        </div>
+            </main>
+
+            <!-- RIGHT SIDEBAR (Events & Prayers) -->
+            <aside class="hidden lg:block w-80 sticky top-6 h-fit space-y-6">
+                <!-- Events Widget -->
+                <div class="glass-panel p-5 rounded-[24px]">
+                    <h3 class="font-bold mb-4 flex items-center justify-between">
+                        <span>Événements</span>
+                        <span class="text-[10px] bg-white/10 px-2 py-1 rounded-full">Bientôt</span>
+                    </h3>
+                    <div id="widget-events-list" class="space-y-3">
+                        <!-- Events injected -->
                     </div>
                 </div>
 
-                <div id="view-public-profile" class="hidden">
-                    <!-- Pourrait être développé plus tard -->
+                <!-- Prayer Widget -->
+                <div class="glass-panel p-5 rounded-[24px]">
+                    <h3 class="font-bold mb-4">Mur de Prière 🙏</h3>
+                    <div id="widget-prayers-list" class="space-y-3 max-h-60 overflow-y-auto scrollbar-hide"></div>
+                    <div class="mt-4 flex gap-2">
+                        <input id="widget-prayer-input" type="text" placeholder="Je prie pour..."
+                            class="input-field flex-1 text-xs px-3 py-2 rounded-lg">
+                        <button onclick="App.Features.Prayers.add()"
+                            class="bg-primary/20 hover:bg-primary/30 text-primary p-2 rounded-lg"><i data-lucide="send"
+                                class="w-4 h-4"></i></button>
+                    </div>
                 </div>
-            </div> <!-- End Content Area -->
-        </main>
+            </aside>
 
-        <!-- Barre de Navigation Mobile Moderne -->
-        <nav class="mobile-bottom-nav md:hidden">
-            <button id="nav-home" onclick="switchView('home')" class="mobile-nav-item">
-                <div class="mobile-nav-icon">
-                    <i data-lucide="home"></i>
-                </div>
-                <span class="mobile-nav-label">Accueil</span>
-                <div class="mobile-nav-indicator"></div>
-            </button>
+        </div>
 
-            <button id="nav-reels" onclick="switchView('reels')" class="mobile-nav-item">
-                <div class="mobile-nav-icon">
-                    <i data-lucide="film"></i>
-                </div>
-                <span class="mobile-nav-label">Versets</span>
-                <div class="mobile-nav-indicator"></div>
-            </button>
-
-            <button id="nav-bible" onclick="switchView('bible')" class="mobile-nav-item">
-                <div class="mobile-nav-icon">
-                    <i data-lucide="book-open"></i>
-                </div>
-                <span class="mobile-nav-label">Bible</span>
-                <div class="mobile-nav-indicator"></div>
-            </button>
-
-            <button id="nav-messages" onclick="switchView('messages')" class="mobile-nav-item">
-                <div class="mobile-nav-icon">
-                    <i data-lucide="message-square"></i>
-                    <span id="msg-badge" class="mobile-nav-badge hidden"></span>
-                </div>
-                <span class="mobile-nav-label">Messages</span>
-                <div class="mobile-nav-indicator"></div>
-            </button>
-
-            <button id="nav-groups" onclick="switchView('groups')" class="mobile-nav-item">
-                <div class="mobile-nav-icon">
-                    <i data-lucide="users"></i>
-                </div>
-                <span class="mobile-nav-label">Groupes</span>
-                <div class="mobile-nav-indicator"></div>
-            </button>
-
-            <button id="nav-profile" onclick="switchView('profile')" class="mobile-nav-item">
-                <div class="mobile-nav-icon">
-                    <i data-lucide="user"></i>
-                </div>
-                <span class="mobile-nav-label">Profil</span>
-                <div class="mobile-nav-indicator"></div>
+        <!-- MOBILE BOTTOM NAV -->
+        <nav class="md:hidden fixed bottom-0 left-0 right-0 glass-nav px-6 py-4 pb-6 flex justify-between z-50">
+            <button onclick="App.UI.navigateTo('home')" class="nav-item text-gray-400 active" id="mob-nav-home"><i
+                    data-lucide="home"></i></button>
+            <button onclick="App.UI.navigateTo('reels')" class="nav-item text-gray-400" id="mob-nav-reels"><i
+                    data-lucide="play-circle"></i></button>
+            <button onclick="App.Features.Feed.openCreator()"
+                class="bg-primary text-white p-3 rounded-full -mt-8 shadow-glow"><i data-lucide="plus"></i></button>
+            <button onclick="App.UI.navigateTo('bible')" class="nav-item text-gray-400" id="mob-nav-bible"><i
+                    data-lucide="book"></i></button>
+            <button onclick="App.UI.navigateTo('messages')" class="nav-item text-gray-400 relative"
+                id="mob-nav-messages">
+                <i data-lucide="message-circle"></i>
+                <span class="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full hidden" id="mob-msg-badge"></span>
             </button>
         </nav>
+
     </div>
 
-    <!-- =========== MODALS & OVERLAYS =========== -->
-    <!-- ... (le reste des modales ne change pas) ... -->
-    <!-- Modal: Modification du Profil -->
-    <div id="edit-profile-modal" class="hidden fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
-        <div class="bg-gray-900 w-full max-w-md rounded-2xl p-6 space-y-4 relative">
-            <button onclick="closeEditModal()" class="absolute top-4 right-4 text-gray-500 hover:text-white"><i
-                    data-lucide="x"></i></button>
-            <h3 class="text-lg font-bold">Modifier le profil</h3>
-            <div class="flex flex-col items-center">
-                <img id="edit-avatar-preview" class="w-24 h-24 rounded-full object-cover mb-2">
-                <input type="file" id="edit-avatar-input" class="hidden" onchange="handleAvatarPreview(this)"
-                    accept="image/*">
-                <button onclick="document.getElementById('edit-avatar-input').click()"
-                    class="text-xs text-purple-400 font-bold">Changer la photo</button>
-            </div>
-            <div>
-                <label class="text-xs font-bold text-gray-400">Pseudo</label>
-                <input id="edit-username" type="text"
-                    class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 mt-1">
-            </div>
-            <div>
-                <label class="text-xs font-bold text-gray-400">Bio</label>
-                <textarea id="edit-bio" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 mt-1"
-                    rows="3"></textarea>
-            </div>
-            <button onclick="saveProfile()"
-                class="w-full bg-purple-600 hover:bg-purple-500 text-white font-bold py-2 rounded-lg">Enregistrer</button>
-        </div>
-    </div>
-
-    <!-- Modal: Visionneuse de Story -->
-    <div id="story-viewer" class="hidden fixed inset-0 z-50 bg-black flex flex-col items-center justify-center">
-        <div class="w-full max-w-md h-full relative">
-            <!-- Header Story -->
-            <div class="absolute top-0 left-0 right-0 p-4 z-10 bg-gradient-to-b from-black/70 to-transparent">
-                <div class="h-1 w-full bg-white/20 rounded-full overflow-hidden mb-2">
-                    <div id="story-progress" class="h-1 bg-white"></div>
-                </div>
-                <div class="flex items-center gap-3">
-                    <img id="story-viewer-avatar" class="w-10 h-10 rounded-full object-cover">
-                    <span id="story-viewer-name" class="font-bold text-white text-sm"></span>
-                    <button onclick="closeStoryViewer()" class="text-white ml-auto"><i data-lucide="x"></i></button>
-                </div>
-            </div>
-            <!-- Image Story -->
-            <img id="story-viewer-image" class="w-full h-full object-contain">
-            <!-- Bouton Supprimer -->
-            <div id="story-delete-btn-container" class="absolute bottom-5 left-1/2 -translate-x-1/2 z-10"></div>
-        </div>
-    </div>
-    <!-- Modal: Éditeur de Verset -->
-    <div id="verse-editor-modal"
-        class="hidden fixed inset-0 z-50 bg-black/80 flex flex-col items-center justify-center p-4">
-        <div
-            class="bg-gray-900 w-full max-w-4xl rounded-2xl p-2 md:p-6 relative flex flex-col md:flex-row gap-6 max-h-[90vh]">
-            <button onclick="closeVerseEditor()" class="absolute top-4 right-4 text-gray-500 hover:text-white z-10"><i
-                    data-lucide="x"></i></button>
-
-            <!-- Zone Canvas -->
-            <div class="flex-1 flex flex-col items-center justify-center bg-black rounded-lg p-2">
-                <canvas id="verse-canvas" width="500" height="500"
-                    class="w-full h-auto object-contain rounded-md"></canvas>
-            </div>
-            <!-- Panneau de Contrôles -->
-            <div class="w-full md:w-72 flex-shrink-0 space-y-4 overflow-y-auto pr-2 scrollbar-hide">
-                <h3 class="text-lg font-bold text-white">Créateur de Verset</h3>
-                <!-- Texte -->
-                <div>
-                    <label class="text-xs font-bold text-gray-400">Texte du verset</label>
-                    <textarea id="verse-text-input" oninput="drawCanvas()" rows="4"
-                        class="w-full bg-gray-800 border-gray-700 rounded-lg px-3 py-2 mt-1 text-sm">"Car Dieu a tant aimé le monde qu'il a donné son Fils unique..." (Jean 3:16)</textarea>
-                </div>
-                <!-- Style Texte -->
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="text-xs font-bold text-gray-400">Couleur</label>
-                        <input id="text-color-picker" oninput="drawCanvas()" type="color" value="#FFFFFF"
-                            class="w-full h-10 bg-gray-800 rounded-lg p-1 border border-gray-700">
-                    </div>
-                    <div>
-                        <label class="text-xs font-bold text-gray-400">Taille</label>
-                        <input id="font-size-picker" oninput="drawCanvas()" type="number" value="40"
-                            class="w-full h-10 bg-gray-800 rounded-lg px-2 border border-gray-700">
-                    </div>
-                </div>
-                <div>
-                    <label class="text-xs font-bold text-gray-400">Police</label>
-                    <select id="font-family-picker" onchange="drawCanvas()"
-                        class="w-full bg-gray-800 rounded-lg px-2 py-2 border border-gray-700 text-sm">
-                        <option value="Lora">Lora (Serif)</option>
-                        <option value="Inter">Inter (Sans-Serif)</option>
-                        <option value="Verdana">Verdana</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="text-xs font-bold text-gray-400">Interligne</label>
-                    <input id="line-height-slider" oninput="drawCanvas()" type="range" min="1.0" max="2.5" step="0.1"
-                        value="1.5" class="w-full">
-                </div>
-                <!-- Fond -->
-                <div>
-                    <label class="text-xs font-bold text-gray-400">Arrière-plan</label>
-                    <div class="flex gap-2 mt-1">
-                        <input onchange="setBackground('color', this.value)" type="color" value="#1f2937"
-                            class="w-10 h-10 bg-gray-800 rounded-lg p-1 border border-gray-700">
-                        <input type="file" id="bg-upload-input" class="hidden" onchange="handleBgUpload(this)"
-                            accept="image/*">
-                        <button onclick="document.getElementById('bg-upload-input').click()"
-                            class="flex-1 bg-gray-800 text-xs font-bold rounded-lg border border-gray-700">Image</button>
-                    </div>
-                </div>
-
-                <!-- Filtres -->
-                <div>
-                    <label class="text-xs font-bold text-gray-400">Filtre Sombre</label>
-                    <input id="overlay-slider" oninput="drawCanvas()" type="range" min="0" max="0.9" step="0.05"
-                        value="0.3" class="w-full">
-                </div>
-
-                <!-- Action -->
-                <button id="btn-publish-verse" onclick="publishVerseCard()"
-                    class="w-full bg-purple-600 text-white font-bold py-3 rounded-lg">Publier la carte</button>
-            </div>
-        </div>
-    </div>
-    <!-- Notification Audio (cachée) -->
-    <audio id="notif-sound" src="https://example.com/notification.mp3" preload="auto"></audio>
-    <!-- TODO: Remplacer l'URL example.com par un fichier audio valide -->
-    <div id="notification-container" class="fixed top-20 right-4 z-50 w-72 space-y-2"></div>
-
-    <!-- VOTRE SCRIPT JS -->
-
+    <!-- SCRIPT APPLICATION -->
     <script src="script.js"></script>
-
-    <script>
-        // Initialisation de l'UI au chargement
-        document.addEventListener('DOMContentLoaded', () => {
-            // Activer la première vue par défaut
-            switchView('home');
-
-            // Initialiser les icônes SEULEMENT si la librairie est prête
-            if (typeof lucide !== 'undefined') {
-                lucide.createIcons();
-            }
-        });
-    </script>
-
 </body>
 
 </html>
