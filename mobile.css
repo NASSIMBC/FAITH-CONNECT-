@@ -1,0 +1,221 @@
+/* ==========================================
+   MOBILE OPTIMIZATIONS
+   ========================================== */
+
+/* === MOBILE BOTTOM NAVIGATION === */
+.mobile-bottom-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 50;
+    background: rgba(10, 10, 10, 0.95);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 8px 0 calc(8px + env(safe-area-inset-bottom));
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.3);
+}
+
+.mobile-nav-item {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 8px 12px;
+    border: none;
+    background: transparent;
+    color: #9CA3AF;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    min-width: 64px;
+    min-height: 56px;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.mobile-nav-item:active {
+    transform: scale(0.95);
+}
+
+.mobile-nav-icon {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    transition: all 0.3s ease;
+}
+
+.mobile-nav-icon i {
+    width: 24px;
+    height: 24px;
+}
+
+.mobile-nav-label {
+    font-size: 11px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.mobile-nav-indicator {
+    position: absolute;
+    top: 6px;
+    left: 50%;
+    transform: translateX(-50%) scale(0);
+    width: 4px;
+    height: 4px;
+    background: linear-gradient(135deg, #8B5CF6, #6366F1);
+    border-radius: 2px;
+    transition: all 0.3s ease;
+}
+
+/* Active State */
+.mobile-nav-item.active {
+    color: white;
+}
+
+.mobile-nav-item.active .mobile-nav-icon {
+    transform: translateY(-2px);
+}
+
+.mobile-nav-item.active .mobile-nav-indicator {
+    transform: translateX(-50%) scale(1);
+    box-shadow: 0 0 8px rgba(139, 92, 246, 0.6);
+}
+
+.mobile-nav-item.active .mobile-nav-label {
+    color: #8B5CF6;
+    font-weight: 600;
+}
+
+/* Badge */
+.mobile-nav-badge {
+    position: absolute;
+    top: -2px;
+    right: -2px;
+    width: 8px;
+    height: 8px;
+    background: linear-gradient(135deg, #EF4444, #DC2626);
+    border: 2px solid rgba(10, 10, 10, 0.95);
+    border-radius: 50%;
+    animation: pulse-badge 2s infinite;
+}
+
+@keyframes pulse-badge {
+
+    0%,
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+
+    50% {
+        transform: scale(1.2);
+        opacity: 0.8;
+    }
+}
+
+/* === MOBILE TOUCH OPTIMIZATIONS === */
+@media (max-width: 768px) {
+
+    /* Larger touch targets */
+    button,
+    a {
+        min-height: 44px;
+    }
+
+    /* Premium cards on mobile */
+    .premium-card {
+        border-radius: 16px;
+        padding: 16px;
+    }
+
+    /* Post creator on mobile */
+    .input-modern {
+        font-size: 16px;
+        /* Prevent zoom on iOS */
+    }
+
+    /* Buttons on mobile */
+    .btn-gradient,
+    .btn-ghost {
+        min-height: 48px;
+        padding: 12px 24px;
+        font-size: 15px;
+    }
+
+    /* Messenger on mobile */
+    .messenger-container {
+        height: calc(100vh - 60px);
+        border-radius: 0;
+    }
+
+    .messenger-messages {
+        padding: 16px;
+    }
+
+    .message-bubble {
+        max-width: 85%;
+        font-size: 15px;
+    }
+
+    /* Conversation items */
+    .conversation-item {
+        padding: 14px 12px;
+        min-height: 72px;
+    }
+
+    .conversation-avatar img,
+    .conversation-avatar .avatar-placeholder {
+        width: 52px;
+        height: 52px;
+    }
+
+    /* Smooth scrolling */
+    * {
+        -webkit-overflow-scrolling: touch;
+    }
+
+    /* Prevent text selection on buttons */
+    button,
+    .mobile-nav-item {
+        -webkit-user-select: none;
+        user-select: none;
+    }
+}
+
+/* === MOBILE SAFE AREAS === */
+@supports (padding: env(safe-area-inset-bottom)) {
+    .mobile-bottom-nav {
+        padding-bottom: calc(8px + env(safe-area-inset-bottom));
+    }
+}
+
+/* === MOBILE RIPPLE EFFECT === */
+@media (max-width: 768px) {
+    .mobile-nav-item:active::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: radial-gradient(circle, rgba(139, 92, 246, 0.2) 0%, transparent 70%);
+        border-radius: 12px;
+        animation: ripple 0.6s ease-out;
+    }
+
+    @keyframes ripple {
+        from {
+            transform: scale(0);
+            opacity: 1;
+        }
+
+        to {
+            transform: scale(2);
+            opacity: 0;
+        }
+    }
+}
