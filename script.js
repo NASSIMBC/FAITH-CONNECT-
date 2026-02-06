@@ -1551,7 +1551,7 @@ const App = {
 
             async loadDetail(groupId) {
                 this.currentGroup = null;
-                const { data: g } = await sb.from('groups').select('*').eq('id', groupId).single();
+                const { data: g } = await sb.from('groups').select('*').eq('id', groupId).maybeSingle();
                 if (!g) return App.UI.navigateTo('groups');
                 this.currentGroup = g;
 
@@ -1561,7 +1561,7 @@ const App = {
                 document.getElementById('group-detail-icon').setAttribute('data-lucide', g.type === 'page' ? 'flag' : 'users');
 
                 // Subscription Check
-                const { data: sub } = await sb.from('group_members').select('*').eq('group_id', groupId).eq('user_id', App.state.user.id).single();
+                const { data: sub } = await sb.from('group_members').select('*').eq('group_id', groupId).eq('user_id', App.state.user.id).maybeSingle();
                 const btnJoin = document.getElementById('btn-group-join');
                 const btnPost = document.getElementById('btn-group-post');
                 const btnEdit = document.getElementById('btn-group-edit');
@@ -1608,7 +1608,7 @@ const App = {
 
             async toggleSubscription() {
                 const groupId = this.currentGroup.id;
-                const { data: sub } = await sb.from('group_members').select('*').eq('group_id', groupId).eq('user_id', App.state.user.id).single();
+                const { data: sub } = await sb.from('group_members').select('*').eq('group_id', groupId).eq('user_id', App.state.user.id).maybeSingle();
 
                 if (sub) {
                     if (confirm("Voulez-vous vraiment quitter ce groupe ?")) {
