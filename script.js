@@ -302,6 +302,19 @@ const App = {
                     });
                 });
             }
+
+            // Global Search Listener (Desktop & Mobile)
+            ['global-search-desktop', 'mobile-search-input'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) {
+                    el.addEventListener('keypress', (e) => {
+                        if (e.key === 'Enter') {
+                            App.Features.Search.execute(e.target.value);
+                            if (id === 'mobile-search-input') App.UI.toggleMobileSearch();
+                        }
+                    });
+                }
+            });
         },
 
         // 1. FEED & POSTS
@@ -1196,8 +1209,62 @@ const App = {
 
         // 6. SEARCH & PROFILE
         Search: {
-            async searchUser(query) {
-                // Implementer dans UI si besoin
+            async execute(query) {
+                if (!query) return;
+
+                App.UI.navigateTo('search');
+                const queryText = document.getElementById('search-query-text');
+                if (queryText) queryText.innerText = `Résultats pour "${query}"`;
+
+                const userContainer = document.getElementById('search-users-results');
+                const postContainer = document.getElementById('search-posts-results');
+
+                userContainer.innerHTML = '<div class="p-4 animate-pulse">Recherche d\'utilisateurs...</div>';
+                postContainer.innerHTML = '<div class="p-4 animate-pulse">Recherche de témoignages...</div>';
+
+                try {
+                    // 1. Search Users
+                    const { data: users } = await sb.from('profiles')
+                        .select('*')
+                        .ilike('username', `%${query}%`)
+                        .limit(10);
+
+                    if (users && users.length > 0) {
+                        userContainer.innerHTML = users.map(u => `
+                            <div class="glass-panel p-4 rounded-2xl flex items-center justify-between group">
+                                <div class="flex items-center gap-3">
+                                    <img src="${u.avatar_url || 'https://ui-avatars.com/api/?name=' + u.username}" class="w-12 h-12 rounded-full object-cover">
+                                    <span class="font-bold text-white">${u.username}</span>
+                                </div>
+                                <button onclick="App.Features.Chat.openChat('${u.id}', '${u.username}', '${u.avatar_url}'); App.UI.navigateTo('messages')" 
+                                        class="p-2 bg-primary/10 hover:bg-primary text-primary hover:text-white rounded-xl transition">
+                                    <i data-lucide="message-circle" class="w-5 h-5"></i>
+                                </button>
+                            </div>
+                        `).join('');
+                    } else {
+                        userContainer.innerHTML = '<div class="text-gray-500 p-4 italic text-sm">Aucun chrétien trouvé avec ce nom.</div>';
+                    }
+
+                    // 2. Search Posts
+                    const { data: posts } = await sb.from('posts')
+                        .select('*, profiles(username, avatar_url)')
+                        .ilike('content', `%${query}%`)
+                        .order('created_at', { ascending: false })
+                        .limit(10);
+
+                    if (posts && posts.length > 0) {
+                        postContainer.innerHTML = posts.map(post => App.Features.Feed.renderPost(post)).join('');
+                    } else {
+                        postContainer.innerHTML = '<div class="text-gray-500 p-4 italic text-sm">Aucun message ne contient ces mots.</div>';
+                    }
+
+                    if (typeof lucide !== 'undefined') lucide.createIcons();
+
+                } catch (err) {
+                    console.error("Search error:", err);
+                    userContainer.innerHTML = '<div class="text-red-400 p-4">Erreur lors de la recherche.</div>';
+                }
             }
         },
 
