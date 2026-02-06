@@ -486,6 +486,17 @@
                         <h2 id="profile-page-name" class="text-2xl font-black">Mon Profil</h2>
                         <p id="profile-page-bio" class="text-gray-400 text-sm mt-2 max-w-md mx-auto">...</p>
 
+                        <div id="profile-actions" class="mt-4 flex justify-center gap-3 hidden">
+                            <button id="btn-add-friend" onclick="App.Features.Friends.sendRequest()"
+                                class="btn-primary px-6 py-2 rounded-xl text-xs font-bold flex items-center gap-2">
+                                <i data-lucide="user-plus" class="w-4 h-4"></i> Ajouter en ami
+                            </button>
+                            <button id="btn-message-friend"
+                                class="bg-white/10 hover:bg-white/20 text-white px-6 py-2 rounded-xl text-xs font-bold flex items-center gap-2">
+                                <i data-lucide="message-circle" class="w-4 h-4"></i> Message
+                            </button>
+                        </div>
+
                         <div class="grid grid-cols-3 gap-4 mt-8 pt-6 border-t border-white/5">
                             <div>
                                 <p class="font-black text-xl" id="stat-posts">0</p>
