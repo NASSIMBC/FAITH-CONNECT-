@@ -285,22 +285,23 @@
                         </button>
                     </div>
                     <div class="flex gap-2 overflow-x-auto pb-2 custom-scrollbar">
-                        <button
-                            class="px-4 py-1 bg-primary text-white rounded-full text-xs font-bold whitespace-nowrap">Tout</button>
-                        <button
-                            class="px-4 py-1 bg-white/5 hover:bg-white/10 text-gray-300 rounded-full text-xs font-bold whitespace-nowrap transition">Livres</button>
-                        <button
-                            class="px-4 py-1 bg-white/5 hover:bg-white/10 text-gray-300 rounded-full text-xs font-bold whitespace-nowrap transition">Vêtements</button>
-                        <button
-                            class="px-4 py-1 bg-white/5 hover:bg-white/10 text-gray-300 rounded-full text-xs font-bold whitespace-nowrap transition">Artisanat</button>
-                        <button
-                            class="px-4 py-1 bg-white/5 hover:bg-white/10 text-gray-300 rounded-full text-xs font-bold whitespace-nowrap transition">Musique</button>
-                    </div>
+                        <div class="flex gap-2 overflow-x-auto pb-2 custom-scrollbar">
+                            <button onclick="App.Features.Marketplace.load('')"
+                                class="px-4 py-1 bg-primary text-white rounded-full text-xs font-bold whitespace-nowrap">Tout</button>
+                            <button onclick="App.Features.Marketplace.load('livre')"
+                                class="px-4 py-1 bg-white/5 hover:bg-white/10 text-gray-300 rounded-full text-xs font-bold whitespace-nowrap transition">Livres</button>
+                            <button onclick="App.Features.Marketplace.load('t-shirt')"
+                                class="px-4 py-1 bg-white/5 hover:bg-white/10 text-gray-300 rounded-full text-xs font-bold whitespace-nowrap transition">Vêtements</button>
+                            <button onclick="App.Features.Marketplace.load('art')"
+                                class="px-4 py-1 bg-white/5 hover:bg-white/10 text-gray-300 rounded-full text-xs font-bold whitespace-nowrap transition">Artisanat</button>
+                            <button onclick="App.Features.Marketplace.load('musique')"
+                                class="px-4 py-1 bg-white/5 hover:bg-white/10 text-gray-300 rounded-full text-xs font-bold whitespace-nowrap transition">Musique</button>
+                        </div>
 
-                    <div id="marketplace-grid" class="grid grid-cols-2 md:grid-cols-3 gap-4 pb-20">
-                        <!-- Products injected -->
-                        <div class="col-span-full text-center py-10 text-gray-500">Chargement des articles...</div>
-                    </div>
+                        <div id="marketplace-grid" class="grid grid-cols-2 md:grid-cols-3 gap-4 pb-20">
+                            <!-- Products injected -->
+                            <div class="col-span-full text-center py-10 text-gray-500">Chargement des articles...</div>
+                        </div>
                 </section>
 
                 <!-- VIEW: BIBLE -->
