@@ -1258,16 +1258,25 @@ const App = {
                                         <img src="${u.avatar_url || 'https://ui-avatars.com/api/?name=' + u.username}" class="w-12 h-12 rounded-full object-cover">
                                         <div class="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 border-2 border-[#050510] rounded-full"></div>
                                     </div>
-                                    <div class="flex flex-col">
+                                <div class="flex flex-col">
                                         <span class="font-bold text-white">${u.username}</span>
                                         <span class="text-[10px] text-gray-500 truncate max-w-[150px]">${u.bio || 'Membre de FaithConnect'}</span>
                                     </div>
                                 </div>
-                                <button onclick="App.Features.Chat.openChat('${u.id}', '${u.username}', '${u.avatar_url}'); App.UI.navigateTo('messages')" 
-                                        class="flex items-center gap-2 px-4 py-2 bg-primary/10 hover:bg-primary text-primary hover:text-white rounded-xl transition font-bold text-xs">
-                                    <i data-lucide="message-circle" class="w-4 h-4"></i>
-                                    Parler
-                                </button>
+                                <div class="flex gap-2">
+                                    <button onclick="App.Features.ProfilePage.load('${u.id}')" 
+                                            class="p-2 bg-white/5 hover:bg-white/10 text-white rounded-xl transition" title="Voir profil">
+                                        <i data-lucide="user" class="w-4 h-4"></i>
+                                    </button>
+                                    <button onclick="App.Features.Friends.sendRequest('${u.id}')" 
+                                            class="p-2 bg-primary/10 hover:bg-primary text-primary hover:text-white rounded-xl transition" title="Ajouter en ami">
+                                        <i data-lucide="user-plus" class="w-4 h-4"></i>
+                                    </button>
+                                    <button onclick="App.Features.Chat.openChat('${u.id}', '${u.username}', '${u.avatar_url}'); App.UI.navigateTo('messages')" 
+                                            class="p-2 bg-white/5 hover:bg-white/10 text-white rounded-xl transition" title="Message">
+                                        <i data-lucide="message-circle" class="w-4 h-4"></i>
+                                    </button>
+                                </div>
                             </div>
                         `).join('');
                     } else {
@@ -1298,27 +1307,60 @@ const App = {
             }
         },
 
-        // 7. GROUPS (FIXED)
-        Groups: {
-            async fetchAll() {
-                const container = document.getElementById('groups-container');
-                if (!container) return;
+    },
 
-                container.innerHTML = '<div class="col-span-full text-center text-xs text-gray-500 animate-pulse">Recherche des groupes...</div>';
+    // 7. FRIENDS & SOCIAL
+    Friends: {
+        async sendRequest(targetId) {
+            const id = targetId || App.Features.ProfilePage.currentTargetId;
+            if (!id) return;
 
-                const { data: groups, error } = await sb.from('groups').select('*');
+            try {
+                const { error } = await sb.from('friends').insert([{
+                    user_id: App.state.user.id,
+                    friend_id: id,
+                    status: 'pending'
+                }]);
 
-                if (error || !groups || groups.length === 0) {
-                    container.innerHTML = `
+                if (error) {
+                    if (error.code === '23505') alert("Demande déjà envoyée !");
+                    else alert("Erreur: " + error.message);
+                } else {
+                    alert("Demande d'ami envoyée ! 🙏");
+                    const btn = document.getElementById('btn-add-friend');
+                    if (btn) {
+                        btn.innerHTML = '<i data-lucide="check" class="w-4 h-4"></i> En attente';
+                        btn.disabled = true;
+                        btn.classList.replace('btn-primary', 'bg-gray-700');
+                    }
+                }
+            } catch (err) {
+                console.error(err);
+            }
+        }
+    },
+
+    // 8. GROUPS (FIXED)
+    Groups: {
+        async fetchAll() {
+            const container = document.getElementById('groups-container');
+            if (!container) return;
+
+            container.innerHTML = '<div class="col-span-full text-center text-xs text-gray-500 animate-pulse">Recherche des groupes...</div>';
+
+            const { data: groups, error } = await sb.from('groups').select('*');
+
+            if (error || !groups || groups.length === 0) {
+                container.innerHTML = `
                         <div class="col-span-full text-center py-10">
                             <p class="text-gray-400 mb-4">Aucun groupe trouvé.</p>
                             <button onclick="App.Features.Groups.createModal()" class="btn-primary px-4 py-2 rounded-xl">Créer le premier groupe</button>
                         </div>
                     `;
-                    return;
-                }
+                return;
+            }
 
-                container.innerHTML = groups.map(g => `
+            container.innerHTML = groups.map(g => `
                     <div class="bg-gray-900 border border-white/5 rounded-2xl overflow-hidden hover:border-primary/50 transition-all group">
                         <div class="h-24 bg-gray-800 relative">
                              <div class="absolute inset-0 bg-gradient-to-t from-gray-900 via-transparent to-transparent"></div>
@@ -1330,97 +1372,179 @@ const App = {
                         </div>
                     </div>
                 `).join('');
-            },
+        },
 
-            createModal() {
-                const name = prompt("Nom du groupe ou de la page :");
-                if (name) this.create(name);
-            },
+        createModal() {
+            const name = prompt("Nom du groupe ou de la page :");
+            if (name) this.create(name);
+        },
 
-            async create(name) {
-                const { error } = await sb.from('groups').insert([{
-                    name: name,
-                    description: "Groupe créé par " + App.state.profile.username,
-                    created_by: App.state.user.id
-                }]);
+        async create(name) {
+            const { error } = await sb.from('groups').insert([{
+                name: name,
+                description: "Groupe créé par " + App.state.profile.username,
+                created_by: App.state.user.id
+            }]);
 
-                if (error) alert("Erreur création : " + error.message);
-                else {
-                    alert("Groupe créé avec succès !");
-                    this.fetchAll();
+            if (error) alert("Erreur création : " + error.message);
+            else {
+                alert("Groupe créé avec succès !");
+                this.fetchAll();
+            }
+        }
+    },
+
+    // 8. REALTIME SUBSCRIPTIONS
+    Realtime: {
+        init() {
+            sb.channel('public:messages')
+                .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, payload => {
+                    const msg = payload.new;
+                    if (App.Features.Chat.activeContactId &&
+                        (msg.sender_id === App.Features.Chat.activeContactId)) {
+                        App.Features.Chat.renderMessage(msg);
+                    }
+                })
+                .subscribe();
+        }
+    },
+    // 9. PROFILE PAGE LOGIC
+    ProfilePage: {
+        currentTargetId: null,
+
+        async init() {
+            this.load(App.state.user.id);
+        },
+
+        async load(userId = null) {
+            const id = userId || App.state.user.id;
+            this.currentTargetId = id;
+            const isMe = id === App.state.user.id;
+
+            App.UI.navigateTo('profile');
+
+            const actions = document.getElementById('profile-actions');
+            const editBtn = document.querySelector('[onclick="App.UI.modals.editProfile.open()"]')?.parentElement;
+            const title = document.getElementById('profile-page-name');
+            const tabLabel = document.getElementById('tab-profile-posts');
+
+            if (isMe) {
+                if (actions) actions.classList.add('hidden');
+                if (editBtn) editBtn.classList.remove('hidden');
+                if (title) title.innerText = "Mon Profil";
+                if (tabLabel) tabLabel.innerText = "Mes Posts";
+                this.renderProfileData(App.state.profile);
+            } else {
+                if (actions) actions.classList.remove('hidden');
+                if (editBtn) editBtn.classList.add('hidden');
+                if (tabLabel) tabLabel.innerText = "Posts";
+
+                const { data: profile } = await sb.from('profiles').select('*').eq('id', id).single();
+                if (profile) {
+                    if (title) title.innerText = profile.username;
+                    this.renderProfileData(profile);
+
+                    // Link message button
+                    const msgBtn = document.getElementById('btn-message-friend');
+                    if (msgBtn) {
+                        msgBtn.onclick = () => {
+                            App.Features.Chat.openChat(profile.id, profile.username, profile.avatar_url);
+                            App.UI.navigateTo('messages');
+                        };
+                    }
                 }
+                this.checkFriendship(id);
             }
+
+            this.loadStats(id);
+            this.loadPosts(id);
         },
 
-        // 8. REALTIME SUBSCRIPTIONS
-        Realtime: {
-            init() {
-                sb.channel('public:messages')
-                    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, payload => {
-                        const msg = payload.new;
-                        if (App.Features.Chat.activeContactId &&
-                            (msg.sender_id === App.Features.Chat.activeContactId)) {
-                            App.Features.Chat.renderMessage(msg);
-                        }
-                    })
-                    .subscribe();
-            }
+        renderProfileData(p) {
+            const avatar = document.getElementById('profile-page-avatar');
+            const bio = document.getElementById('profile-page-bio');
+            if (avatar) avatar.src = p.avatar_url || `https://ui-avatars.com/api/?name=${p.username}`;
+            if (bio) bio.innerText = p.bio || "Membre de FaithConnect";
         },
-        // 9. PROFILE PAGE LOGIC
-        ProfilePage: {
-            async init() {
-                this.loadPosts();
-                this.loadStats();
-            },
 
-            async loadStats() {
-                // Count posts
-                const { count: postsCount } = await sb.from('posts').select('*', { count: 'exact', head: true }).eq('user_id', App.state.user.id);
-                document.getElementById('stat-posts').innerText = postsCount || 0;
+        async checkFriendship(targetId) {
+            const btn = document.getElementById('btn-add-friend');
+            if (!btn) return;
 
-                // Count friends (Real friends)
-                const { count: friendsCount } = await sb.from('friends').select('*', { count: 'exact', head: true }).or(`user_id.eq.${App.state.user.id},friend_id.eq.${App.state.user.id}`).eq('status', 'accepted');
-                document.getElementById('stat-friends').innerText = friendsCount || 0;
-            },
+            const { data } = await sb.from('friends')
+                .select('*')
+                .or(`and(user_id.eq.${App.state.user.id},friend_id.eq.${targetId}),and(user_id.eq.${targetId},friend_id.eq.${App.state.user.id})`)
+                .single();
 
-            async loadPosts() {
-                const container = document.getElementById('profile-posts-container');
-                if (!container) return;
-
-                const { data: posts } = await sb.from('posts').select('*, profiles(username, avatar_url)')
-                    .eq('user_id', App.state.user.id)
-                    .order('created_at', { ascending: false });
-
-                if (posts && posts.length > 0) {
-                    container.innerHTML = posts.map(post => App.Features.Feed.renderPost(post)).join('');
+            if (data) {
+                if (data.status === 'accepted') {
+                    btn.innerHTML = '<i data-lucide="user-check" class="w-4 h-4"></i> Ami';
+                    btn.disabled = true;
+                    btn.className = "bg-green-600 text-white px-6 py-2 rounded-xl text-xs font-bold flex items-center gap-2";
                 } else {
-                    container.innerHTML = `<div class="text-center text-gray-500 py-10">Vous n'avez rien publié encore.</div>`;
+                    btn.innerHTML = '<i data-lucide="clock" class="w-4 h-4"></i> En attente';
+                    btn.disabled = true;
+                    btn.className = "bg-gray-700 text-white px-6 py-2 rounded-xl text-xs font-bold flex items-center gap-2";
                 }
-            },
+            } else {
+                btn.innerHTML = '<i data-lucide="user-plus" class="w-4 h-4"></i> Ajouter en ami';
+                btn.disabled = false;
+                btn.className = "btn-primary px-6 py-2 rounded-xl text-xs font-bold flex items-center gap-2";
+            }
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+        },
 
-            async loadFriends() {
-                const container = document.getElementById('profile-friends-container');
-                if (container.innerHTML.trim() !== "" && !container.innerHTML.includes('Chargement')) return;
+        async loadStats(userId) {
+            const id = userId || App.state.user.id;
+            const { count: postsCount } = await sb.from('posts').select('*', { count: 'exact', head: true }).eq('user_id', id);
+            document.getElementById('stat-posts').innerText = postsCount || 0;
 
-                const { data: friendships } = await sb.from('friends').select('user_id, friend_id').or(`user_id.eq.${App.state.user.id},friend_id.eq.${App.state.user.id}`).eq('status', 'accepted');
+            const { count: friendsCount } = await sb.from('friends').select('*', { count: 'exact', head: true }).or(`user_id.eq.${id},friend_id.eq.${id}`).eq('status', 'accepted');
+            document.getElementById('stat-friends').innerText = friendsCount || 0;
+        },
 
-                if (friendships) {
-                    const friendIds = friendships.map(f => f.user_id === App.state.user.id ? f.friend_id : f.user_id);
-                    if (friendIds.length > 0) {
-                        const { data: users } = await sb.from('profiles').select('*').in('id', friendIds);
-                        if (users) {
-                            container.innerHTML = users.map(u => `
+        async loadPosts(userId) {
+            const id = userId || App.state.user.id;
+            const container = document.getElementById('profile-posts-container');
+            if (!container) return;
+
+            container.innerHTML = '<div class="text-center py-10 animate-pulse text-xs text-gray-500">Chargement des témoignages...</div>';
+
+            const { data: posts } = await sb.from('posts').select('*, profiles(username, avatar_url)')
+                .eq('user_id', id)
+                .order('created_at', { ascending: false });
+
+            if (posts && posts.length > 0) {
+                container.innerHTML = posts.map(post => App.Features.Feed.renderPost(post)).join('');
+                if (typeof lucide !== 'undefined') lucide.createIcons();
+            } else {
+                container.innerHTML = `<div class="text-center text-gray-500 py-10 text-xs">${id === App.state.user.id ? "Vous n'avez rien publié encore." : "Aucun post pour le moment."}</div>`;
+            }
+        },
+
+        async loadFriends() {
+            const container = document.getElementById('profile-friends-container');
+            const id = this.currentTargetId || App.state.user.id;
+            container.innerHTML = '<div class="col-span-full text-center py-10 animate-pulse text-xs text-gray-500">Chargement...</div>';
+
+            const { data: friendships } = await sb.from('friends').select('user_id, friend_id').or(`user_id.eq.${id},friend_id.eq.${id}`).eq('status', 'accepted');
+
+            if (friendships) {
+                const friendIds = friendships.map(f => f.user_id === id ? f.friend_id : f.user_id);
+                if (friendIds.length > 0) {
+                    const { data: users } = await sb.from('profiles').select('*').in('id', friendIds);
+                    if (users) {
+                        container.innerHTML = users.map(u => `
                                 <div class="glass-panel p-3 rounded-2xl flex flex-col items-center gap-2">
                                      <img src="${u.avatar_url || 'https://ui-avatars.com/api/?name=' + u.username}" class="w-12 h-12 rounded-full object-cover">
                                      <span class="text-xs font-bold text-white truncate max-w-full">${u.username}</span>
-                                     <button onclick="App.Features.Chat.openChat('${u.id}', '${u.username}', '${u.avatar_url}'); App.UI.navigateTo('messages')" 
-                                             class="w-full bg-white/5 hover:bg-primary py-1.5 rounded-lg text-[10px] transition-colors">Message</button>
+                                     <button onclick="App.Features.ProfilePage.load('${u.id}')" 
+                                             class="w-full bg-white/5 hover:bg-primary py-1.5 rounded-lg text-[10px] transition-colors">Profil</button>
                                 </div>
                             `).join('');
-                        }
-                    } else {
-                        container.innerHTML = `<div class="col-span-full text-center py-10 text-gray-500">Vous n'avez pas encore d'amis.</div>`;
                     }
+                } else {
+                    container.innerHTML = `<div class="col-span-full text-center py-10 text-gray-500 text-xs">Aucun ami trouvé.</div>`;
                 }
             }
         }
