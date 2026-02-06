@@ -191,6 +191,14 @@
                         <i data-lucide="calendar" class="group-hover:text-yellow-400 transition"></i> <span
                             class="font-semibold text-sm">Événements</span>
                     </button>
+                    <button onclick="App.UI.navigateTo('notifications')"
+                        class="nav-btn-desktop w-full flex items-center gap-4 px-4 py-3 rounded-2xl text-gray-400 hover:text-white hover:bg-white/5 transition group relative"
+                        id="desk-nav-notifications">
+                        <i data-lucide="bell" class="group-hover:text-red-400 transition"></i> <span
+                            class="font-semibold text-sm">Notifications</span>
+                        <span id="notif-badge-desktop"
+                            class="absolute top-3 right-4 w-2 h-2 bg-red-500 rounded-full hidden"></span>
+                    </button>
                 </nav>
 
                 <div class="mt-auto space-y-4">
@@ -586,6 +594,23 @@
                     </div>
                 </section>
 
+                <!-- VIEW: NOTIFICATIONS -->
+                <section id="view-notifications" class="page-view hidden p-4 md:p-0 space-y-6">
+                    <div class="glass-panel p-6 rounded-[32px] flex justify-between items-center">
+                        <div>
+                            <h2 class="text-2xl font-bold flex items-center gap-2">Notifications</h2>
+                            <p class="text-gray-400 text-sm italic">Restez connecté avec votre communauté.</p>
+                        </div>
+                        <button onclick="App.Features.Notifications.markAllAsRead()"
+                            class="text-xs text-primary hover:underline font-bold">Tout marquer comme lu</button>
+                    </div>
+
+                    <div id="notifications-list" class="space-y-3 pb-20">
+                        <!-- Notifications items -->
+                        <div class="text-center py-20 text-gray-500 animate-pulse">Chargement de vos nouvelles...</div>
+                    </div>
+                </section>
+
                 <!-- VIEW: PROFILE -->
                 <section id="view-profile" class="page-view hidden p-4 md:p-0">
                     <div class="glass-panel p-6 rounded-[32px] text-center relative overflow-hidden mb-6">
@@ -946,6 +971,12 @@
                 <i data-lucide="check" class="w-5 h-5"></i> Publier l'événement
             </button>
         </div>
+    </div>
+
+    <!-- NOTIFICATION TOAST CONTAINER -->
+    <div id="notification-toast-container"
+        class="fixed top-6 right-6 z-[100] flex flex-col gap-3 pointer-events-none w-full max-w-sm">
+        <!-- Toasts appear here -->
     </div>
 
     <!-- SCRIPT APPLICATION -->
