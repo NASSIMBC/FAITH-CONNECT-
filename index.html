@@ -167,6 +167,12 @@
                         <i data-lucide="users" class="group-hover:text-green-400 transition"></i> <span
                             class="font-semibold text-sm">Groupes</span>
                     </button>
+                    <button onclick="App.UI.navigateTo('pages')"
+                        class="nav-btn-desktop w-full flex items-center gap-4 px-4 py-3 rounded-2xl text-gray-400 hover:text-white hover:bg-white/5 transition group"
+                        id="desk-nav-pages">
+                        <i data-lucide="flag" class="group-hover:text-blue-400 transition"></i> <span
+                            class="font-semibold text-sm">Pages</span>
+                    </button>
                     <button onclick="App.UI.navigateTo('messages')"
                         class="nav-btn-desktop w-full flex items-center gap-4 px-4 py-3 rounded-2xl text-gray-400 hover:text-white hover:bg-white/5 transition group"
                         id="desk-nav-messages">
@@ -423,6 +429,22 @@
                     </div>
                 </section>
 
+                <!-- VIEW: PAGES -->
+                <section id="view-pages" class="page-view hidden p-4 md:p-0">
+                    <div class="glass-panel p-6 rounded-[32px] mb-6 flex justify-between items-center">
+                        <div>
+                            <h2 class="text-2xl font-bold mb-1">Pages Spirituelles</h2>
+                            <p class="text-gray-400 text-sm">Suivez vos ministères et médias préférés.</p>
+                        </div>
+                        <button onclick="App.Features.Pages.createModal()"
+                            class="bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-xl text-sm font-bold transition">Créer
+                            une page</button>
+                    </div>
+                    <div id="pages-container" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                        <!-- Pages injected here -->
+                    </div>
+                </section>
+
                 <!-- VIEW: MESSAGES (Fixed Layout for Mobile) -->
                 <section id="view-messages"
                     class="page-view hidden bg-[#030014] fixed inset-0 top-[60px] bottom-[85px] z-40 md:static md:h-[calc(100vh-4rem)] md:z-auto">
@@ -541,20 +563,22 @@
         </div>
 
         <!-- MOBILE BOTTOM NAV -->
-        <nav class="md:hidden fixed bottom-0 left-0 right-0 glass-nav px-4 py-4 pb-6 flex justify-between z-50">
+        <nav class="md:hidden fixed bottom-0 left-0 right-0 glass-nav px-2 py-4 pb-6 flex justify-between z-50">
             <button onclick="App.UI.navigateTo('home')" class="nav-item text-gray-400 active" id="mob-nav-home"><i
-                    data-lucide="home"></i></button>
+                    data-lucide="home" class="w-5 h-5"></i></button>
             <button onclick="App.UI.navigateTo('marketplace')" class="nav-item text-gray-400"
-                id="mob-nav-marketplace"><i data-lucide="shopping-bag"></i></button>
+                id="mob-nav-marketplace"><i data-lucide="shopping-bag" class="w-5 h-5"></i></button>
             <button onclick="App.UI.navigateTo('groups')" class="nav-item text-gray-400" id="mob-nav-groups"><i
-                    data-lucide="users"></i></button>
+                    data-lucide="users" class="w-5 h-5"></i></button>
             <button onclick="App.Features.Feed.openCreator()"
                 class="bg-primary text-white p-3 rounded-full -mt-8 shadow-glow"><i data-lucide="plus"></i></button>
+            <button onclick="App.UI.navigateTo('pages')" class="nav-item text-gray-400" id="mob-nav-pages"><i
+                    data-lucide="flag" class="w-5 h-5"></i></button>
             <button onclick="App.UI.navigateTo('bible')" class="nav-item text-gray-400" id="mob-nav-bible"><i
-                    data-lucide="book"></i></button>
+                    data-lucide="book" class="w-5 h-5"></i></button>
             <button onclick="App.UI.navigateTo('messages')" class="nav-item text-gray-400 relative"
                 id="mob-nav-messages">
-                <i data-lucide="message-circle"></i>
+                <i data-lucide="message-circle" class="w-5 h-5"></i>
                 <span class="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full hidden" id="mob-msg-badge"></span>
             </button>
         </nav>
