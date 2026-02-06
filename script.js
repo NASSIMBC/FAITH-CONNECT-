@@ -31,6 +31,7 @@ const App = {
         if (App.state.user) {
             App.Features.Notifications.subscribe();
             App.Features.Notifications.updateBadges();
+            App.Features.Chat.subscribe();
         }
         if (typeof lucide !== 'undefined') lucide.createIcons();
     },
@@ -1011,7 +1012,7 @@ const App = {
                 container.innerHTML = '<div class="col-span-full text-center py-20 animate-pulse text-gray-500">Chargement de la boutique...</div>';
 
                 // Tentative de chargement avec jointure
-                let { data, error } = await sb.from('marketplace').select('*, profiles(username, avatar_url)');
+                let { data, error } = await sb.from('marketplace').select('*, profiles(id, username, avatar_url)');
 
                 // Si la jointure échoue (manque de clé étrangère), on charge les données simples
                 if (error && error.code === 'PGRST200') {
@@ -1086,8 +1087,8 @@ const App = {
                 sellerAvatar.src = item.profiles?.avatar_url || `https://ui-avatars.com/api/?name=${item.profiles?.username || 'V'}`;
 
                 // Buttons
-                document.getElementById('btn-contact-seller').onclick = () => this.buy(item.profiles?.username || 'le vendeur');
-                document.getElementById('btn-buy-now').onclick = () => this.buy(item.profiles?.username || 'le vendeur');
+                document.getElementById('btn-contact-seller').onclick = () => this.buy(item.profiles?.id, item.profiles?.username, item.profiles?.avatar_url);
+                document.getElementById('btn-buy-now').onclick = () => this.buy(item.profiles?.id, item.profiles?.username, item.profiles?.avatar_url);
 
                 modal.classList.remove('hidden');
             },
@@ -1174,9 +1175,11 @@ const App = {
                 }
             },
 
-            buy(sellerName) {
-                alert(`Contacter ${sellerName} pour l'achat ?`);
+            buy(sellerId, sellerName, sellerAvatar) {
+                if (!sellerId) return alert("Vendeur introuvable.");
+                App.Features.Chat.openChat(sellerId, sellerName, sellerAvatar);
                 App.UI.navigateTo('messages');
+                App.UI.modals.closeAll();
             }
         },
 
@@ -1299,34 +1302,61 @@ const App = {
                 const container = document.getElementById('conversations-list');
                 if (!container || !App.state.user) return;
 
-                // 1. Récupérer les amis réels
+                // 1. Fetch current friends (accepted)
                 const { data: friendships } = await sb.from('friends').select('user_id, friend_id').or(`user_id.eq.${App.state.user.id},friend_id.eq.${App.state.user.id}`).eq('status', 'accepted');
 
+                // 2. Fetch people with existing messages (even if not friends)
+                const { data: recentMsgs } = await sb.from('messages').select('sender_id, receiver_id').or(`sender_id.eq.${App.state.user.id},receiver_id.eq.${App.state.user.id}`).order('created_at', { ascending: false }).limit(50);
+
+                const partnerIds = new Set();
                 if (friendships) {
-                    const friendIds = friendships.map(f => f.user_id === App.state.user.id ? f.friend_id : f.user_id);
-                    if (friendIds.length > 0) {
-                        const { data: profiles } = await sb.from('profiles').select('*').in('id', friendIds);
-                        if (profiles) {
-                            container.innerHTML = profiles.map(p => `
-                                <div onclick="App.Features.Chat.openChat('${p.id}', '${p.username}', '${p.avatar_url || ''}')" 
-                                     class="p-4 flex items-center gap-3 hover:bg-white/5 cursor-pointer border-b border-white/5 transition-colors">
-                                    <div class="relative">
-                                        <img src="${p.avatar_url || 'https://ui-avatars.com/api/?name=' + p.username}" class="w-10 h-10 rounded-full object-cover bg-gray-800">
-                                        <span class="absolute bottom-0 right-0 w-3 h-3 bg-gray-500 rounded-full border-2 border-[#050510]" id="status-${p.id}"></span>
-                                    </div>
-                                    <div class="flex-1 min-w-0">
-                                        <div class="flex justify-between items-baseline">
-                                            <h4 class="font-bold text-sm text-white truncate">${p.username}</h4>
-                                        </div>
-                                        <p class="text-xs text-gray-400 truncate">Cliquez pour discuter</p>
-                                    </div>
-                                </div>
-                            `).join('');
-                        }
-                    } else {
-                        container.innerHTML = `<div class="p-10 text-center text-xs text-gray-500">Ajoutez des amis pour discuter.</div>`;
-                    }
+                    friendships.forEach(f => partnerIds.add(f.user_id === App.state.user.id ? f.friend_id : f.user_id));
                 }
+                if (recentMsgs) {
+                    recentMsgs.forEach(m => partnerIds.add(m.sender_id === App.state.user.id ? m.receiver_id : m.sender_id));
+                }
+
+                if (partnerIds.size > 0) {
+                    const { data: profiles } = await sb.from('profiles').select('*').in('id', Array.from(partnerIds));
+                    if (profiles) {
+                        container.innerHTML = profiles.map(p => `
+                            <div onclick="App.Features.Chat.openChat('${p.id}', '${p.username}', '${p.avatar_url || ''}')" 
+                                 class="p-4 flex items-center gap-3 hover:bg-white/5 cursor-pointer border-b border-white/5 transition-colors contact-item" id="contact-${p.id}">
+                                <div class="relative">
+                                    <img src="${p.avatar_url || 'https://ui-avatars.com/api/?name=' + p.username}" class="w-10 h-10 rounded-full object-cover bg-gray-800">
+                                    <span class="absolute bottom-0 right-0 w-3 h-3 bg-gray-500 rounded-full border-2 border-[#050510]" id="status-${p.id}"></span>
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <h4 class="font-bold text-sm text-white truncate">${p.username}</h4>
+                                    <p class="text-[10px] text-gray-400 truncate">Messagerie</p>
+                                </div>
+                            </div>
+                        `).join('');
+                    }
+                } else {
+                    container.innerHTML = `<div class="p-10 text-center text-xs text-gray-500 italic">Aucune discussion. ✨</div>`;
+                }
+            },
+
+            subscribe() {
+                if (!App.state.user) return;
+                sb.channel('realtime_messages')
+                    .on('postgres_changes', {
+                        event: 'INSERT',
+                        schema: 'public',
+                        table: 'messages',
+                        filter: `receiver_id=eq.${App.state.user.id}`
+                    }, payload => {
+                        const msg = payload.new;
+                        // 1. If chat is open with this sender, render message
+                        if (this.activeContactId === msg.sender_id) {
+                            this.renderMessage(msg);
+                        } else {
+                            // 2. Otherwise update notification/badge (optional logic if we have sidebar markers)
+                            this.loadConversations(); // Refresh list to show new contact if needed
+                        }
+                    })
+                    .subscribe();
             },
 
             async openChat(userId, username, avatar) {
