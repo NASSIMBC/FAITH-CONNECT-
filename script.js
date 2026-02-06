@@ -216,11 +216,16 @@ const App = {
 
             App.state.view = viewName;
 
+            if (viewName === 'profile' && !App.state.user) {
+                this.showAuth();
+                return;
+            }
+
             // Lazy Load Data
             if (viewName === 'groups') App.Features.Groups.fetchAll();
-            if (viewName === 'messages') App.Features.Chat.loadList();
-            if (viewName === 'profile') App.Features.ProfilePage.load(targetId || App.state.user.id);
-            if (viewName === 'prayers') App.Features.Prayers.load();
+            if (viewName === 'messages' && App.state.user) App.Features.Chat.loadList();
+            if (viewName === 'profile' && App.state.user) App.Features.ProfilePage.load(targetId || App.state.user.id);
+            if (viewName === 'prayers' && App.state.user) App.Features.Prayers.load();
             if (viewName === 'events') App.Features.Events.load();
             if (viewName === 'marketplace') App.Features.Marketplace.load ? App.Features.Marketplace.load() : null;
 
@@ -660,6 +665,7 @@ const App = {
             },
 
             async publish() {
+                if (!App.state.user) return alert("Veuillez vous connecter.");
                 this.canvas.toBlob(async (blob) => {
                     const fileName = `verse_${Date.now()}.png`;
                     // FIX: Using 'posts' bucket instead of 'reels' which might not exist
@@ -936,9 +942,8 @@ const App = {
             async addMain() { this._add('main-prayer-input'); },
 
             async _add(inputId) {
+                if (!App.state.user || !App.state.profile) return alert("Veuillez vous connecter pour publier une prière.");
                 const input = document.getElementById(inputId);
-                if (!input || !input.value) return;
-                await sb.from('prayers').insert([{ user_id: App.state.user.id, user_name: App.state.profile.username, content: input.value, count: 0 }]);
                 input.value = "";
                 alert("Prière publiée 🙏");
                 this.load();
@@ -1204,12 +1209,13 @@ const App = {
             activeContactId: null,
 
             async loadList() {
+                if (!App.state.user) return;
                 this.loadConversations();
             },
 
             async loadConversations() {
                 const container = document.getElementById('conversations-list');
-                if (!container) return;
+                if (!container || !App.state.user) return;
 
                 // 1. Récupérer les amis réels
                 const { data: friendships } = await sb.from('friends').select('user_id, friend_id').or(`user_id.eq.${App.state.user.id},friend_id.eq.${App.state.user.id}`).eq('status', 'accepted');
@@ -1242,6 +1248,7 @@ const App = {
             },
 
             async openChat(userId, username, avatar) {
+                if (!App.state.user) return;
                 this.activeContactId = userId;
 
                 // UI Update
@@ -1279,6 +1286,8 @@ const App = {
                 }
 
                 msgsContainer.innerHTML = '<div class="text-center text-xs text-gray-500 py-10">Chargement...</div>';
+
+                if (!App.state.user) return;
 
                 const { data: messages } = await sb.from('messages')
                     .select('*')
@@ -1335,9 +1344,10 @@ const App = {
             },
 
             async send() {
+                if (!App.state.user) return;
                 const input = document.getElementById('chat-input');
                 const content = input.value;
-                if (!content || !this.activeContactId) return;
+                if (!content || !this.activeContactId || !App.state.user) return;
 
                 const { error } = await sb.from('messages').insert([{
                     sender_id: App.state.user.id,
@@ -1544,6 +1554,7 @@ const App = {
             currentTargetId: null,
 
             async load(userId = null) {
+                if (!App.state.user && !userId) return;
                 const id = userId || App.state.user.id;
                 this.currentTargetId = id;
                 const isMe = id === App.state.user.id;
@@ -1678,15 +1689,14 @@ const App = {
                 }
             }
         },
-
         initAll() {
             App.Features.Feed.loadDailyVerse();
             App.Features.Feed.loadPosts();
             App.Features.Bible.init();
             App.Features.Prayers.load();
             App.Features.Events.loadWidget();
-            App.Features.Marketplace.initSearch ? App.Features.Marketplace.initSearch() : null;
-            if (window.innerWidth > 768) App.Features.Chat.loadList();
+            if (App.Features.Marketplace && App.Features.Marketplace.initSearch) App.Features.Marketplace.initSearch();
+            if (App.state.user && window.innerWidth > 768) App.Features.Chat.loadList();
 
             // Initialisation Groupes & Realtime
             if (App.state.view === 'groups') App.Features.Groups.fetchAll();
@@ -1716,7 +1726,7 @@ const App = {
                             hint.id = hintId;
                             hint.className = 'p-4 text-center cursor-pointer hover:bg-white/5 transition';
                             hint.innerHTML = `<p class="text-xs text-gray-500 mb-2">Pas d'ami trouvé pour "${val}"</p>
-                                             <button onclick="App.Features.Finder.query('${val}')" class="text-xs text-primary font-bold">Chercher dans tout FaithConnect</button>`;
+                                                 <button onclick="App.Features.Finder.query('${val}')" class="text-xs text-primary font-bold">Chercher dans tout FaithConnect</button>`;
                             document.getElementById('conversations-list').appendChild(hint);
                         }
                     } else if (hint) {
@@ -1737,7 +1747,7 @@ const App = {
                     });
                 }
             });
-        }
+        },
     },
 };
 
