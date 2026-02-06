@@ -541,11 +541,13 @@
         </div>
 
         <!-- MOBILE BOTTOM NAV -->
-        <nav class="md:hidden fixed bottom-0 left-0 right-0 glass-nav px-6 py-4 pb-6 flex justify-between z-50">
+        <nav class="md:hidden fixed bottom-0 left-0 right-0 glass-nav px-4 py-4 pb-6 flex justify-between z-50">
             <button onclick="App.UI.navigateTo('home')" class="nav-item text-gray-400 active" id="mob-nav-home"><i
                     data-lucide="home"></i></button>
             <button onclick="App.UI.navigateTo('marketplace')" class="nav-item text-gray-400"
                 id="mob-nav-marketplace"><i data-lucide="shopping-bag"></i></button>
+            <button onclick="App.UI.navigateTo('groups')" class="nav-item text-gray-400" id="mob-nav-groups"><i
+                    data-lucide="users"></i></button>
             <button onclick="App.Features.Feed.openCreator()"
                 class="bg-primary text-white p-3 rounded-full -mt-8 shadow-glow"><i data-lucide="plus"></i></button>
             <button onclick="App.UI.navigateTo('bible')" class="nav-item text-gray-400" id="mob-nav-bible"><i
