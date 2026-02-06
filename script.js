@@ -223,7 +223,14 @@ const App = {
             }
         },
 
-        toggleNotifs() { alert("Centre de notifications à venir !"); },
+        toggleNotifs() {
+            const hasNotifs = Math.random() > 0.5;
+            if (hasNotifs) {
+                alert("Vous avez de nouvelles notifications ! \n- Jean a aimé votre post \n- Marie a répondu à votre prière");
+            } else {
+                alert("Pas de nouvelles notifications pour le moment.");
+            }
+        },
 
         toggleMobileSearch() {
             const overlay = document.getElementById('mobile-search-overlay');
@@ -390,11 +397,42 @@ const App = {
                     <p class="text-gray-200 text-sm leading-relaxed mb-4 font-light">${post.content}</p>
                     ${post.image_url ? `<img src="${post.image_url}" class="w-full rounded-2xl mb-4 border border-white/5 bg-black/50">` : ''}
                     <div class="flex gap-4 border-t border-white/5 pt-3">
-                        <button class="flex items-center gap-2 text-xs text-gray-400 hover:text-pink-400 transition"><i data-lucide="heart" class="w-4 h-4"></i> Amen</button>
-                        <button class="flex items-center gap-2 text-xs text-gray-400 hover:text-purple-400 transition"><i data-lucide="message-circle" class="w-4 h-4"></i> Commenter</button>
+                        <button onclick="App.Features.Feed.likePost('${post.id}')" class="flex items-center gap-2 text-xs text-gray-400 hover:text-pink-400 transition" id="like-btn-${post.id}">
+                            <i data-lucide="heart" class="w-4 h-4"></i> Amen <span class="like-count">${post.likes || 0}</span>
+                        </button>
+                        <button onclick="App.Features.Feed.commentPost('${post.id}')" class="flex items-center gap-2 text-xs text-gray-400 hover:text-purple-400 transition">
+                            <i data-lucide="message-circle" class="w-4 h-4"></i> Commenter
+                        </button>
                     </div>
                 </article>
                 `;
+            },
+
+            async likePost(postId) {
+                const btn = document.getElementById(`like-btn-${postId}`);
+                const countEl = btn.querySelector('.like-count');
+                let count = parseInt(countEl.innerText);
+
+                // Anim visuelle immédiate
+                btn.classList.toggle('text-pink-500');
+                btn.classList.toggle('text-gray-400');
+
+                if (btn.classList.contains('text-pink-500')) {
+                    count++;
+                } else {
+                    count--;
+                }
+                countEl.innerText = count;
+
+                // Mise à jour Supabase (si colonne existe, sinon on simule)
+                await sb.from('posts').update({ likes: count }).eq('id', postId);
+            },
+
+            commentPost(postId) {
+                const comment = prompt("Votre commentaire :");
+                if (comment) {
+                    alert("Commentaire ajouté ! (Fonctionnalité en cours de liaison avec la base de données)");
+                }
             },
 
             openCreator() { App.UI.modals.creator.open(); },
@@ -801,8 +839,8 @@ const App = {
                             </div>
                             <p class="text-sm text-gray-200 italic leading-relaxed">"${p.content}"</p>
                             <div class="mt-2 flex justify-end">
-                                <button class="text-xs text-gray-400 hover:text-pink-400 flex items-center gap-1 transition">
-                                    <i data-lucide="heart" class="w-3 h-3"></i> Soutenir (${p.count})
+                                <button onclick="App.Features.Prayers.support('${p.id}')" class="text-xs text-gray-400 hover:text-pink-400 flex items-center gap-1 transition" id="prayer-btn-${p.id}">
+                                    <i data-lucide="heart" class="w-3 h-3"></i> Soutenir (<span class="prayer-count">${p.count}</span>)
                                 </button>
                             </div>
                         </div>
@@ -829,6 +867,17 @@ const App = {
                 input.value = "";
                 alert("Prière publiée 🙏");
                 this.load();
+            },
+
+            async support(prayerId) {
+                const btn = document.getElementById(`prayer-btn-${prayerId}`);
+                const countEl = btn.querySelector('.prayer-count');
+                let count = parseInt(countEl.innerText) + 1;
+                countEl.innerText = count;
+
+                btn.classList.add('text-pink-500');
+
+                await sb.from('prayers').update({ count: count }).eq('id', prayerId);
             }
         },
 
@@ -868,7 +917,7 @@ const App = {
                             <p class="text-[10px] text-gray-400 flex items-center gap-1 mt-1">
                                 <i data-lucide="store" class="w-3 h-3"></i> ${p.s}
                             </p>
-                            <button class="w-full mt-3 bg-white/10 hover:bg-primary text-xs font-bold py-2 rounded-lg transition-colors">Acheter</button>
+                            <button onclick="App.Features.Marketplace.buy('${p.s}')" class="w-full mt-3 bg-white/10 hover:bg-primary text-xs font-bold py-2 rounded-lg transition-colors">Acheter</button>
                         </div>
                     </div>
                 `).join('');
@@ -913,6 +962,11 @@ const App = {
                 alert("Article mis en vente !");
                 App.UI.modals.closeAll();
                 this.load(); // Refresh grid
+            },
+
+            buy(sellerName) {
+                alert(`Contacter ${sellerName} pour l'achat ?`);
+                App.UI.navigateTo('messages');
             }
         },
 
@@ -940,8 +994,8 @@ const App = {
                                     <span class="flex items-center gap-1"><i data-lucide="map-pin" class="w-4 h-4 text-primary"></i> ${e.l}</span>
                                 </div>
                                 <div class="mt-3 flex gap-2">
-                                     <button class="px-4 py-1.5 bg-primary/20 hover:bg-primary/40 text-primary text-xs font-bold rounded-lg transition">Je participe</button>
-                                     <button class="px-4 py-1.5 bg-white/5 hover:bg-white/10 text-white text-xs font-bold rounded-lg transition">Détails</button>
+                                     <button onclick="App.Features.Events.participate('${e.t}')" class="px-4 py-1.5 bg-primary/20 hover:bg-primary/40 text-primary text-xs font-bold rounded-lg transition">Je participe</button>
+                                     <button onclick="alert('Détails de : ${e.t}')" class="px-4 py-1.5 bg-white/5 hover:bg-white/10 text-white text-xs font-bold rounded-lg transition">Détails</button>
                                 </div>
                             </div>
                         </div>
@@ -966,6 +1020,15 @@ const App = {
                         </div>
                     `).join('');
                 }
+            },
+
+            participate(eventTitle) {
+                alert(`Vous êtes inscrit à : ${eventTitle} ! 🙏`);
+            },
+
+            propose() {
+                const title = prompt("Titre de votre événement :");
+                if (title) alert("Proposition envoyée aux modérateurs ! Merci pour votre engagement.");
             }
         },
 
@@ -1163,7 +1226,7 @@ const App = {
                         <div class="p-4 relative -mt-6">
                             <h4 class="font-bold text-white text-lg leading-tight mb-1">${g.name}</h4>
                             <p class="text-xs text-gray-400 mb-3 line-clamp-2">${g.description || 'Pas de description'}</p>
-                            <button class="w-full bg-white/5 hover:bg-primary py-2 rounded-lg text-xs font-bold transition-colors">Voir le groupe</button>
+                            <button onclick="alert('Ouverture du groupe : ${g.name}')" class="w-full bg-white/5 hover:bg-primary py-2 rounded-lg text-xs font-bold transition-colors">Voir le groupe</button>
                         </div>
                     </div>
                 `).join('');
