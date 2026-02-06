@@ -182,6 +182,9 @@ const App = {
             },
             creator: {
                 open() { document.getElementById('modal-creator').classList.remove('hidden'); }
+            },
+            sell: {
+                open() { App.Features.Marketplace.openSellModal(); }
             }
         },
 
@@ -349,13 +352,22 @@ const App = {
                 const container = document.getElementById('feed-container');
                 if (!container) return;
 
-                const { data: posts } = await sb.from('posts').select('*, profiles(username, avatar_url)').order('created_at', { ascending: false }).limit(20);
+                container.innerHTML = '<div class="text-center py-20 animate-pulse text-gray-500">Chargement de la lumière...</div>';
 
-                if (posts && posts.length > 0) {
-                    container.innerHTML = posts.map(post => App.Features.Feed.renderPost(post)).join('');
-                    if (typeof lucide !== 'undefined') lucide.createIcons();
-                } else {
-                    container.innerHTML = `<div class="text-center text-gray-500 py-10">Soyez la première lumière ici. ✨</div>`;
+                try {
+                    const { data: posts, error } = await sb.from('posts').select('*, profiles(username, avatar_url)').order('created_at', { ascending: false }).limit(20);
+
+                    if (error) throw error;
+
+                    if (posts && posts.length > 0) {
+                        container.innerHTML = posts.map(post => App.Features.Feed.renderPost(post)).join('');
+                        if (typeof lucide !== 'undefined') lucide.createIcons();
+                    } else {
+                        container.innerHTML = `<div class="text-center text-gray-500 py-10">Soyez la première lumière ici. ✨</div>`;
+                    }
+                } catch (err) {
+                    console.error("Feed Load Error:", err);
+                    container.innerHTML = `<div class="text-center text-gray-400 py-10 italic">Impossible de charger les messages. ${err.message}</div>`;
                 }
             },
 
@@ -440,15 +452,25 @@ const App = {
                 const content = document.getElementById('post-input').value;
                 if (!content && !this.selectedImage) return alert("Écrivez quelque chose ou ajoutez une image.");
 
+                if (!App.state.user) return alert("Vous devez être connecté pour publier.");
+
                 let imageUrl = null;
                 // Upload image if exists
                 if (this.selectedImage) {
-                    const fileExt = this.selectedImage.name.split('.').pop();
-                    const fileName = `${Date.now()}.${fileExt}`;
-                    const { error: uploadError } = await sb.storage.from('posts').upload(fileName, this.selectedImage);
-                    if (uploadError) return alert("Erreur upload: " + uploadError.message);
-                    const { data: { publicUrl } } = sb.storage.from('posts').getPublicUrl(fileName);
-                    imageUrl = publicUrl;
+                    try {
+                        const fileExt = this.selectedImage.name.split('.').pop();
+                        const fileName = `${Date.now()}.${fileExt}`;
+                        const { error: uploadError } = await sb.storage.from('posts').upload(fileName, this.selectedImage);
+                        if (uploadError) {
+                            console.error("Storage Error:", uploadError);
+                            return alert("Erreur lors de l'envoi de l'image. Vérifiez si le bucket 'posts' existe.");
+                        }
+                        const { data: { publicUrl } } = sb.storage.from('posts').getPublicUrl(fileName);
+                        imageUrl = publicUrl;
+                    } catch (err) {
+                        console.error("Upload Catch:", err);
+                        return alert("Erreur réseau lors de l'upload.");
+                    }
                 }
 
                 const { error } = await sb.from('posts').insert([{
@@ -458,8 +480,10 @@ const App = {
                     type: 'post'
                 }]);
 
-                if (error) alert(error.message);
-                else {
+                if (error) {
+                    console.error("Insert Error:", error);
+                    alert("Erreur lors de la publication : " + error.message);
+                } else {
                     App.UI.modals.closeAll();
                     document.getElementById('post-input').value = "";
                     this.removeImage();
@@ -862,24 +886,29 @@ const App = {
             }
         },
 
-        // 3. MARKETPLACE (Vente & Achat)
+        // 3. MARKETPLACE (Liaison Supabase complète)
         Marketplace: {
-            items: [
-                { t: "T-Shirt Foi", p: "25€", img: "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=500&auto=format&fit=crop&q=60", s: "FaithBrand" },
-                { t: "Bible Journaling", p: "30€", img: "https://images.unsplash.com/photo-1544947950-fa07a98d237f?w=500&auto=format&fit=crop&q=60", s: "LibrairieVie" },
-                { t: "Mug Verset", p: "12€", img: "https://images.unsplash.com/photo-1514228742587-6b1558fcca3d?w=500&auto=format&fit=crop&q=60", s: "CadeauxCiel" },
-                { t: "Bracelet Croix", p: "15€", img: "https://images.unsplash.com/photo-1611591437281-460bfbe1220a?w=500&auto=format&fit=crop&q=60", s: "BijouxSens" },
-                { t: "Hoodie Blessed", p: "45€", img: "https://images.unsplash.com/photo-1556906781-9a412961d289?w=500&auto=format&fit=crop&q=60", s: "ModeChretienne" },
-                { t: "Tableau Déco", p: "60€", img: "https://images.unsplash.com/photo-1513519245088-0e12902e5a38?w=500&auto=format&fit=crop&q=60", s: "ArtFoi" }
-            ],
+            selectedImage: null,
 
-            load(filter = "") {
+            async load(filter = "") {
                 const container = document.getElementById('marketplace-grid');
                 if (!container) return;
 
-                const filtered = this.items.filter(p =>
-                    p.t.toLowerCase().includes(filter.toLowerCase()) ||
-                    p.s.toLowerCase().includes(filter.toLowerCase())
+                container.innerHTML = '<div class="col-span-full text-center py-20 animate-pulse text-gray-500">Chargement de la boutique...</div>';
+
+                const { data, error } = await sb.from('marketplace').select('*, profiles(username)');
+
+                if (error) {
+                    console.error("Marketplace Error:", error);
+                    container.innerHTML = `<div class="col-span-full text-center py-10 text-gray-400">
+                        <p class="mb-4">Le Marketplace n'est pas encore prêt (Table 'marketplace' manquante ?)</p>
+                    </div>`;
+                    return;
+                }
+
+                const filtered = data.filter(p =>
+                    p.title.toLowerCase().includes(filter.toLowerCase()) ||
+                    (p.profiles?.username || '').toLowerCase().includes(filter.toLowerCase())
                 );
 
                 if (filtered.length === 0) {
@@ -889,16 +918,16 @@ const App = {
 
                 container.innerHTML = filtered.map(p => `
                     <div class="glass-panel p-0 rounded-2xl overflow-hidden group cursor-pointer hover:border-primary/50 transition relative">
-                        <div class="absolute top-2 right-2 bg-black/60 text-white text-xs font-bold px-2 py-1 rounded-lg backdrop-blur-sm z-10">${p.p}</div>
+                        <div class="absolute top-2 right-2 bg-black/60 text-white text-xs font-bold px-2 py-1 rounded-lg backdrop-blur-sm z-10">${p.price}€</div>
                         <div class="h-40 overflow-hidden">
-                            <img src="${p.img}" class="w-full h-full object-cover group-hover:scale-110 transition duration-500">
+                            <img src="${p.image_url || 'https://images.unsplash.com/photo-1550989460-0adf9ea622e2?w=500&auto=format&fit=crop&q=60'}" class="w-full h-full object-cover group-hover:scale-110 transition duration-500">
                         </div>
                         <div class="p-3">
-                            <h4 class="font-bold text-sm text-white truncate">${p.t}</h4>
+                            <h4 class="font-bold text-sm text-white truncate">${p.title}</h4>
                             <p class="text-[10px] text-gray-400 flex items-center gap-1 mt-1">
-                                <i data-lucide="store" class="w-3 h-3"></i> ${p.s}
+                                <i data-lucide="store" class="w-3 h-3"></i> ${p.profiles?.username || 'Vendeur'}
                             </p>
-                            <button onclick="App.Features.Marketplace.buy('${p.s}')" class="w-full mt-3 bg-white/10 hover:bg-primary text-xs font-bold py-2 rounded-lg transition-colors">Acheter</button>
+                            <button onclick="App.Features.Marketplace.buy('${p.profiles?.username || 'Vendeur'}')" class="w-full mt-3 bg-white/10 hover:bg-primary text-xs font-bold py-2 rounded-lg transition-colors">Acheter</button>
                         </div>
                     </div>
                 `).join('');
@@ -918,31 +947,69 @@ const App = {
                 const modal = document.getElementById('modal-sell');
                 if (modal) {
                     modal.classList.remove('hidden');
-                    // Reset fields
+                    // Reset
                     document.getElementById('sell-title').value = '';
                     document.getElementById('sell-price').value = '';
+                    document.getElementById('sell-file').value = '';
+                    document.getElementById('sell-preview-img').classList.add('hidden');
+                    document.getElementById('sell-image-placeholder').classList.remove('hidden');
+                    this.selectedImage = null;
                 }
             },
 
-            publish() {
+            handleImageSelect(input) {
+                if (input.files && input.files[0]) {
+                    this.selectedImage = input.files[0];
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        document.getElementById('sell-preview-img').src = e.target.result;
+                        document.getElementById('sell-preview-img').classList.remove('hidden');
+                        document.getElementById('sell-image-placeholder').classList.add('hidden');
+                    };
+                    reader.readAsDataURL(input.files[0]);
+                }
+            },
+
+            async publish() {
                 const title = document.getElementById('sell-title').value;
                 const price = document.getElementById('sell-price').value;
-                // Mock image for demo
-                const img = "https://images.unsplash.com/photo-1550989460-0adf9ea622e2?w=500&auto=format&fit=crop&q=60";
 
                 if (!title || !price) return alert("Veuillez remplir les champs.");
+                if (!App.state.user) return alert("Veuillez vous connecter.");
 
-                // Add to list
-                this.items.unshift({
-                    t: title,
-                    p: price + "€",
-                    img: img,
-                    s: App.state.profile.username || "Moi"
-                });
+                let imageUrl = null;
+                if (this.selectedImage) {
+                    try {
+                        const fileName = `${Date.now()}_${this.selectedImage.name}`;
+                        const { error: uploadError } = await sb.storage.from('marketplace').upload(fileName, this.selectedImage);
+                        if (uploadError) {
+                            console.error("Marketplace Upload Error:", uploadError);
+                            return alert("Erreur image: Vérifiez le bucket 'marketplace'");
+                        }
+                        const { data: { publicUrl } } = sb.storage.from('marketplace').getPublicUrl(fileName);
+                        imageUrl = publicUrl;
+                    } catch (err) {
+                        console.error(err);
+                    }
+                }
 
-                alert("Article mis en vente !");
-                App.UI.modals.closeAll();
-                this.load(); // Refresh grid
+                const { error } = await sb.from('marketplace').insert([{
+                    user_id: App.state.user.id,
+                    title: title,
+                    price: parseFloat(price),
+                    image_url: imageUrl
+                }]);
+
+                if (error) {
+                    alert("Erreur lors de la mise en vente: " + error.message);
+                } else {
+                    alert("Article mis en vente ! 🙏");
+                    App.UI.modals.closeAll();
+                    this.selectedImage = null;
+                    document.getElementById('sell-preview-img').classList.add('hidden');
+                    document.getElementById('sell-image-placeholder').classList.remove('hidden');
+                    this.load();
+                }
             },
 
             buy(sellerName) {
