@@ -294,24 +294,23 @@
                                 class="hidden md:inline">Vendre</span>
                         </button>
                     </div>
-                    <div class="flex gap-2 overflow-x-auto pb-2 custom-scrollbar">
-                        <div class="flex gap-2 overflow-x-auto pb-2 custom-scrollbar">
-                            <button onclick="App.Features.Marketplace.load('')"
-                                class="px-4 py-1 bg-primary text-white rounded-full text-xs font-bold whitespace-nowrap">Tout</button>
-                            <button onclick="App.Features.Marketplace.load('livre')"
-                                class="px-4 py-1 bg-white/5 hover:bg-white/10 text-gray-300 rounded-full text-xs font-bold whitespace-nowrap transition">Livres</button>
-                            <button onclick="App.Features.Marketplace.load('t-shirt')"
-                                class="px-4 py-1 bg-white/5 hover:bg-white/10 text-gray-300 rounded-full text-xs font-bold whitespace-nowrap transition">Vêtements</button>
-                            <button onclick="App.Features.Marketplace.load('art')"
-                                class="px-4 py-1 bg-white/5 hover:bg-white/10 text-gray-300 rounded-full text-xs font-bold whitespace-nowrap transition">Artisanat</button>
-                            <button onclick="App.Features.Marketplace.load('musique')"
-                                class="px-4 py-1 bg-white/5 hover:bg-white/10 text-gray-300 rounded-full text-xs font-bold whitespace-nowrap transition">Musique</button>
-                        </div>
+                    <div class="flex gap-2 overflow-x-auto pb-4 custom-scrollbar mb-6">
+                        <button onclick="App.Features.Marketplace.load('')"
+                            class="px-4 py-1.5 bg-primary text-white rounded-full text-xs font-bold whitespace-nowrap">Tout</button>
+                        <button onclick="App.Features.Marketplace.load('livre')"
+                            class="px-4 py-1.5 bg-white/5 hover:bg-white/10 text-gray-300 rounded-full text-xs font-bold whitespace-nowrap transition">Livres</button>
+                        <button onclick="App.Features.Marketplace.load('t-shirt')"
+                            class="px-4 py-1.5 bg-white/5 hover:bg-white/10 text-gray-300 rounded-full text-xs font-bold whitespace-nowrap transition">Vêtements</button>
+                        <button onclick="App.Features.Marketplace.load('art')"
+                            class="px-4 py-1.5 bg-white/5 hover:bg-white/10 text-gray-300 rounded-full text-xs font-bold whitespace-nowrap transition">Artisanat</button>
+                        <button onclick="App.Features.Marketplace.load('musique')"
+                            class="px-4 py-1.5 bg-white/5 hover:bg-white/10 text-gray-300 rounded-full text-xs font-bold whitespace-nowrap transition">Musique</button>
+                    </div>
 
-                        <div id="marketplace-grid" class="grid grid-cols-2 md:grid-cols-3 gap-4 pb-20">
-                            <!-- Products injected -->
-                            <div class="col-span-full text-center py-10 text-gray-500">Chargement des articles...</div>
-                        </div>
+                    <div id="marketplace-grid" class="grid grid-cols-2 md:grid-cols-3 gap-4 pb-20">
+                        <!-- Products injected -->
+                        <div class="col-span-full text-center py-10 text-gray-500">Chargement des articles...</div>
+                    </div>
                 </section>
 
                 <!-- VIEW: BIBLE -->
@@ -657,14 +656,17 @@
                         data-lucide="x"></i></button>
             </div>
             <div class="space-y-4">
-                <div
-                    class="h-32 bg-gray-800 rounded-xl flex items-center justify-center border-2 border-dashed border-white/10 cursor-pointer hover:border-primary/50 transition">
-                    <div class="text-center text-gray-500">
+                <div onclick="document.getElementById('sell-file').click()"
+                    class="h-32 bg-gray-800 rounded-xl flex items-center justify-center border-2 border-dashed border-white/10 cursor-pointer hover:border-primary/50 transition relative overflow-hidden">
+                    <input type="file" id="sell-file" accept="image/*" class="hidden"
+                        onchange="App.Features.Marketplace.handleImageSelect(this)">
+                    <div id="sell-image-placeholder" class="text-center text-gray-500">
                         <i data-lucide="image" class="w-8 h-8 mx-auto mb-2 opacity-50"></i>
                         <span class="text-xs">Ajouter une photo</span>
                     </div>
+                    <img id="sell-preview-img" class="hidden absolute inset-0 w-full h-full object-cover">
                 </div>
-                <input type="text" id="sell-title" placeholder="Titre de l'article"
+                <input type="text" id="sell-title" placeholder="Titre de l'article (ex: Bible de luxe)"
                     class="input-field w-full px-4 py-3 rounded-xl">
                 <div class="flex gap-2 relative">
                     <input type="number" id="sell-price" placeholder="Prix"
