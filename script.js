@@ -1144,54 +1144,65 @@ const App = {
 
         // 4. EVENTS
         Events: {
-            load() {
-                this.loadWidget(); // Keep widget sync
+            async load() {
+                const container = document.getElementById('events-container');
+                if (!container) return;
 
-                const list = [
-                    { t: "Culte de Louange & Adoration", d: "Dimanche 10h00", l: "Paris & Online", img: "https://images.unsplash.com/photo-1438232992991-995b7058bbb3?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3" },
-                    { t: "Maraude Solidaire", d: "Mardi 19h30", l: "Gare du Nord", img: "https://images.unsplash.com/photo-1469571486292-0ba58a3f068b?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3" },
-                    { t: "Étude Biblique Zoom", d: "Jeudi 20h00", l: "Lien privé", img: "https://images.unsplash.com/photo-1491841550275-ad7854e35ca6?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3" },
-                    { t: "Concert Gospel", d: "Samedi 25 Oct, 20h", l: "Salle Pleyel", img: "https://images.unsplash.com/photo-1516280440614-6697288d5d38?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3" }
-                ];
+                container.innerHTML = '<div class="col-span-full text-center py-10 animate-pulse text-gray-500">Chargement des événements...</div>';
 
-                const mainContainer = document.getElementById('events-container');
-                if (mainContainer) {
-                    mainContainer.innerHTML = list.map(e => `
-                        <div class="glass-panel p-0 rounded-2xl overflow-hidden flex flex-col md:flex-row hover:shadow-glow transition-all">
-                            <img src="${e.img}" class="w-full md:w-48 h-32 object-cover">
-                            <div class="p-4 flex-1 flex flex-col justify-center">
-                                <h4 class="font-bold text-lg text-white mb-1">${e.t}</h4>
-                                <div class="flex flex-col md:flex-row gap-2 md:gap-6 text-sm text-gray-400">
-                                    <span class="flex items-center gap-1"><i data-lucide="calendar" class="w-4 h-4 text-primary"></i> ${e.d}</span>
-                                    <span class="flex items-center gap-1"><i data-lucide="map-pin" class="w-4 h-4 text-primary"></i> ${e.l}</span>
-                                </div>
-                                <div class="mt-3 flex gap-2">
-                                     <button onclick="App.Features.Events.participate('${e.t}')" class="px-4 py-1.5 bg-primary/20 hover:bg-primary/40 text-primary text-xs font-bold rounded-lg transition">Je participe</button>
-                                     <button onclick="alert('Détails de : ${e.t}')" class="px-4 py-1.5 bg-white/5 hover:bg-white/10 text-white text-xs font-bold rounded-lg transition">Détails</button>
-                                </div>
+                const { data: events, error } = await sb.from('events').select('*, profiles(username, avatar_url)').order('created_at', { ascending: false });
+
+                if (error) {
+                    console.error("Events Load Error:", error);
+                    container.innerHTML = `<div class="text-center py-10 text-red-400 text-xs">Erreur: ${error.message}</div>`;
+                    return;
+                }
+
+                if (!events || events.length === 0) {
+                    container.innerHTML = '<div class="text-center py-10 text-gray-500 text-xs">Aucun événement à venir. Soyez le premier à en proposer un !</div>';
+                    return;
+                }
+
+                container.innerHTML = events.map(e => `
+                    <div class="glass-panel p-0 rounded-2xl overflow-hidden flex flex-col md:flex-row hover:shadow-glow transition-all">
+                        <img src="${e.image_url || 'https://images.unsplash.com/photo-1438232992991-995b7058bbb3?w=500&auto=format&fit=crop&q=60'}" class="w-full md:w-48 h-32 object-cover">
+                        <div class="p-4 flex-1 flex flex-col justify-center">
+                            <h4 class="font-bold text-lg text-white mb-1">${e.title}</h4>
+                            <div class="flex flex-col md:flex-row gap-2 md:gap-6 text-sm text-gray-400">
+                                <span class="flex items-center gap-1"><i data-lucide="calendar" class="w-4 h-4 text-primary"></i> ${e.date_text}</span>
+                                <span class="flex items-center gap-1"><i data-lucide="map-pin" class="w-4 h-4 text-primary"></i> ${e.location}</span>
+                            </div>
+                            <p class="text-[10px] text-gray-500 mt-2 line-clamp-1 italic">${e.description || 'Pas de description'}</p>
+                            <div class="mt-3 flex gap-2">
+                                <button onclick="App.Features.Events.participate('${e.title}')" class="px-4 py-1.5 bg-primary/20 hover:bg-primary/40 text-primary text-xs font-bold rounded-lg transition">Je participe</button>
+                                <button onclick="alert('Description : ${e.description ? e.description.replace(/'/g, "\\'") : 'Aucune'}')" class="px-4 py-1.5 bg-white/5 hover:bg-white/10 text-white text-xs font-bold rounded-lg transition">Détails</button>
                             </div>
                         </div>
-                    `).join('');
-                }
+                    </div>
+                `).join('');
+                if (typeof lucide !== 'undefined') lucide.createIcons();
+                this.loadWidget(events.slice(0, 2));
             },
 
-            loadWidget() {
-                const list = [
-                    { t: "Louange Live", d: "Dimanche 10h", l: "Paris" },
-                    { t: "Maraude", d: "Mardi 20h", l: "Gare Nord" }
-                ];
+            loadWidget(events = []) {
                 const c = document.getElementById('widget-events-list');
-                if (c) {
-                    c.innerHTML = list.map(e => `
-                        <div class="bg-white/5 rounded-xl p-3 flex items-center gap-3">
-                            <div class="bg-primary/20 text-primary p-2 rounded-lg"><i data-lucide="calendar" class="w-4 h-4"></i></div>
-                            <div>
-                                <p class="font-bold text-xs text-white">${e.t}</p>
-                                <p class="text-[10px] text-gray-400">${e.d} • ${e.l}</p>
-                            </div>
-                        </div>
-                    `).join('');
+                if (!c) return;
+
+                if (events.length === 0) {
+                    c.innerHTML = '<p class="text-[10px] text-gray-500 text-center">Aucun événement</p>';
+                    return;
                 }
+
+                c.innerHTML = events.map(e => `
+                    <div class="bg-white/5 rounded-xl p-3 flex items-center gap-3">
+                        <div class="bg-primary/20 text-primary p-2 rounded-lg"><i data-lucide="calendar" class="w-4 h-4"></i></div>
+                        <div>
+                            <p class="font-bold text-xs text-white">${e.title}</p>
+                            <p class="text-[10px] text-gray-400">${e.date_text} • ${e.location}</p>
+                        </div>
+                    </div>
+                `).join('');
+                if (typeof lucide !== 'undefined') lucide.createIcons();
             },
 
             participate(eventTitle) {
@@ -1199,8 +1210,41 @@ const App = {
             },
 
             propose() {
-                const title = prompt("Titre de votre événement :");
-                if (title) alert("Proposition envoyée aux modérateurs ! Merci pour votre engagement.");
+                if (!App.state.user) return alert("Veuillez vous connecter pour proposer un événement.");
+                document.getElementById('modal-event-propose').classList.remove('hidden');
+            },
+
+            async publish() {
+                const title = document.getElementById('event-title').value;
+                const date_text = document.getElementById('event-date').value;
+                const location = document.getElementById('event-location').value;
+                const description = document.getElementById('event-description').value;
+                const image_url = document.getElementById('event-image').value;
+
+                if (!title || !date_text || !location) return alert("Le titre, la date et le lieu sont obligatoires.");
+
+                try {
+                    const { error } = await sb.from('events').insert([{
+                        title,
+                        date_text,
+                        location,
+                        description,
+                        image_url: image_url || null,
+                        created_by: App.state.user.id
+                    }]);
+
+                    if (error) throw error;
+
+                    alert("Événement publié avec succès ! 🙏");
+                    App.UI.modals.closeAll();
+                    // Reset fields
+                    ['event-title', 'event-date', 'event-location', 'event-description', 'event-image'].forEach(id => {
+                        document.getElementById(id).value = '';
+                    });
+                    this.load();
+                } catch (err) {
+                    alert("Erreur: " + err.message);
+                }
             }
         },
 
