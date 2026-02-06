@@ -223,6 +223,7 @@ const App = {
 
             // Lazy Load Data
             if (viewName === 'groups') App.Features.Groups.fetchAll();
+            if (viewName === 'pages') App.Features.Pages.fetchAll();
             if (viewName === 'messages' && App.state.user) App.Features.Chat.loadList();
             if (viewName === 'profile' && App.state.user) App.Features.ProfilePage.load(targetId || App.state.user.id);
             if (viewName === 'prayers' && App.state.user) App.Features.Prayers.load();
@@ -1525,7 +1526,7 @@ const App = {
             }
         },
 
-        // 8. GROUPS (FIXED)
+        // 8. GROUPS
         Groups: {
             async fetchAll() {
                 const container = document.getElementById('groups-container');
@@ -1533,7 +1534,7 @@ const App = {
 
                 container.innerHTML = '<div class="col-span-full text-center text-xs text-gray-500 animate-pulse">Recherche des groupes...</div>';
 
-                const { data: groups, error } = await sb.from('groups').select('*');
+                const { data: groups, error } = await sb.from('groups').select('*').eq('type', 'group');
 
                 if (error || !groups || groups.length === 0) {
                     container.innerHTML = `
@@ -1567,6 +1568,7 @@ const App = {
             async create(name) {
                 const { error } = await sb.from('groups').insert([{
                     name: name,
+                    type: 'group',
                     description: "Groupe créé par " + App.state.profile.username,
                     created_by: App.state.user.id
                 }]);
@@ -1579,7 +1581,63 @@ const App = {
             }
         },
 
-        // 8. REALTIME SUBSCRIPTIONS
+        // 9. PAGES
+        Pages: {
+            async fetchAll() {
+                const container = document.getElementById('pages-container');
+                if (!container) return;
+
+                container.innerHTML = '<div class="col-span-full text-center text-xs text-gray-500 animate-pulse">Recherche des pages...</div>';
+
+                const { data: pages, error } = await sb.from('groups').select('*').eq('type', 'page');
+
+                if (error || !pages || pages.length === 0) {
+                    container.innerHTML = `
+                        <div class="col-span-full text-center py-10">
+                            <p class="text-gray-400 mb-4">Aucune page trouvée.</p>
+                            <button onclick="App.Features.Pages.createModal()" class="btn-primary px-4 py-2 rounded-xl">Créer la première page</button>
+                        </div>
+                    `;
+                    return;
+                }
+
+                container.innerHTML = pages.map(p => `
+                    <div class="bg-gray-900 border border-white/5 rounded-2xl overflow-hidden hover:border-primary/50 transition-all group">
+                        <div class="h-24 bg-blue-900/20 relative">
+                             <div class="absolute inset-0 bg-gradient-to-t from-gray-900 via-transparent to-transparent"></div>
+                             <div class="absolute top-2 right-2 bg-blue-500/20 text-blue-400 text-[8px] font-bold px-2 py-0.5 rounded-full uppercase">Page</div>
+                        </div>
+                        <div class="p-4 relative -mt-6">
+                            <h4 class="font-bold text-white text-lg leading-tight mb-1">${p.name}</h4>
+                            <p class="text-xs text-gray-400 mb-3 line-clamp-2">${p.description || 'Pas de description'}</p>
+                            <button onclick="alert('Ouverture de la page : ${p.name}')" class="w-full bg-white/5 hover:bg-primary py-2 rounded-lg text-xs font-bold transition-colors">Suivre la page</button>
+                        </div>
+                    </div>
+                `).join('');
+            },
+
+            createModal() {
+                const name = prompt("Nom de votre page :");
+                if (name) this.create(name);
+            },
+
+            async create(name) {
+                const { error } = await sb.from('groups').insert([{
+                    name: name,
+                    type: 'page',
+                    description: "Page certifiée créée par " + App.state.profile.username,
+                    created_by: App.state.user.id
+                }]);
+
+                if (error) alert("Erreur création : " + error.message);
+                else {
+                    alert("Page créée avec succès !");
+                    this.fetchAll();
+                }
+            }
+        },
+
+        // 10. REALTIME SUBSCRIPTIONS
         Realtime: {
             init() {
                 sb.channel('public:messages')
@@ -1742,8 +1800,9 @@ const App = {
             if (App.Features.Marketplace && App.Features.Marketplace.initSearch) App.Features.Marketplace.initSearch();
             if (App.state.user && window.innerWidth > 768) App.Features.Chat.loadList();
 
-            // Initialisation Groupes & Realtime
+            // Initialisation Groupes & Pages & Realtime
             if (App.state.view === 'groups') App.Features.Groups.fetchAll();
+            if (App.state.view === 'pages') App.Features.Pages.fetchAll();
             if (App.Features.Realtime) App.Features.Realtime.init();
 
             // Search Listener (Chat Sidebar)
