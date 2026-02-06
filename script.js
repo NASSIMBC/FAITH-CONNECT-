@@ -274,70 +274,10 @@ const App = {
 
     // --- FONCTIONNALITÉS MÉTIERS ---
     Features: {
-        initAll() {
-            this.Feed.loadDailyVerse();
-            this.Feed.loadPosts();
-            this.Bible.init();
-            this.Prayers.load();
-            this.Events.loadWidget();
-            this.Marketplace.initSearch();
-            if (window.innerWidth > 768) App.Features.Chat.loadList();
-
-            // Initialisation Groupes & Realtime
-            if (App.state.view === 'groups') this.Groups.fetchAll(); // Load if on groups view
-            this.Realtime.init();
-
-            // Search Listener (Chat Sidebar)
-            const searchInput = document.querySelector('#msg-sidebar input');
-            if (searchInput) {
-                searchInput.addEventListener('input', (e) => {
-                    const val = e.target.value.toLowerCase();
-                    const items = document.querySelectorAll('#conversations-list > div');
-                    items.forEach(item => {
-                        const h4 = item.querySelector('h4');
-                        if (h4) {
-                            const name = h4.innerText.toLowerCase();
-                            item.style.display = name.includes(val) ? 'flex' : 'none';
-                        }
-                    });
-
-                    // Add a hint if no items match
-                    const visibleItems = Array.from(items).filter(i => i.style.display !== 'none');
-                    const hintId = 'chat-search-hint';
-                    let hint = document.getElementById(hintId);
-
-                    if (visibleItems.length === 0 && val.length > 0) {
-                        if (!hint) {
-                            hint = document.createElement('div');
-                            hint.id = hintId;
-                            hint.className = 'p-4 text-center cursor-pointer hover:bg-white/5 transition';
-                            hint.innerHTML = `<p class="text-xs text-gray-500 mb-2">Pas d'ami trouvé pour "${val}"</p>
-                                             <button onclick="App.Features.Finder.query('${val}')" class="text-xs text-primary font-bold">Chercher dans tout FaithConnect</button>`;
-                            document.getElementById('conversations-list').appendChild(hint);
-                        }
-                    } else if (hint) {
-                        hint.remove();
-                    }
-                });
-            }
-
-            // Global Search Listener (Desktop & Mobile)
-            ['global-search-desktop', 'mobile-search-input'].forEach(id => {
-                const el = document.getElementById(id);
-                if (el) {
-                    el.addEventListener('keypress', (e) => {
-                        if (e.key === 'Enter') {
-                            App.Features.Finder.query(e.target.value);
-                            if (id === 'mobile-search-input') App.UI.toggleMobileSearch();
-                        }
-                    });
-                }
-            });
-        },
-
         // 1. FEED & POSTS
         Feed: {
             selectedImage: null,
+
 
             async loadDailyVerse() {
                 // Versets Populaires (Liste locale robuste pour éviter les erreurs API)
@@ -1546,6 +1486,66 @@ const App = {
                     }
                 }
             }
+        },
+
+        initAll() {
+            App.Features.Feed.loadDailyVerse();
+            App.Features.Feed.loadPosts();
+            App.Features.Bible.init();
+            App.Features.Prayers.load();
+            App.Features.Events.loadWidget();
+            App.Features.Marketplace.initSearch ? App.Features.Marketplace.initSearch() : null;
+            if (window.innerWidth > 768) App.Features.Chat.loadList();
+
+            // Initialisation Groupes & Realtime
+            if (App.state.view === 'groups') App.Features.Groups.fetchAll();
+            if (App.Features.Realtime) App.Features.Realtime.init();
+
+            // Search Listener (Chat Sidebar)
+            const searchInput = document.querySelector('#msg-sidebar input');
+            if (searchInput) {
+                searchInput.addEventListener('input', (e) => {
+                    const val = e.target.value.toLowerCase();
+                    const items = document.querySelectorAll('#conversations-list > div');
+                    items.forEach(item => {
+                        const h4 = item.querySelector('h4');
+                        if (h4) {
+                            const name = h4.innerText.toLowerCase();
+                            item.style.display = name.includes(val) ? 'flex' : 'none';
+                        }
+                    });
+
+                    const visibleItems = Array.from(items).filter(i => i.style.display !== 'none');
+                    const hintId = 'chat-search-hint';
+                    let hint = document.getElementById(hintId);
+
+                    if (visibleItems.length === 0 && val.length > 0) {
+                        if (!hint) {
+                            hint = document.createElement('div');
+                            hint.id = hintId;
+                            hint.className = 'p-4 text-center cursor-pointer hover:bg-white/5 transition';
+                            hint.innerHTML = `<p class="text-xs text-gray-500 mb-2">Pas d'ami trouvé pour "${val}"</p>
+                                             <button onclick="App.Features.Finder.query('${val}')" class="text-xs text-primary font-bold">Chercher dans tout FaithConnect</button>`;
+                            document.getElementById('conversations-list').appendChild(hint);
+                        }
+                    } else if (hint) {
+                        hint.remove();
+                    }
+                });
+            }
+
+            // Global Search Listener (Desktop & Mobile)
+            ['global-search-desktop', 'mobile-search-input'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) {
+                    el.addEventListener('keypress', (e) => {
+                        if (e.key === 'Enter') {
+                            App.Features.Finder.query(e.target.value);
+                            if (id === 'mobile-search-input') App.UI.toggleMobileSearch();
+                        }
+                    });
+                }
+            });
         }
     }
 };
