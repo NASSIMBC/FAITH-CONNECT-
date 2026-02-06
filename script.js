@@ -1764,10 +1764,10 @@ const App = {
 
                 if (members && members.length > 0) {
                     container.innerHTML = members.map(m => `
-    < img src = "${m.profiles.avatar_url || 'https://ui-avatars.com/api/?name=' + m.profiles.username}"
-title = "${m.profiles.username}"
-class="w-10 h-10 rounded-lg object-cover ring-1 ring-white/10" >
-    `).join('');
+                        <img src="${m.profiles.avatar_url || 'https://ui-avatars.com/api/?name=' + m.profiles.username}" 
+                             title="${m.profiles.username}" 
+                             class="w-10 h-10 rounded-lg object-cover ring-1 ring-white/10">
+                    `).join('');
                 } else {
                     container.innerHTML = '<div class="col-span-4 text-[10px] text-gray-600 italic text-center">Aucun membre.</div>';
                 }
@@ -1814,7 +1814,7 @@ class="w-10 h-10 rounded-lg object-cover ring-1 ring-white/10" >
             },
 
             share() {
-                const link = `${window.location.origin}${window.location.pathname}?view = group - detail & id=${this.currentGroup.id} `;
+                const link = `${window.location.origin}${window.location.pathname}?view=group-detail&id=${this.currentGroup.id}`;
                 navigator.clipboard.writeText(link).then(() => alert("Lien d'invitation copié ! 🙏"));
             },
 
@@ -1868,7 +1868,7 @@ class="w-10 h-10 rounded-lg object-cover ring-1 ring-white/10" >
 
             renderCard(p) {
                 return `
-    < div class="bg-gray-900 border border-white/5 rounded-2xl overflow-hidden hover:border-primary/50 transition-all group cursor-pointer" onclick = "App.UI.navigateTo('group-detail', '${p.id}')" >
+                    <div class="bg-gray-900 border border-white/5 rounded-2xl overflow-hidden hover:border-primary/50 transition-all group cursor-pointer" onclick="App.UI.navigateTo('group-detail', '${p.id}')">
                         <div class="h-24 bg-blue-900/20 relative">
                              <div class="absolute inset-0 bg-gradient-to-t from-gray-900 via-transparent to-transparent"></div>
                              <div class="absolute top-2 right-2 bg-blue-500/20 text-blue-400 text-[8px] font-bold px-2 py-0.5 rounded-full uppercase">Page</div>
@@ -1878,8 +1878,8 @@ class="w-10 h-10 rounded-lg object-cover ring-1 ring-white/10" >
                             <p class="text-xs text-gray-400 mb-3 line-clamp-2">${p.description || 'Pas de description'}</p>
                             <span class="text-primary text-[10px] font-bold uppercase tracking-tighter">Voir la page</span>
                         </div>
-                    </div >
-    `;
+                    </div>
+                `;
             },
 
             createModal() {
