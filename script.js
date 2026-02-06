@@ -959,12 +959,21 @@ const App = {
 
                 container.innerHTML = '<div class="col-span-full text-center py-20 animate-pulse text-gray-500">Chargement de la boutique...</div>';
 
-                const { data, error } = await sb.from('marketplace').select('*, profiles(username)');
+                // Tentative de chargement avec jointure
+                let { data, error } = await sb.from('marketplace').select('*, profiles(username)');
+
+                // Si la jointure échoue (manque de clé étrangère), on charge les données simples
+                if (error && error.code === 'PGRST200') {
+                    console.warn("Lien profiles manquant, chargement sans noms d'utilisateurs");
+                    const fallback = await sb.from('marketplace').select('*');
+                    data = fallback.data;
+                    error = fallback.error;
+                }
 
                 if (error) {
                     console.error("Marketplace Error:", error);
                     container.innerHTML = `<div class="col-span-full text-center py-10 text-gray-400">
-                        <p class="mb-4">Le Marketplace n'est pas encore prêt (Table 'marketplace' manquante ?)</p>
+                        <p class="mb-4">Erreur de chargement du Marketplace : ${error.message}</p>
                     </div>`;
                     return;
                 }
