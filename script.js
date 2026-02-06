@@ -1412,10 +1412,12 @@ const App = {
                 const btn = document.getElementById('btn-add-friend');
                 if (!btn) return;
 
-                const { data } = await sb.from('friends')
+                const { data: friendships } = await sb.from('friends')
                     .select('*')
                     .or(`and(user_id.eq.${App.state.user.id},friend_id.eq.${targetId}),and(user_id.eq.${targetId},friend_id.eq.${App.state.user.id})`)
-                    .maybeSingle();
+                    .limit(1);
+
+                const data = friendships?.[0];
 
                 if (data) {
                     if (data.status === 'accepted') {
