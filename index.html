@@ -632,6 +632,20 @@
         <div class="glass-panel w-full max-w-md p-6 rounded-[32px] m-4 animate-slide-in-up">
             <h3 class="text-xl font-bold mb-4">Modifier Profil</h3>
             <div class="space-y-4">
+                <div class="flex flex-col items-center gap-4 mb-4">
+                    <div class="relative group cursor-pointer"
+                        onclick="document.getElementById('edit-avatar-file').click()">
+                        <img id="edit-avatar-preview" src=""
+                            class="w-24 h-24 rounded-full object-cover border-2 border-primary/50 group-hover:opacity-75 transition">
+                        <div
+                            class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition">
+                            <i data-lucide="camera" class="w-6 h-6 text-white"></i>
+                        </div>
+                    </div>
+                    <input type="file" id="edit-avatar-file" accept="image/*" class="hidden"
+                        onchange="App.Auth.handleAvatarSelect(this)">
+                    <span class="text-[10px] text-gray-500 italic">Cliquez pour changer d'avatar</span>
+                </div>
                 <input type="text" id="edit-username" placeholder="Nom d'utilisateur"
                     class="input-field w-full p-3 rounded-xl">
                 <textarea id="edit-bio" placeholder="Votre bio..."
