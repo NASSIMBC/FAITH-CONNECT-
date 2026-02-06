@@ -81,12 +81,12 @@ const App = {
     UI: {
         showAuth() {
             document.getElementById('auth-screen').classList.remove('hidden');
-            document.getElementById('app-conatiner').classList.add('hidden');
+            document.getElementById('app-container').classList.add('hidden');
         },
 
         showApp() {
             document.getElementById('auth-screen').classList.add('hidden');
-            document.getElementById('app-conatiner').classList.remove('hidden');
+            document.getElementById('app-container').classList.remove('hidden');
             App.Features.initAll(); // Charger les contenus
         },
 
@@ -111,17 +111,27 @@ const App = {
         },
 
         navigateTo(viewName) {
-            // 1. Hide current view
+            // 1. Hide current view & handle mobile cleanup
             document.querySelectorAll('.page-view').forEach(el => {
                 el.classList.add('hidden');
                 el.classList.remove('view-transition'); // Reset anim
             });
+
+            // Close sub-components & modals
+            this.modals.closeAll();
+            if (document.getElementById('mobile-search-overlay')) {
+                document.getElementById('mobile-search-overlay').classList.add('hidden');
+            }
+            if (App.Features.Chat && App.Features.Chat.closeMobileChat) {
+                App.Features.Chat.closeMobileChat();
+            }
 
             // 2. Show new view
             const target = document.getElementById('view-' + viewName);
             if (target) {
                 target.classList.remove('hidden');
                 target.classList.add('view-transition');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
             }
 
             // 3. Update Nav States
@@ -150,7 +160,7 @@ const App = {
             if (viewName === 'profile') App.Features.ProfilePage.init();
             if (viewName === 'prayers') App.Features.Prayers.load();
             if (viewName === 'events') App.Features.Events.load();
-            if (viewName === 'marketplace') App.Features.Marketplace.load();
+            if (viewName === 'marketplace') App.Features.Marketplace.load ? App.Features.Marketplace.load() : null;
         },
 
         modals: {
@@ -940,25 +950,33 @@ const App = {
                 const container = document.getElementById('conversations-list');
                 if (!container) return;
 
-                // 1. Récupérer tous les profils (Simulation d'amis pour l'instant)
-                const { data: profiles } = await sb.from('profiles').select('*').neq('id', App.state.user.id).limit(50);
+                // 1. Récupérer les amis réels
+                const { data: friendships } = await sb.from('friends').select('user_id, friend_id').or(`user_id.eq.${App.state.user.id},friend_id.eq.${App.state.user.id}`).eq('status', 'accepted');
 
-                if (profiles) {
-                    container.innerHTML = profiles.map(p => `
-                        <div onclick="App.Features.Chat.openChat('${p.id}', '${p.username}', '${p.avatar_url}')" 
-                             class="p-4 flex items-center gap-3 hover:bg-white/5 cursor-pointer border-b border-white/5 transition-colors">
-                            <div class="relative">
-                                <img src="${p.avatar_url || 'https://ui-avatars.com/api/?name=' + p.username}" class="w-10 h-10 rounded-full object-cover bg-gray-800">
-                                <span class="absolute bottom-0 right-0 w-3 h-3 bg-gray-500 rounded-full border-2 border-[#050510]" id="status-${p.id}"></span>
-                            </div>
-                            <div class="flex-1 min-w-0">
-                                <div class="flex justify-between items-baseline">
-                                    <h4 class="font-bold text-sm text-white truncate">${p.username}</h4>
+                if (friendships) {
+                    const friendIds = friendships.map(f => f.user_id === App.state.user.id ? f.friend_id : f.user_id);
+                    if (friendIds.length > 0) {
+                        const { data: profiles } = await sb.from('profiles').select('*').in('id', friendIds);
+                        if (profiles) {
+                            container.innerHTML = profiles.map(p => `
+                                <div onclick="App.Features.Chat.openChat('${p.id}', '${p.username}', '${p.avatar_url}')" 
+                                     class="p-4 flex items-center gap-3 hover:bg-white/5 cursor-pointer border-b border-white/5 transition-colors">
+                                    <div class="relative">
+                                        <img src="${p.avatar_url || 'https://ui-avatars.com/api/?name=' + p.username}" class="w-10 h-10 rounded-full object-cover bg-gray-800">
+                                        <span class="absolute bottom-0 right-0 w-3 h-3 bg-gray-500 rounded-full border-2 border-[#050510]" id="status-${p.id}"></span>
+                                    </div>
+                                    <div class="flex-1 min-w-0">
+                                        <div class="flex justify-between items-baseline">
+                                            <h4 class="font-bold text-sm text-white truncate">${p.username}</h4>
+                                        </div>
+                                        <p class="text-xs text-gray-400 truncate">Cliquez pour discuter</p>
+                                    </div>
                                 </div>
-                                <p class="text-xs text-gray-400 truncate">Cliquez pour discuter</p>
-                            </div>
-                        </div>
-                    `).join('');
+                            `).join('');
+                        }
+                    } else {
+                        container.innerHTML = `<div class="p-10 text-center text-xs text-gray-500">Ajoutez des amis pour discuter.</div>`;
+                    }
                 }
             },
 
@@ -1166,9 +1184,9 @@ const App = {
                 const { count: postsCount } = await sb.from('posts').select('*', { count: 'exact', head: true }).eq('user_id', App.state.user.id);
                 document.getElementById('stat-posts').innerText = postsCount || 0;
 
-                // Count friends (Simulation: all users - 1)
-                const { count: usersCount } = await sb.from('profiles').select('*', { count: 'exact', head: true });
-                document.getElementById('stat-friends').innerText = (usersCount - 1) || 0;
+                // Count friends (Real friends)
+                const { count: friendsCount } = await sb.from('friends').select('*', { count: 'exact', head: true }).or(`user_id.eq.${App.state.user.id},friend_id.eq.${App.state.user.id}`).eq('status', 'accepted');
+                document.getElementById('stat-friends').innerText = friendsCount || 0;
             },
 
             async loadPosts() {
@@ -1188,19 +1206,27 @@ const App = {
 
             async loadFriends() {
                 const container = document.getElementById('profile-friends-container');
-                if (container.innerHTML.trim() !== "") return; // Avoid reload
+                if (container.innerHTML.trim() !== "" && !container.innerHTML.includes('Chargement')) return;
 
-                const { data: users } = await sb.from('profiles').select('*').neq('id', App.state.user.id).limit(20);
+                const { data: friendships } = await sb.from('friends').select('user_id, friend_id').or(`user_id.eq.${App.state.user.id},friend_id.eq.${App.state.user.id}`).eq('status', 'accepted');
 
-                if (users) {
-                    container.innerHTML = users.map(u => `
-                        <div class="glass-panel p-3 rounded-2xl flex flex-col items-center gap-2">
-                             <img src="${u.avatar_url || 'https://ui-avatars.com/api/?name=' + u.username}" class="w-12 h-12 rounded-full object-cover">
-                             <span class="text-xs font-bold text-white truncate max-w-full">${u.username}</span>
-                             <button onclick="App.Features.Chat.openChat('${u.id}', '${u.username}', '${u.avatar_url}'); App.UI.navigateTo('messages')" 
-                                     class="w-full bg-white/5 hover:bg-primary py-1.5 rounded-lg text-[10px] transition-colors">Message</button>
-                        </div>
-                    `).join('');
+                if (friendships) {
+                    const friendIds = friendships.map(f => f.user_id === App.state.user.id ? f.friend_id : f.user_id);
+                    if (friendIds.length > 0) {
+                        const { data: users } = await sb.from('profiles').select('*').in('id', friendIds);
+                        if (users) {
+                            container.innerHTML = users.map(u => `
+                                <div class="glass-panel p-3 rounded-2xl flex flex-col items-center gap-2">
+                                     <img src="${u.avatar_url || 'https://ui-avatars.com/api/?name=' + u.username}" class="w-12 h-12 rounded-full object-cover">
+                                     <span class="text-xs font-bold text-white truncate max-w-full">${u.username}</span>
+                                     <button onclick="App.Features.Chat.openChat('${u.id}', '${u.username}', '${u.avatar_url}'); App.UI.navigateTo('messages')" 
+                                             class="w-full bg-white/5 hover:bg-primary py-1.5 rounded-lg text-[10px] transition-colors">Message</button>
+                                </div>
+                            `).join('');
+                        }
+                    } else {
+                        container.innerHTML = `<div class="col-span-full text-center py-10 text-gray-500">Vous n'avez pas encore d'amis.</div>`;
+                    }
                 }
             }
         }
