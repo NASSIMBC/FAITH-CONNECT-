@@ -443,6 +443,29 @@
                     </div>
                 </section>
 
+                <!-- VIEW: SEARCH RESULTS -->
+                <section id="view-search" class="page-view hidden p-4 md:p-0 space-y-6">
+                    <div class="glass-panel p-6 rounded-[32px]">
+                        <h2 class="text-2xl font-bold mb-2 flex items-center gap-2">Résultats de recherche</h2>
+                        <p id="search-query-text" class="text-gray-400 text-sm italic">Saisissez quelque chose pour
+                            rechercher...</p>
+                    </div>
+
+                    <div class="space-y-4">
+                        <h3 class="text-lg font-bold px-2">Utilisateurs</h3>
+                        <div id="search-users-results" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div class="text-gray-500 p-4">Aucun utilisateur trouvé.</div>
+                        </div>
+                    </div>
+
+                    <div class="space-y-4">
+                        <h3 class="text-lg font-bold px-2 pb-20">Posts</h3>
+                        <div id="search-posts-results" class="space-y-4 pb-20">
+                            <div class="text-gray-500 p-4">Aucun post trouvé.</div>
+                        </div>
+                    </div>
+                </section>
+
                 <!-- VIEW: PROFILE -->
                 <section id="view-profile" class="page-view hidden p-4 md:p-0">
                     <div class="glass-panel p-6 rounded-[32px] text-center relative overflow-hidden mb-6">
