@@ -110,7 +110,7 @@
                     class="input-field w-full pl-10 pr-4 py-2 rounded-xl text-sm">
             </div>
             <button
-                onclick="App.Features.Search.execute(document.getElementById('mobile-search-input').value); App.UI.toggleMobileSearch()"
+                onclick="App.Features.Finder.query(document.getElementById('mobile-search-input').value); App.UI.toggleMobileSearch()"
                 class="bg-primary text-white p-2 rounded-xl"><i data-lucide="search" class="w-5 h-5"></i></button>
         </div>
 
@@ -135,7 +135,7 @@
                                 class="input-field w-full pl-10 pr-4 py-2.5 rounded-2xl text-xs bg-white/5 border-white/10 focus:border-primary/50 transition-all">
                         </div>
                         <button
-                            onclick="App.Features.Search.execute(document.getElementById('global-search-desktop').value)"
+                            onclick="App.Features.Finder.query(document.getElementById('global-search-desktop').value)"
                             class="p-2 bg-primary/10 text-primary hover:bg-primary hover:text-white rounded-xl transition">
                             <i data-lucide="arrow-right" class="w-4 h-4"></i>
                         </button>
