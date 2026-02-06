@@ -111,7 +111,7 @@ const App = {
             if (pBio) pBio.innerText = p.bio || "Pas de bio";
         },
 
-        navigateTo(viewName) {
+        navigateTo(viewName, targetId = null) {
             // 1. Hide current view & handle mobile cleanup
             document.querySelectorAll('.page-view').forEach(el => {
                 el.classList.add('hidden');
@@ -158,10 +158,12 @@ const App = {
             // Lazy Load Data
             if (viewName === 'groups') App.Features.Groups.fetchAll();
             if (viewName === 'messages') App.Features.Chat.loadList();
-            if (viewName === 'profile') App.Features.ProfilePage.init();
+            if (viewName === 'profile') App.Features.ProfilePage.load(targetId || App.state.user.id);
             if (viewName === 'prayers') App.Features.Prayers.load();
             if (viewName === 'events') App.Features.Events.load();
             if (viewName === 'marketplace') App.Features.Marketplace.load ? App.Features.Marketplace.load() : null;
+
+            if (typeof lucide !== 'undefined') lucide.createIcons();
         },
 
         modals: {
@@ -361,10 +363,10 @@ const App = {
                 const avatar = post.profiles?.avatar_url || `https://ui-avatars.com/api/?name=${post.profiles?.username || 'Inconnu'}`;
                 return `
                 <article class="glass-panel p-5 rounded-[24px] animate-slide-in-up">
-                    <div class="flex items-center gap-3 mb-3">
-                        <img src="${avatar}" class="w-10 h-10 rounded-full object-cover">
+                    <div class="flex items-center gap-3 mb-3 cursor-pointer group/author" onclick="App.UI.navigateTo('profile', '${post.user_id}')">
+                        <img src="${avatar}" class="w-10 h-10 rounded-full object-cover group-hover/author:ring-2 ring-primary transition-all">
                         <div>
-                            <h4 class="font-bold text-sm text-white">${post.profiles?.username || 'Anonyme'}</h4>
+                            <h4 class="font-bold text-sm text-white group-hover/author:text-primary transition-colors">${post.profiles?.username || 'Anonyme'}</h4>
                             <p class="text-[10px] text-gray-500">${new Date(post.created_at).toLocaleDateString()}</p>
                         </div>
                     </div>
@@ -1204,7 +1206,7 @@ const App = {
                                     </div>
                                 </div>
                                 <div class="flex gap-2">
-                                    <button onclick="App.Features.ProfilePage.load('${u.id}')" 
+                                    <button onclick="App.UI.navigateTo('profile', '${u.id}')" 
                                             class="p-2 bg-white/5 hover:bg-white/10 text-white rounded-xl transition" title="Voir profil">
                                         <i data-lucide="user" class="w-4 h-4"></i>
                                     </button>
@@ -1350,16 +1352,12 @@ const App = {
         ProfilePage: {
             currentTargetId: null,
 
-            async init() {
-                this.load(App.state.user.id);
-            },
-
             async load(userId = null) {
                 const id = userId || App.state.user.id;
                 this.currentTargetId = id;
                 const isMe = id === App.state.user.id;
 
-                App.UI.navigateTo('profile');
+
 
                 const actions = document.getElementById('profile-actions');
                 const editBtn = document.querySelector('[onclick="App.UI.modals.editProfile.open()"]')?.parentElement;
@@ -1476,7 +1474,7 @@ const App = {
                                 <div class="glass-panel p-3 rounded-2xl flex flex-col items-center gap-2">
                                      <img src="${u.avatar_url || 'https://ui-avatars.com/api/?name=' + u.username}" class="w-12 h-12 rounded-full object-cover">
                                      <span class="text-xs font-bold text-white truncate max-w-full">${u.username}</span>
-                                     <button onclick="App.Features.ProfilePage.load('${u.id}')" 
+                                     <button onclick="App.UI.navigateTo('profile', '${u.id}')" 
                                              class="w-full bg-white/5 hover:bg-primary py-1.5 rounded-lg text-[10px] transition-colors">Profil</button>
                                 </div>
                             `).join('');
