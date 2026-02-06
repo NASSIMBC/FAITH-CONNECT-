@@ -29,19 +29,172 @@
     --radius-xl: 24px;
     --radius-lg: 16px;
     --radius-md: 12px;
+
+    /* 🌙 Transition Theme */
+    --theme-transition: background 0.3s ease, color 0.3s ease, border-color 0.3s ease;
 }
 
-/* === RESET & BASE === */
+/* === LIGHT MODE OVERRIDES === */
+.light-mode {
+    --celestial-bg: #F8FAFC;
+    --celestial-card: rgba(255, 255, 255, 0.8);
+    --celestial-glass: rgba(255, 255, 255, 0.5);
+    --celestial-border: rgba(0, 0, 0, 0.08);
+    --text-primary: #1E293B;
+    --text-secondary: #64748B;
+    --primary: #7C3AED;
+    --glow-primary: 0 0 20px rgba(124, 58, 237, 0.2);
+}
+
 body {
     background-color: var(--celestial-bg);
     color: #F3F4F6;
-    font-family: 'Inter', sans-serif;
-    overflow-x: hidden;
-    /* Arrimage du fond étoilé fixe */
+    transition: var(--theme-transition);
+}
+
+.light-mode body {
+    color: var(--text-primary);
     background-image:
-        radial-gradient(circle at 15% 50%, rgba(76, 29, 149, 0.15), transparent 25%),
-        radial-gradient(circle at 85% 30%, rgba(236, 72, 153, 0.1), transparent 25%);
-    background-attachment: fixed;
+        radial-gradient(circle at 15% 50%, rgba(124, 58, 237, 0.05), transparent 25%),
+        radial-gradient(circle at 85% 30%, rgba(236, 72, 153, 0.05), transparent 25%);
+}
+
+.light-mode .text-white {
+    color: var(--text-primary) !important;
+}
+
+.light-mode .text-gray-400 {
+    color: var(--text-secondary) !important;
+}
+
+.light-mode .text-gray-200 {
+    color: #334155 !important;
+}
+
+.light-mode .glass-panel {
+    background: white;
+    border-color: rgba(0, 0, 0, 0.05);
+}
+
+.light-mode .glass-nav {
+    background: rgba(255, 255, 255, 0.9);
+    border-color: rgba(0, 0, 0, 0.05);
+}
+
+.light-mode .input-field {
+    background: #F1F5F9;
+    color: var(--text-primary) !important;
+    border-color: #E2E8F0;
+}
+
+.light-mode .nav-btn-desktop:hover,
+.light-mode .nav-item:hover {
+    background: rgba(124, 58, 237, 0.05);
+}
+
+.light-mode .bg-gray-900,
+.light-mode .bg-gray-800 {
+    background-color: #F1F5F9 !important;
+}
+
+.light-mode .bg-black\/20 {
+    background-color: rgba(0, 0, 0, 0.02) !important;
+}
+
+.light-mode .bg-black\/30 {
+    background-color: #fff !important;
+}
+
+.light-mode aside {
+    background: white;
+}
+
+.light-mode #msg-sidebar {
+    background: #f8fafc;
+}
+
+.light-mode #msg-area {
+    background: #ffffff;
+}
+
+/* Fixed visibility for Light Mode */
+.light-mode .text-purple-400,
+.light-mode .text-primary {
+    color: #7C3AED !important;
+}
+
+.light-mode .bg-primary {
+    background: #7C3AED !important;
+}
+
+.light-mode .bg-primary\/10 {
+    background: rgba(124, 58, 237, 0.1) !important;
+}
+
+.light-mode .bg-primary\/20 {
+    background: rgba(124, 58, 237, 0.1) !important;
+}
+
+.light-mode .bg-white\/5 {
+    background: rgba(0, 0, 0, 0.03) !important;
+}
+
+.light-mode .bg-white\/10 {
+    background: rgba(0, 0, 0, 0.05) !important;
+}
+
+.light-mode .border-white\/5,
+.light-mode .border-white\/10 {
+    border-color: rgba(0, 0, 0, 0.08) !important;
+}
+
+.light-mode .hover\:bg-white\/5:hover {
+    background-color: rgba(124, 58, 237, 0.05) !important;
+}
+
+.light-mode .hover\:bg-white\/10:hover {
+    background-color: rgba(124, 58, 237, 0.1) !important;
+}
+
+.light-mode .bible-text {
+    color: #1E293B;
+}
+
+.light-mode .bible-verse-num {
+    color: #7C3AED;
+}
+
+.light-mode .input-field::placeholder {
+    color: #94A3B8;
+}
+
+.light-mode .bg-black\/80 {
+    background-color: rgba(255, 255, 255, 0.95) !important;
+    backdrop-filter: blur(10px);
+}
+
+.light-mode .text-red-400 {
+    color: #DC2626 !important;
+}
+
+.light-mode .group:hover .text-gray-400 {
+    color: #7C3AED !important;
+}
+
+.light-mode .bg-gray-900\/50 {
+    background: #f1f5f9 !important;
+}
+
+.light-mode #msg-area {
+    background: #ffffff !important;
+}
+
+.light-mode .bg-\[\#050510\] {
+    background: #ffffff !important;
+}
+
+.light-mode .bg-\[\#030014\] {
+    background: #f8fafc !important;
 }
 
 .font-serif {
