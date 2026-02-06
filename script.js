@@ -1302,10 +1302,93 @@ const App = {
         // 5. CHAT (MESSAGERIE COMPLÈTE & RECHERCHE)
         Chat: {
             activeContactId: null,
+            activeContactInfo: null,
+            replyToId: null,
+            searchTimeout: null,
+
+            insertEmoji(emoji) {
+                const input = document.getElementById('chat-input');
+                if (input) {
+                    input.value += emoji;
+                    input.focus();
+                }
+            },
+
+            setReply(msgId, text) {
+                this.replyToId = msgId;
+                const preview = document.getElementById('reply-preview');
+                const previewText = document.getElementById('reply-text');
+                if (preview && previewText) {
+                    previewText.innerText = text;
+                    preview.classList.remove('hidden');
+                }
+            },
+
+            clearReply() {
+                this.replyToId = null;
+                const preview = document.getElementById('reply-preview');
+                if (preview) preview.classList.add('hidden');
+            },
+
+            async handleMediaSelect(input) {
+                if (input.files && input.files[0]) {
+                    const file = input.files[0];
+                    if (file.size > 5 * 1024 * 1024) return alert("Fichier trop volumineux (max 5Mo)");
+
+                    const fileName = `${App.state.user.id}/${Date.now()}_${file.name}`;
+                    const { data, error } = await sb.storage.from('chat-media').upload(fileName, file);
+
+                    if (error) alert("Erreur upload: " + error.message);
+                    else {
+                        const { data: { publicUrl } } = sb.storage.from('chat-media').getPublicUrl(fileName);
+                        this.send(publicUrl, 'image');
+                    }
+                }
+            },
 
             async loadList() {
                 if (!App.state.user) return;
                 this.loadConversations();
+            },
+
+            handleSearch(query) {
+                if (this.searchTimeout) clearTimeout(this.searchTimeout);
+                if (!query || query.trim().length === 0) {
+                    this.loadConversations();
+                    return;
+                }
+                this.searchTimeout = setTimeout(() => this.searchGlobal(query), 300);
+            },
+
+            async searchGlobal(q) {
+                const container = document.getElementById('conversations-list');
+                if (!container) return;
+
+                const { data: users } = await sb.from('profiles')
+                    .select('*')
+                    .ilike('username', `%${q}%`)
+                    .neq('id', App.state.user.id)
+                    .limit(10);
+
+                if (users && users.length > 0) {
+                    container.innerHTML = `
+                        <div class="p-2 text-[10px] text-gray-500 uppercase tracking-widest font-bold bg-white/5 mb-1">Résultats pour "${q}"</div>
+                        ${users.map(u => `
+                            <div onclick="App.Features.Chat.openChat('${u.id}', '${u.username}', '${u.avatar_url || ''}')" 
+                                 class="p-4 flex items-center gap-3 hover:bg-white/5 cursor-pointer border-b border-white/5 transition-colors group/u">
+                                <div class="relative">
+                                    <img src="${u.avatar_url || 'https://ui-avatars.com/api/?name=' + u.username}" class="w-10 h-10 rounded-full object-cover bg-gray-800 group-hover/u:ring-2 ring-primary transition-all">
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <h4 class="font-bold text-sm text-white truncate font-outfit">${u.username}</h4>
+                                    <p class="text-[10px] text-primary truncate">Démarrer une discussion</p>
+                                </div>
+                            </div>
+                        `).join('')}
+                    `;
+                } else {
+                    container.innerHTML = `<div class="p-10 text-center text-xs text-gray-500 italic">Aucun membre trouvé pour "${q}".</div>`;
+                }
             },
 
             async loadConversations() {
@@ -1352,18 +1435,30 @@ const App = {
                 if (!App.state.user) return;
                 sb.channel('realtime_messages')
                     .on('postgres_changes', {
-                        event: 'INSERT',
+                        event: '*',
                         schema: 'public',
-                        table: 'messages',
-                        filter: `receiver_id=eq.${App.state.user.id}`
+                        table: 'messages'
                     }, payload => {
-                        const msg = payload.new;
-                        // 1. If chat is open with this sender, render message
-                        if (this.activeContactId === msg.sender_id) {
-                            this.renderMessage(msg);
-                        } else {
-                            // 2. Otherwise update notification/badge (optional logic if we have sidebar markers)
-                            this.loadConversations(); // Refresh list to show new contact if needed
+                        const { eventType, new: newRecord, old: oldRecord } = payload;
+
+                        if (eventType === 'INSERT') {
+                            if (newRecord.receiver_id === App.state.user.id || newRecord.sender_id === App.state.user.id) {
+                                if (this.activeContactId === newRecord.sender_id || this.activeContactId === newRecord.receiver_id) {
+                                    if (!document.getElementById(`msg-${newRecord.id}`)) this.renderMessage(newRecord);
+                                }
+                                this.loadConversations();
+                            }
+                        } else if (eventType === 'UPDATE') {
+                            if (this.activeContactId === newRecord.sender_id || this.activeContactId === newRecord.receiver_id) {
+                                const el = document.getElementById(`msg-${newRecord.id}`);
+                                if (el) {
+                                    // Refresh only if needed, or better: just reload messages to keep everything in sync
+                                    this.loadMessages(this.activeContactId);
+                                }
+                            }
+                        } else if (eventType === 'DELETE') {
+                            document.getElementById(`msg-${oldRecord.id}`)?.remove();
+                            this.loadConversations();
                         }
                     })
                     .subscribe();
@@ -1373,19 +1468,29 @@ const App = {
                 if (!App.state.user) return;
                 this.activeContactId = userId;
 
-                // UI Update
-                const header = document.getElementById('chat-header');
+                // If we have username/avatar, update cache, otherwise try to use cache
+                if (username) {
+                    this.activeContactInfo = { username, avatar };
+                } else if (this.activeContactInfo && userId !== this.activeContactId) {
+                    // Info might be for another user
+                    this.activeContactInfo = null;
+                }
+
+                const headerContent = document.getElementById('chat-header-content');
                 const msgsContainer = document.getElementById('chat-messages');
                 const input = document.getElementById('chat-input');
+
+                // Show loading or previous name if cached
+                const currentName = this.activeContactInfo?.username || username || "Chargement...";
+                const currentAvatar = this.activeContactInfo?.avatar || avatar;
 
                 if (window.innerWidth < 768) {
                     const msgArea = document.getElementById('msg-area');
                     msgArea.classList.remove('hidden');
-                    msgArea.classList.add('flex'); // Ensure flex layout for column direction
+                    msgArea.classList.add('flex');
                     document.getElementById('msg-sidebar').classList.add('hidden');
 
-                    // Fullscreen Mode: Hide Mobile Nav & Expand View
-                    const nav = document.querySelector('.glass-nav.fixed.bottom-0'); // Mobile nav
+                    const nav = document.querySelector('.glass-nav.fixed.bottom-0');
                     const view = document.getElementById('view-messages');
                     if (nav) nav.classList.add('hidden');
                     if (view) {
@@ -1394,22 +1499,44 @@ const App = {
                     }
                 }
 
-                if (header) header.innerHTML = `
+                // Load Customizations
+                const { data: custom } = await sb.from('chat_customization')
+                    .select('*')
+                    .eq('user_id', App.state.user.id)
+                    .eq('contact_id', userId)
+                    .maybeSingle();
+
+                const displayName = custom?.nickname || username;
+                if (custom?.theme) this.applyTheme(custom.theme);
+
+                if (headerContent) {
+                    headerContent.innerHTML = `
                     <div class="flex items-center gap-3">
                         <button class="md:hidden p-1 mr-2" onclick="App.Features.Chat.closeMobileChat()"><i data-lucide="arrow-left"></i></button>
                         <img src="${(avatar && avatar !== 'null') ? avatar : 'https://ui-avatars.com/api/?name=' + username}" class="w-8 h-8 rounded-full">
-                        <span class="font-bold text-white">${username}</span>
+                        <div class="flex flex-col">
+                            <span class="font-bold text-white text-sm">${displayName}</span>
+                            ${custom?.nickname ? `<span class="text-[9px] text-gray-500 italic">@${username}</span>` : '<span class="text-[9px] text-green-500">En ligne</span>'}
+                        </div>
                     </div>
+                    <button onclick="App.Features.Chat.toggleSettings()" class="p-2 hover:bg-white/5 rounded-full transition text-gray-400 hover:text-white">
+                        <i data-lucide="settings" class="w-5 h-5"></i>
+                    </button>
                 `;
+                    if (typeof lucide !== 'undefined') lucide.createIcons();
+                }
 
                 if (input) {
                     input.disabled = false;
                     input.focus();
                 }
 
-                msgsContainer.innerHTML = '<div class="text-center text-xs text-gray-500 py-10">Chargement...</div>';
+                await this.loadMessages(userId);
+            },
 
-                if (!App.state.user) return;
+            async loadMessages(userId) {
+                const msgsContainer = document.getElementById('chat-messages');
+                if (!msgsContainer) return;
 
                 const { data: messages } = await sb.from('messages')
                     .select('*')
@@ -1445,48 +1572,308 @@ const App = {
             },
 
             renderMessage(msg) {
-                // Clear "Empty" msg if exists
-                if (document.getElementById('chat-messages').innerHTML.includes('Aucun message')) {
-                    document.getElementById('chat-messages').innerHTML = '';
-                }
+                const container = document.getElementById('chat-messages');
+                if (!container) return;
+
+                if (container.innerHTML.includes('Aucun message')) container.innerHTML = '';
 
                 const isMe = msg.sender_id === App.state.user.id;
-                const container = document.getElementById('chat-messages');
-
                 const div = document.createElement('div');
-                div.className = `flex ${isMe ? 'justify-end' : 'justify-start'} mb-2 animate-slide-in-up`;
-                div.innerHTML = `
-                    <div class="max-w-[75%] px-4 py-2 rounded-2xl ${isMe ? 'bg-primary text-white rounded-br-none' : 'bg-gray-800 text-gray-200 rounded-bl-none'} shadow-sm">
-                        <p class="text-sm break-words">${msg.content}</p>
-                        <p class="text-[9px] opacity-50 text-right mt-1">${new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+                div.id = `msg-${msg.id || Date.now()}`;
+                div.className = `flex flex-col ${isMe ? 'items-end' : 'items-start'} group mb-4`;
+
+                let contentHtml = '';
+                if (msg.type === 'image') {
+                    contentHtml = `<img src="${msg.content}" class="rounded-xl max-w-full h-48 object-cover cursor-pointer border border-white/10 hover:opacity-90 transition" onclick="window.open('${msg.content}')">`;
+                } else {
+                    contentHtml = `<p class="text-sm break-words">${msg.content}</p>`;
+                }
+
+                // Reactions rendering
+                let reactionsHtml = '';
+                if (msg.reactions && msg.reactions.length > 0) {
+                    const counts = msg.reactions.reduce((acc, r) => {
+                        acc[r.emoji] = (acc[r.emoji] || 0) + 1;
+                        return acc;
+                    }, {});
+
+                    reactionsHtml = `<div class="flex flex-wrap gap-1 mt-1">` + Object.entries(counts).map(([emoji, count]) => `
+                    <button onclick="App.Features.Chat.toggleReaction('${msg.id}', '${emoji}')" class="flex items-center gap-1 bg-white/10 hover:bg-white/20 px-1.5 py-0.5 rounded-full text-[10px] transition">
+                        <span>${emoji}</span>
+                        <span class="opacity-60">${count}</span>
+                    </button>
+                `).join('') + `</div>`;
+                }
+
+                // Reply indicator
+                let replyHtml = '';
+                if (msg.parent_id) {
+                    replyHtml = `
+                    <div class="mb-2 text-[10px] opacity-60 border-l-2 border-primary pl-2 italic bg-white/5 p-1 rounded-r-lg max-w-full truncate">
+                        Réponse au message...
                     </div>
                 `;
+                }
+
+                div.innerHTML = `
+                <div class="max-w-[85%] relative">
+                    <div class="px-4 py-2 rounded-2xl ${isMe ? 'bg-primary text-white rounded-br-none' : 'bg-gray-800 text-gray-200 rounded-bl-none'} shadow-sm relative group/bubble">
+                        ${replyHtml}
+                        ${contentHtml}
+                        <div class="flex items-center justify-between gap-4 mt-1">
+                            <span class="text-[8px] opacity-40">${msg.is_edited ? 'Modifié' : ''}</span>
+                            <span class="text-[9px] opacity-50 ms-auto text-right">${new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                        </div>
+
+                        ${reactionsHtml}
+
+                        <!-- Context Actions (Hover) -->
+                        <div class="absolute ${isMe ? '-left-12' : '-right-12'} top-0 flex flex-col gap-1 opacity-0 group-hover/bubble:opacity-100 transition-all z-20">
+                            <button onclick="App.Features.Chat.setReply('${msg.id}', '${msg.content?.substring(0, 30) || 'Image'}')" class="p-1.5 bg-gray-900 border border-white/10 rounded-full hover:text-primary transition" title="Répondre"><i data-lucide="corner-up-left" class="w-3 h-3"></i></button>
+                            ${isMe ? `
+                                <button onclick="App.Features.Chat.editMessage('${msg.id}', '${msg.content}')" class="p-1.5 bg-gray-900 border border-white/10 rounded-full hover:text-blue-400 transition" title="Modifier"><i data-lucide="edit-3" class="w-3 h-3"></i></button>
+                                <button onclick="App.Features.Chat.deleteMessage('${msg.id}')" class="p-1.5 bg-gray-900 border border-white/10 rounded-full hover:text-red-400 transition" title="Supprimer"><i data-lucide="trash-2" class="w-3 h-3"></i></button>
+                            ` : ''}
+                            <div class="flex gap-1 bg-gray-900 border border-white/10 rounded-full p-1 mt-1 shadow-lg">
+                                <button onclick="App.Features.Chat.toggleReaction('${msg.id}', '🙏')" class="hover:scale-125 transition">🙏</button>
+                                <button onclick="App.Features.Chat.toggleReaction('${msg.id}', '❤️')" class="hover:scale-125 transition">❤️</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
                 container.appendChild(div);
-                setTimeout(() => { container.scrollTop = container.scrollHeight; }, 50); // Delay for layout
+                if (typeof lucide !== 'undefined') lucide.createIcons();
+                setTimeout(() => { container.scrollTop = container.scrollHeight; }, 50);
             },
 
-            async send() {
+            async send(contentOverride = null, type = 'text') {
                 if (!App.state.user) return;
                 const input = document.getElementById('chat-input');
-                const content = input.value;
-                if (!content || !this.activeContactId || !App.state.user) return;
+                const content = contentOverride || input.value;
+                if (!content || !this.activeContactId) return;
 
                 const { error } = await sb.from('messages').insert([{
                     sender_id: App.state.user.id,
                     receiver_id: this.activeContactId,
-                    content: content
+                    content: content,
+                    type: type,
+                    parent_id: this.replyToId
                 }]);
 
                 if (error) alert("Erreur envoi: " + error.message);
                 else {
-                    input.value = "";
-                    input.focus(); // Keep focus
-                    this.renderMessage({
-                        sender_id: App.state.user.id,
-                        content: content,
-                        created_at: new Date().toISOString()
-                    });
+                    if (!contentOverride) input.value = "";
+                    this.clearReply();
+                    input.focus();
+                    this.loadConversations(); // Update list to show latest msg
                 }
+            },
+
+            async deleteMessage(msgId) {
+                if (!confirm("Supprimer ce message pour tout le monde ?")) return;
+                const { error } = await sb.from('messages').delete().eq('id', msgId);
+                if (error) alert("Erreur: " + error.message);
+                else {
+                    document.getElementById(`msg-${msgId}`)?.remove();
+                }
+            },
+
+            async editMessage(msgId, oldContent) {
+                const newContent = prompt("Modifier le message :", oldContent);
+                if (!newContent || newContent === oldContent) return;
+
+                const { error } = await sb.from('messages').update({
+                    content: newContent,
+                    is_edited: true
+                }).eq('id', msgId);
+
+                if (error) alert("Erreur: " + error.message);
+                else {
+                    // RT will refresh or we can manually update
+                    alert("Message modifié.");
+                    this.openChat(this.activeContactId); // Full refresh for simplicity now
+                }
+            },
+
+            async setNickname(userId, nickname) {
+                const { error } = await sb.from('chat_customization').upsert({
+                    user_id: App.state.user.id,
+                    contact_id: userId,
+                    nickname: nickname
+                }, { onConflict: 'user_id,contact_id' });
+
+                if (error) alert("Erreur: " + error.message);
+                else alert("Surnom mis à jour !");
+            },
+
+            async setTheme(theme) {
+                if (!this.activeContactId) return;
+                const { error } = await sb.from('chat_customization').upsert({
+                    user_id: App.state.user.id,
+                    contact_id: this.activeContactId,
+                    theme: theme
+                }, { onConflict: 'user_id,contact_id' });
+
+                if (error) alert("Erreur: " + error.message);
+                else {
+                    alert("Thème mis à jour !");
+                    this.applyTheme(theme);
+                }
+            },
+
+            applyTheme(theme) {
+                const area = document.getElementById('msg-area');
+                if (area) area.className = `hidden md:flex flex-1 flex-col relative chat-theme-${theme}`;
+            },
+
+            toggleSettings() {
+                const menu = document.getElementById('chat-settings-menu');
+                if (menu) menu.classList.toggle('hidden');
+            },
+
+            async changeNickname() {
+                if (!this.activeContactId) return;
+                const newNick = prompt("Entrez un surnom pour ce contact :");
+                await this.setNickname(this.activeContactId, newNick);
+                this.openChat(this.activeContactId); // Refresh header
+            },
+
+            async toggleReaction(msgId, emoji) {
+                const { data: msg } = await sb.from('messages').select('reactions').eq('id', msgId).single();
+                let reactions = msg.reactions || [];
+
+                const existingIdx = reactions.findIndex(r => r.user_id === App.state.user.id && r.emoji === emoji);
+                if (existingIdx > -1) {
+                    reactions.splice(existingIdx, 1);
+                } else {
+                    reactions.push({ user_id: App.state.user.id, emoji: emoji });
+                }
+
+                const { error } = await sb.from('messages').update({ reactions }).eq('id', msgId);
+                if (error) alert("Erreur: " + error.message);
+            }
+        },
+
+        // 5.5 OBJECTIFS SPIRITUELS (IA GENERATED)
+        Objectives: {
+            async loadMonthly(userId) {
+                const section = document.getElementById('monthly-objectives-section');
+                if (!section) return;
+
+                const isMe = userId === App.state.user.id;
+                if (!isMe) {
+                    section.classList.add('hidden');
+                    return;
+                }
+                section.classList.remove('hidden');
+
+                const now = new Date();
+                const monthYear = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+
+                const dateEl = document.getElementById('objectives-date');
+                if (dateEl) {
+                    const months = ["Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"];
+                    dateEl.innerText = `${months[now.getMonth()]} ${now.getFullYear()}`;
+                }
+
+                const { data, error } = await sb.from('personal_objectives')
+                    .select('*')
+                    .eq('user_id', userId)
+                    .eq('month_year', monthYear)
+                    .maybeSingle();
+
+                if (error) console.error("Error loading objectives:", error);
+
+                if (!data) {
+                    await this.generateAI(userId, monthYear);
+                } else {
+                    this.render(data.objectives, data.id);
+                }
+            },
+
+            async generateAI(userId, monthYear) {
+                const list = document.getElementById('objectives-list');
+                if (list) list.innerHTML = '<div class="text-center py-4 text-xs text-primary animate-pulse italic">Faith AI prépare vos défis spirituels du mois...</div>';
+
+                const prompt = "Génère 3 objectifs spirituels courts et concrets pour un chrétien ce mois-ci. Les objectifs doivent aider à améliorer sa foi, sa prière et son partage avec les autres. Réponds UNIQUEMENT avec une liste JSON de chaînes de caractères, exemple: [\"Lire un psaume par jour\", \"Aider un voisin\", \"Prier 10 min matin\"]. Pas de texte avant ou après.";
+
+                try {
+                    const res = await fetch('https://uduajuxobmywmkjnawjn.supabase.co/functions/v1/faith-ai', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${SUPABASE_KEY}`
+                        },
+                        body: JSON.stringify({ question: prompt })
+                    });
+
+                    const data = await res.json();
+                    let objectivesArr = [];
+
+                    try {
+                        const cleanJson = data.answer.replace(/```json|```/g, '').trim();
+                        objectivesArr = JSON.parse(cleanJson);
+                    } catch (e) {
+                        objectivesArr = [
+                            "Méditer quotidiennement la parole",
+                            "Soutenir un frère ou une sœur dans le besoin",
+                            "Approfondir sa vie de prière"
+                        ];
+                    }
+
+                    const objectives = objectivesArr.map(text => ({ text, completed: false }));
+
+                    const { data: inserted, error } = await sb.from('personal_objectives').insert({
+                        user_id: userId,
+                        month_year: monthYear,
+                        objectives: objectives
+                    }).select().single();
+
+                    if (!error && inserted) {
+                        this.render(inserted.objectives, inserted.id);
+                    }
+                } catch (err) {
+                    console.error("AI Generation failed:", err);
+                    if (list) list.innerHTML = '<p class="text-center text-red-400 text-[10px]">Échec de la génération par l\'IA.</p>';
+                }
+            },
+
+            render(objectives, rowId) {
+                const list = document.getElementById('objectives-list');
+                if (!list) return;
+
+                const completedCount = objectives.filter(o => o.completed).length;
+                const total = objectives.length;
+                const progress = total > 0 ? (completedCount / total) * 100 : 0;
+
+                const bar = document.getElementById('objectives-progress');
+                const countEl = document.getElementById('objectives-count');
+                if (bar) bar.style.width = `${progress}%`;
+                if (countEl) countEl.innerText = `${completedCount}/${total}`;
+
+                list.innerHTML = objectives.map((obj, idx) => `
+                    <div class="objective-item ${obj.completed ? 'completed' : ''} p-3 rounded-2xl flex items-center gap-3 bg-white/5 cursor-pointer hover:bg-white/10 transition group" 
+                         onclick="App.Features.Objectives.toggle(${idx}, '${rowId}')">
+                        <div class="check-circle w-5 h-5 rounded-full border border-white/20 flex items-center justify-center transition-all ${obj.completed ? 'check-animate' : ''}">
+                            ${obj.completed ? '<i data-lucide="check" class="w-3 h-3 text-white"></i>' : ''}
+                        </div>
+                        <span class="objective-text text-sm text-gray-200 flex-1">${obj.text}</span>
+                    </div>
+                `).join('');
+
+                if (typeof lucide !== 'undefined') lucide.createIcons();
+            },
+
+            async toggle(idx, rowId) {
+                const { data } = await sb.from('personal_objectives').select('objectives').eq('id', rowId).single();
+                if (!data) return;
+
+                let objectives = data.objectives;
+                objectives[idx].completed = !objectives[idx].completed;
+
+                const { error } = await sb.from('personal_objectives').update({ objectives }).eq('id', rowId);
+                if (!error) this.render(objectives, rowId);
             }
         },
 
@@ -1959,132 +2346,135 @@ const App = {
                     .subscribe();
             }
         },
-        // 9. PROFILE PAGE LOGIC
-        ProfilePage: {
-            currentTargetId: null,
+    },
 
-            async load(userId = null) {
-                if (!App.state.user && !userId) return;
-                const id = userId || App.state.user.id;
-                this.currentTargetId = id;
-                const isMe = id === App.state.user.id;
+    // 9. PROFILE PAGE LOGIC
+    ProfilePage: {
+        currentTargetId: null,
+
+        async load(userId = null) {
+            if (!App.state.user && !userId) return;
+            const id = userId || App.state.user.id;
+            this.currentTargetId = id;
+            const isMe = id === App.state.user.id;
 
 
 
-                const actions = document.getElementById('profile-actions');
-                const editBtn = document.getElementById('btn-edit-profile');
-                const title = document.getElementById('profile-page-name');
-                const tabLabel = document.getElementById('tab-profile-posts');
+            const actions = document.getElementById('profile-actions');
+            const editBtn = document.getElementById('btn-edit-profile');
+            const title = document.getElementById('profile-page-name');
+            const tabLabel = document.getElementById('tab-profile-posts');
 
-                if (isMe) {
-                    if (actions) actions.classList.add('hidden');
-                    if (editBtn) editBtn.classList.remove('hidden');
-                    if (title) title.innerText = "Mon Profil";
-                    if (tabLabel) tabLabel.innerText = "Mes Posts";
-                    this.renderProfileData(App.state.profile);
-                } else {
-                    if (actions) actions.classList.remove('hidden');
-                    if (editBtn) editBtn.classList.add('hidden');
-                    if (tabLabel) tabLabel.innerText = "Posts";
+            if (isMe) {
+                if (actions) actions.classList.add('hidden');
+                if (editBtn) editBtn.classList.remove('hidden');
+                if (title) title.innerText = "Mon Profil";
+                if (tabLabel) tabLabel.innerText = "Mes Posts";
+                this.renderProfileData(App.state.profile);
+                App.Features.Objectives.loadMonthly(id);
+            } else {
+                if (actions) actions.classList.remove('hidden');
+                if (editBtn) editBtn.classList.add('hidden');
+                if (tabLabel) tabLabel.innerText = "Posts";
 
-                    const { data: profile } = await sb.from('profiles').select('*').eq('id', id).maybeSingle();
-                    if (profile) {
-                        if (title) title.innerText = profile.username;
-                        this.renderProfileData(profile);
+                const { data: profile } = await sb.from('profiles').select('*').eq('id', id).maybeSingle();
+                if (profile) {
+                    if (title) title.innerText = profile.username;
+                    this.renderProfileData(profile);
 
-                        // Link message button
-                        const msgBtn = document.getElementById('btn-message-friend');
-                        if (msgBtn) {
-                            msgBtn.onclick = () => {
-                                App.Features.Chat.openChat(profile.id, profile.username, profile.avatar_url);
-                                App.UI.navigateTo('messages');
-                            };
-                        }
+                    // Link message button
+                    const msgBtn = document.getElementById('btn-message-friend');
+                    if (msgBtn) {
+                        msgBtn.onclick = () => {
+                            App.Features.Chat.openChat(profile.id, profile.username, profile.avatar_url);
+                            App.UI.navigateTo('messages');
+                        };
                     }
-                    this.checkFriendship(id);
                 }
+                this.checkFriendship(id);
+            }
 
-                this.loadStats(id);
-                this.loadPosts(id);
-            },
+            this.loadStats(id);
+            this.loadPosts(id);
+        },
 
-            renderProfileData(p) {
-                const avatar = document.getElementById('profile-page-avatar');
-                const bio = document.getElementById('profile-page-bio');
-                if (avatar) avatar.src = p.avatar_url || `https://ui-avatars.com/api/?name=${p.username}`;
-                if (bio) bio.innerText = p.bio || "Membre de FaithConnect";
-            },
+        renderProfileData(p) {
+            const avatar = document.getElementById('profile-page-avatar');
+            const bio = document.getElementById('profile-page-bio');
+            if (avatar) avatar.src = p.avatar_url || `https://ui-avatars.com/api/?name=${p.username}`;
+            if (bio) bio.innerText = p.bio || "Membre de FaithConnect";
+        },
 
-            async checkFriendship(targetId) {
-                const btn = document.getElementById('btn-add-friend');
-                if (!btn) return;
+        async checkFriendship(targetId) {
+            const btn = document.getElementById('btn-add-friend');
+            if (!btn) return;
 
-                const { data: friendships } = await sb.from('friends')
-                    .select('*')
-                    .or(`and(user_id.eq.${App.state.user.id},friend_id.eq.${targetId}),and(user_id.eq.${targetId},friend_id.eq.${App.state.user.id})`)
-                    .limit(1);
+            const { data: friendships } = await sb.from('friends')
+                .select('*')
+                .or(`and(user_id.eq.${App.state.user.id},friend_id.eq.${targetId}),and(user_id.eq.${targetId},friend_id.eq.${App.state.user.id})`)
+                .limit(1);
 
-                const data = friendships?.[0];
+            const data = friendships?.[0];
 
-                if (data) {
-                    if (data.status === 'accepted') {
-                        btn.innerHTML = '<i data-lucide="user-check" class="w-4 h-4"></i> Ami';
-                        btn.disabled = true;
-                        btn.className = "bg-green-600 text-white px-6 py-2 rounded-xl text-xs font-bold flex items-center gap-2";
-                    } else {
-                        btn.innerHTML = '<i data-lucide="clock" class="w-4 h-4"></i> En attente';
-                        btn.disabled = true;
-                        btn.className = "bg-gray-700 text-white px-6 py-2 rounded-xl text-xs font-bold flex items-center gap-2";
-                    }
+            if (data) {
+                if (data.status === 'accepted') {
+                    btn.innerHTML = '<i data-lucide="user-check" class="w-4 h-4"></i> Ami';
+                    btn.disabled = true;
+                    btn.className = "bg-green-600 text-white px-6 py-2 rounded-xl text-xs font-bold flex items-center gap-2";
                 } else {
-                    btn.innerHTML = '<i data-lucide="user-plus" class="w-4 h-4"></i> Ajouter en ami';
-                    btn.disabled = false;
-                    btn.className = "btn-primary px-6 py-2 rounded-xl text-xs font-bold flex items-center gap-2";
+                    btn.innerHTML = '<i data-lucide="clock" class="w-4 h-4"></i> En attente';
+                    btn.disabled = true;
+                    btn.className = "bg-gray-700 text-white px-6 py-2 rounded-xl text-xs font-bold flex items-center gap-2";
                 }
+            } else {
+                btn.innerHTML = '<i data-lucide="user-plus" class="w-4 h-4"></i> Ajouter en ami';
+                btn.disabled = false;
+                btn.className = "btn-primary px-6 py-2 rounded-xl text-xs font-bold flex items-center gap-2";
+            }
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+        },
+
+        async loadStats(userId) {
+            const id = userId || App.state.user.id;
+            const { count: postsCount } = await sb.from('posts').select('*', { count: 'exact', head: true }).eq('user_id', id);
+            document.getElementById('stat-posts').innerText = postsCount || 0;
+
+            const { count: friendsCount } = await sb.from('friends').select('*', { count: 'exact', head: true }).or(`user_id.eq.${id},friend_id.eq.${id}`).eq('status', 'accepted');
+            document.getElementById('stat-friends').innerText = friendsCount || 0;
+        },
+
+        async loadPosts(userId) {
+            const id = userId || App.state.user.id;
+            const container = document.getElementById('profile-posts-container');
+            if (!container) return;
+
+            container.innerHTML = '<div class="text-center py-10 animate-pulse text-xs text-gray-500">Chargement des témoignages...</div>';
+
+            const { data: posts } = await sb.from('posts').select('*, profiles(username, avatar_url)')
+                .eq('user_id', id)
+                .order('created_at', { ascending: false });
+
+            if (posts && posts.length > 0) {
+                container.innerHTML = posts.map(post => App.Features.Feed.renderPost(post)).join('');
                 if (typeof lucide !== 'undefined') lucide.createIcons();
-            },
+            } else {
+                container.innerHTML = `<div class="text-center text-gray-500 py-10 text-xs">${id === App.state.user.id ? "Vous n'avez rien publié encore." : "Aucun post pour le moment."}</div>`;
+            }
+        },
 
-            async loadStats(userId) {
-                const id = userId || App.state.user.id;
-                const { count: postsCount } = await sb.from('posts').select('*', { count: 'exact', head: true }).eq('user_id', id);
-                document.getElementById('stat-posts').innerText = postsCount || 0;
+        async loadFriends() {
+            const container = document.getElementById('profile-friends-container');
+            const id = this.currentTargetId || App.state.user.id;
+            container.innerHTML = '<div class="col-span-full text-center py-10 animate-pulse text-xs text-gray-500">Chargement...</div>';
 
-                const { count: friendsCount } = await sb.from('friends').select('*', { count: 'exact', head: true }).or(`user_id.eq.${id},friend_id.eq.${id}`).eq('status', 'accepted');
-                document.getElementById('stat-friends').innerText = friendsCount || 0;
-            },
+            const { data: friendships } = await sb.from('friends').select('user_id, friend_id').or(`user_id.eq.${id},friend_id.eq.${id}`).eq('status', 'accepted');
 
-            async loadPosts(userId) {
-                const id = userId || App.state.user.id;
-                const container = document.getElementById('profile-posts-container');
-                if (!container) return;
-
-                container.innerHTML = '<div class="text-center py-10 animate-pulse text-xs text-gray-500">Chargement des témoignages...</div>';
-
-                const { data: posts } = await sb.from('posts').select('*, profiles(username, avatar_url)')
-                    .eq('user_id', id)
-                    .order('created_at', { ascending: false });
-
-                if (posts && posts.length > 0) {
-                    container.innerHTML = posts.map(post => App.Features.Feed.renderPost(post)).join('');
-                    if (typeof lucide !== 'undefined') lucide.createIcons();
-                } else {
-                    container.innerHTML = `<div class="text-center text-gray-500 py-10 text-xs">${id === App.state.user.id ? "Vous n'avez rien publié encore." : "Aucun post pour le moment."}</div>`;
-                }
-            },
-
-            async loadFriends() {
-                const container = document.getElementById('profile-friends-container');
-                const id = this.currentTargetId || App.state.user.id;
-                container.innerHTML = '<div class="col-span-full text-center py-10 animate-pulse text-xs text-gray-500">Chargement...</div>';
-
-                const { data: friendships } = await sb.from('friends').select('user_id, friend_id').or(`user_id.eq.${id},friend_id.eq.${id}`).eq('status', 'accepted');
-
-                if (friendships) {
-                    const friendIds = friendships.map(f => f.user_id === id ? f.friend_id : f.user_id);
-                    if (friendIds.length > 0) {
-                        const { data: users } = await sb.from('profiles').select('*').in('id', friendIds);
-                        if (users) {
-                            container.innerHTML = users.map(u => `
+            if (friendships) {
+                const friendIds = friendships.map(f => f.user_id === id ? f.friend_id : f.user_id);
+                if (friendIds.length > 0) {
+                    const { data: users } = await sb.from('profiles').select('*').in('id', friendIds);
+                    if (users) {
+                        container.innerHTML = users.map(u => `
                                 <div class="glass-panel p-3 rounded-2xl flex flex-col items-center gap-2 group/f transition-all hover:border-primary/30 border border-transparent">
                                      <img src="${u.avatar_url || 'https://ui-avatars.com/api/?name=' + u.username}" 
                                           class="w-12 h-12 rounded-full object-cover cursor-pointer group-hover/f:ring-2 ring-primary transition-all"
@@ -2095,74 +2485,73 @@ const App = {
                                              class="w-full bg-white/5 hover:bg-primary py-1.5 rounded-lg text-[10px] transition-colors font-bold uppercase tracking-tighter">Voir Profil</button>
                                 </div>
                             `).join('');
-                        }
-                    } else {
-                        container.innerHTML = `<div class="col-span-full text-center py-10 text-gray-500 text-xs">Aucun ami trouvé.</div>`;
                     }
+                } else {
+                    container.innerHTML = `<div class="col-span-full text-center py-10 text-gray-500 text-xs">Aucun ami trouvé.</div>`;
                 }
             }
-        },
-        initAll() {
-            App.Features.Feed.loadDailyVerse();
-            App.Features.Feed.loadPosts();
-            App.Features.Bible.init();
-            App.Features.Prayers.load();
-            App.Features.Events.loadWidget();
-            if (App.Features.Marketplace && App.Features.Marketplace.initSearch) App.Features.Marketplace.initSearch();
-            if (App.state.user && window.innerWidth > 768) App.Features.Chat.loadList();
+        }
+    },
+    initAll() {
+        App.Features.Feed.loadDailyVerse();
+        App.Features.Feed.loadPosts();
+        App.Features.Bible.init();
+        App.Features.Prayers.load();
+        App.Features.Events.loadWidget();
+        if (App.Features.Marketplace && App.Features.Marketplace.initSearch) App.Features.Marketplace.initSearch();
+        if (App.state.user && window.innerWidth > 768) App.Features.Chat.loadList();
 
-            // Initialisation Groupes & Pages & Realtime
-            if (App.state.view === 'groups') App.Features.Groups.fetchAll();
-            if (App.state.view === 'pages') App.Features.Pages.fetchAll();
-            if (App.Features.Realtime) App.Features.Realtime.init();
+        // Initialisation Groupes & Pages & Realtime
+        if (App.state.view === 'groups') App.Features.Groups.fetchAll();
+        if (App.state.view === 'pages') App.Features.Pages.fetchAll();
+        if (App.Features.Realtime) App.Features.Realtime.init();
 
-            // Search Listener (Chat Sidebar)
-            const searchInput = document.querySelector('#msg-sidebar input');
-            if (searchInput) {
-                searchInput.addEventListener('input', (e) => {
-                    const val = e.target.value.toLowerCase();
-                    const items = document.querySelectorAll('#conversations-list > div');
-                    items.forEach(item => {
-                        const h4 = item.querySelector('h4');
-                        if (h4) {
-                            const name = h4.innerText.toLowerCase();
-                            item.style.display = name.includes(val) ? 'flex' : 'none';
-                        }
-                    });
+        // Search Listener (Chat Sidebar)
+        const searchInput = document.querySelector('#msg-sidebar input');
+        if (searchInput) {
+            searchInput.addEventListener('input', (e) => {
+                const val = e.target.value.toLowerCase();
+                const items = document.querySelectorAll('#conversations-list > div');
+                items.forEach(item => {
+                    const h4 = item.querySelector('h4');
+                    if (h4) {
+                        const name = h4.innerText.toLowerCase();
+                        item.style.display = name.includes(val) ? 'flex' : 'none';
+                    }
+                });
 
-                    const visibleItems = Array.from(items).filter(i => i.style.display !== 'none');
-                    const hintId = 'chat-search-hint';
-                    let hint = document.getElementById(hintId);
+                const visibleItems = Array.from(items).filter(i => i.style.display !== 'none');
+                const hintId = 'chat-search-hint';
+                let hint = document.getElementById(hintId);
 
-                    if (visibleItems.length === 0 && val.length > 0) {
-                        if (!hint) {
-                            hint = document.createElement('div');
-                            hint.id = hintId;
-                            hint.className = 'p-4 text-center cursor-pointer hover:bg-white/5 transition';
-                            hint.innerHTML = `<p class="text-xs text-gray-500 mb-2">Pas d'ami trouvé pour "${val}"</p>
+                if (visibleItems.length === 0 && val.length > 0) {
+                    if (!hint) {
+                        hint = document.createElement('div');
+                        hint.id = hintId;
+                        hint.className = 'p-4 text-center cursor-pointer hover:bg-white/5 transition';
+                        hint.innerHTML = `<p class="text-xs text-gray-500 mb-2">Pas d'ami trouvé pour "${val}"</p>
                                                  <button onclick="App.Features.Finder.query('${val}')" class="text-xs text-primary font-bold">Chercher dans tout FaithConnect</button>`;
-                            document.getElementById('conversations-list').appendChild(hint);
-                        }
-                    } else if (hint) {
-                        hint.remove();
+                        document.getElementById('conversations-list').appendChild(hint);
+                    }
+                } else if (hint) {
+                    hint.remove();
+                }
+            });
+        }
+
+        // Global Search Listener (Desktop & Mobile)
+        ['global-search-desktop', 'mobile-search-input'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) {
+                el.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') {
+                        App.Features.Finder.query(e.target.value);
+                        if (id === 'mobile-search-input') App.UI.toggleMobileSearch();
                     }
                 });
             }
-
-            // Global Search Listener (Desktop & Mobile)
-            ['global-search-desktop', 'mobile-search-input'].forEach(id => {
-                const el = document.getElementById(id);
-                if (el) {
-                    el.addEventListener('keypress', (e) => {
-                        if (e.key === 'Enter') {
-                            App.Features.Finder.query(e.target.value);
-                            if (id === 'mobile-search-input') App.UI.toggleMobileSearch();
-                        }
-                    });
-                }
-            });
-        },
-    },
+        });
+    }
 };
 
 // Start App when DOM Ready
