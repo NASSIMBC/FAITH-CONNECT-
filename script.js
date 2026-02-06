@@ -294,8 +294,11 @@ const App = {
                     const val = e.target.value.toLowerCase();
                     const items = document.querySelectorAll('#conversations-list > div');
                     items.forEach(item => {
-                        const name = item.querySelector('h4').innerText.toLowerCase();
-                        item.style.display = name.includes(val) ? 'flex' : 'none';
+                        const h4 = item.querySelector('h4');
+                        if (h4) {
+                            const name = h4.innerText.toLowerCase();
+                            item.style.display = name.includes(val) ? 'flex' : 'none';
+                        }
                     });
                 });
             }
