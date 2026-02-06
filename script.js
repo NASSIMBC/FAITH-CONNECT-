@@ -16,6 +16,7 @@ const App = {
     // --- INITIALISATION ---
     init: async () => {
         console.log("🚀 FaithConnect v2.0 Starting...");
+        App.UI.initTheme();
         await App.Auth.checkSession();
         if (typeof lucide !== 'undefined') lucide.createIcons();
     },
@@ -231,6 +232,36 @@ const App = {
                 overlay.classList.toggle('hidden');
                 if (!overlay.classList.contains('hidden') && input) input.focus();
             }
+        },
+
+        toggleTheme() {
+            const isLight = document.documentElement.classList.toggle('light-mode');
+            localStorage.setItem('theme', isLight ? 'light' : 'dark');
+            this.updateThemeUI();
+        },
+
+        updateThemeUI() {
+            const isLight = document.documentElement.classList.contains('light-mode');
+            const iconDesk = document.getElementById('theme-icon-desktop');
+            const iconMob = document.getElementById('theme-icon-mobile');
+            const textDesk = document.getElementById('theme-text-desktop');
+
+            const iconName = isLight ? 'moon' : 'sun';
+            const textName = isLight ? 'Mode Sombre' : 'Mode Clair';
+
+            if (iconDesk) iconDesk.setAttribute('data-lucide', iconName);
+            if (iconMob) iconMob.setAttribute('data-lucide', iconName);
+            if (textDesk) textDesk.innerText = textName;
+
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+        },
+
+        initTheme() {
+            const savedTheme = localStorage.getItem('theme');
+            if (savedTheme === 'light') {
+                document.documentElement.classList.add('light-mode');
+            }
+            this.updateThemeUI();
         }
     },
 
