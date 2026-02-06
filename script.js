@@ -28,6 +28,10 @@ const App = {
         console.log("🚀 FaithConnect v2.0 Starting...");
         App.UI.initTheme();
         await App.Auth.checkSession();
+        if (App.state.user) {
+            App.Features.Notifications.subscribe();
+            App.Features.Notifications.updateBadges();
+        }
         if (typeof lucide !== 'undefined') lucide.createIcons();
     },
 
@@ -229,6 +233,7 @@ const App = {
             if (viewName === 'prayers' && App.state.user) App.Features.Prayers.load();
             if (viewName === 'events') App.Features.Events.load();
             if (viewName === 'marketplace') App.Features.Marketplace.load ? App.Features.Marketplace.load() : null;
+            if (viewName === 'notifications') App.Features.Notifications.fetch();
 
             // Special: Detailed Group/Page
             if (viewName === 'group-detail') App.Features.Groups.loadDetail(targetId);
@@ -479,16 +484,20 @@ const App = {
                     <p class="text-gray-200 text-sm leading-relaxed mb-4 font-light">${post.content}</p>
                     ${post.image_url ? `<img src="${post.image_url}" class="w-full rounded-2xl mb-4 border border-white/5 bg-black/50">` : ''}
                     <div class="flex gap-4 border-t border-white/5 pt-3">
-                        <button onclick="App.Features.Feed.likePost('${post.id}')" class="flex items-center gap-2 text-xs text-gray-400 hover:text-pink-400 transition" id="like-btn-${post.id}">
+                        <button onclick="App.Features.Feed.likePost('${post.id}', '${post.user_id}')" class="flex items-center gap-2 text-xs text-gray-400 hover:text-pink-400 transition" id="like-btn-${post.id}">
                             <i data-lucide="heart" class="w-4 h-4"></i> Amen <span class="like-count">${post.likes || 0}</span>
+                        </button>
+                        <button onclick="App.Features.Feed.commentPost('${post.id}', '${post.user_id}')" class="flex items-center gap-2 text-xs text-gray-400 hover:text-blue-400 transition">
+                            <i data-lucide="message-circle" class="w-4 h-4"></i> Commenter
                         </button>
                     </div>
                 </article>
                 `;
             },
 
-            async likePost(postId) {
+            async likePost(postId, recipientId) {
                 const btn = document.getElementById(`like-btn-${postId}`);
+                if (!btn) return;
                 const countEl = btn.querySelector('.like-count');
                 let count = parseInt(countEl.innerText);
 
@@ -503,6 +512,11 @@ const App = {
                 }
                 countEl.innerText = count;
 
+                // Trigger Notification
+                if (btn.classList.contains('text-pink-500')) {
+                    App.Features.Notifications.create('like', recipientId, postId);
+                }
+
                 // Mise à jour Supabase (si colonne existe)
                 try {
                     const { error } = await sb.from('posts').update({ likes: count }).eq('id', postId);
@@ -512,10 +526,11 @@ const App = {
                 }
             },
 
-            commentPost(postId) {
+            async commentPost(postId, recipientId) {
                 const comment = prompt("Votre commentaire :");
                 if (comment) {
-                    alert("Commentaire ajouté ! (Fonctionnalité en cours de liaison avec la base de données)");
+                    App.Features.Notifications.create('comment', recipientId, postId, comment);
+                    alert("Amen ! Votre commentaire a été envoyé.");
                 }
             },
 
@@ -1435,7 +1450,158 @@ const App = {
             }
         },
 
-        // 6. SEARCH & PROFILE
+        // 6. NOTIFICATIONS
+        Notifications: {
+            async fetch() {
+                const container = document.getElementById('notifications-list');
+                if (!container) return;
+
+                const { data: notifs, error } = await sb.from('notifications')
+                    .select('*, actor:actor_id(username, avatar_url)')
+                    .order('created_at', { ascending: false })
+                    .limit(30);
+
+                if (error) {
+                    container.innerHTML = `<p class="text-center py-10 text-gray-500">Erreur chargement.</p>`;
+                    return;
+                }
+
+                if (!notifs || notifs.length === 0) {
+                    container.innerHTML = `<div class="text-center py-20 text-gray-500 italic">Aucune notification pour le moment. ✨</div>`;
+                    this.updateBadges(0);
+                    return;
+                }
+
+                container.innerHTML = notifs.map(n => this.renderItem(n)).join('');
+                this.updateBadges(notifs.filter(n => !n.is_read).length);
+                if (typeof lucide !== 'undefined') lucide.createIcons();
+            },
+
+            renderItem(n) {
+                const actorName = n.actor?.username || "Quelqu'un";
+                const actorAvatar = n.actor?.avatar_url || `https://ui-avatars.com/api/?name=${actorName}`;
+                let message = "";
+                let icon = "bell";
+                let color = "text-primary";
+
+                switch (n.type) {
+                    case 'like': message = `a dit <b>Amen</b> à votre témoignage.`; icon = "heart"; color = "text-pink-400"; break;
+                    case 'comment': message = `a <b>commenté</b> votre publication.`; icon = "message-circle"; break;
+                    case 'friend_request': message = `vous a envoyé une <b>demande d'ami</b>.`; icon = "user-plus"; color = "text-green-400"; break;
+                    case 'group_invite': message = `vous invite à rejoindre un <b>groupe</b>.`; icon = "users"; color = "text-blue-400"; break;
+                }
+
+                return `
+                    <div class="glass-panel p-4 rounded-2xl flex items-center gap-4 ${n.is_read ? 'opacity-60' : 'notification-item unread'} cursor-pointer" onclick="App.Features.Notifications.handleClick('${n.id}', '${n.type}', '${n.target_id}')">
+                        <img src="${actorAvatar}" class="w-10 h-10 rounded-full object-cover">
+                        <div class="flex-1">
+                            <p class="text-xs text-white leading-snug"><b>${actorName}</b> ${message}</p>
+                            <p class="text-[9px] text-gray-500 mt-1">${new Date(n.created_at).toLocaleString()}</p>
+                        </div>
+                        <div class="${color}"><i data-lucide="${icon}" class="w-5 h-5"></i></div>
+                    </div>
+                `;
+            },
+
+            async handleClick(notifId, type, targetId) {
+                await this.markAsRead(notifId);
+                if (type === 'like' || type === 'comment') App.UI.navigateTo('home');
+                if (type === 'friend_request') App.UI.navigateTo('profile', targetId);
+                if (type === 'group_invite') App.UI.navigateTo('group-detail', targetId);
+            },
+
+            async markAsRead(id) {
+                await sb.from('notifications').update({ is_read: true }).eq('id', id);
+                this.fetch();
+            },
+
+            async markAllAsRead() {
+                await sb.from('notifications').update({ is_read: true }).eq('user_id', App.state.user.id).eq('is_read', false);
+                this.fetch();
+            },
+
+            async updateBadges(count = -1) {
+                if (count === -1) {
+                    const { count: unreadCount } = await sb.from('notifications').select('*', { count: 'exact', head: true }).eq('user_id', App.state.user.id).eq('is_read', false);
+                    count = unreadCount || 0;
+                }
+                const dots = ['notif-badge-mobile', 'notif-badge-desktop'];
+                dots.forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el) {
+                        el.classList.toggle('hidden', count === 0);
+                        if (count > 0) el.classList.add('notification-badge');
+                    }
+                });
+            },
+
+            subscribe() {
+                if (!App.state.user) return;
+                sb.channel('realtime_notifications')
+                    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${App.state.user.id}` }, payload => {
+                        this.showToast(payload.new);
+                        this.updateBadges();
+                        if (App.state.view === 'notifications') this.fetch();
+                    })
+                    .subscribe();
+            },
+
+            async showToast(notif) {
+                const container = document.getElementById('notification-toast-container');
+                if (!container) return;
+
+                const { data: actor } = await sb.from('profiles').select('username, avatar_url').eq('id', notif.actor_id).maybeSingle();
+
+                const toast = document.createElement('div');
+                toast.className = 'notification-toast';
+
+                const actorAvatar = actor?.avatar_url || `https://ui-avatars.com/api/?name=${actor?.username || 'User'}`;
+                const text = this.getToastText(notif.type, actor?.username);
+
+                toast.innerHTML = `
+                    <img src="${actorAvatar}" class="w-10 h-10 rounded-full object-cover">
+                    <div class="flex-1">
+                        <p class="text-[11px] text-white"><b>${actor?.username || 'Quelqu\'un'}</b> ${text}</p>
+                    </div>
+                `;
+
+                toast.onclick = () => {
+                    toast.classList.add('expiring');
+                    setTimeout(() => toast.remove(), 400);
+                    this.handleClick(notif.id, notif.type, notif.target_id);
+                };
+
+                container.appendChild(toast);
+
+                setTimeout(() => {
+                    toast.classList.add('expiring');
+                    setTimeout(() => toast.remove(), 400);
+                }, 5000);
+            },
+
+            getToastText(type, name) {
+                switch (type) {
+                    case 'like': return 'a aimé votre message.';
+                    case 'comment': return 'a commenté votre post.';
+                    case 'friend_request': return 'vous a envoyé une invitation.';
+                    case 'group_invite': return 'vous invite dans un groupe.';
+                    default: return 'vous a envoyé une notification.';
+                }
+            },
+
+            async create(type, recipientId, targetId = null, content = "") {
+                if (!App.state.user || recipientId === App.state.user.id) return;
+                await sb.from('notifications').insert([{
+                    user_id: recipientId,
+                    actor_id: App.state.user.id,
+                    type,
+                    target_id: targetId,
+                    content
+                }]);
+            }
+        },
+
+        // 7. SEARCH & PROFILE
         Finder: {
             async query(q) {
                 if (!q) return;
@@ -1489,7 +1655,7 @@ const App = {
             }
         },
 
-        // 7. FRIENDS & SOCIAL
+        // 8. FRIENDS & SOCIAL
         Friends: {
             async sendRequest(targetId) {
                 const id = targetId || App.Features.ProfilePage.currentTargetId;
@@ -1506,6 +1672,7 @@ const App = {
                         if (error.code === '23505') alert("Demande déjà envoyée !");
                         else alert("Erreur: " + error.message);
                     } else {
+                        App.Features.Notifications.create('friend_request', id);
                         alert("Demande d'ami envoyée ! 🙏");
                         const btn = document.getElementById('btn-add-friend');
                         if (btn) {
@@ -1520,7 +1687,7 @@ const App = {
             }
         },
 
-        // 8. GROUPS
+        // 9. GROUPS
         Groups: {
             currentGroup: null,
 
@@ -1597,10 +1764,10 @@ const App = {
 
                 if (members && members.length > 0) {
                     container.innerHTML = members.map(m => `
-                        <img src="${m.profiles.avatar_url || 'https://ui-avatars.com/api/?name=' + m.profiles.username}" 
-                             title="${m.profiles.username}" 
-                             class="w-10 h-10 rounded-lg object-cover ring-1 ring-white/10">
-                    `).join('');
+    < img src = "${m.profiles.avatar_url || 'https://ui-avatars.com/api/?name=' + m.profiles.username}"
+title = "${m.profiles.username}"
+class="w-10 h-10 rounded-lg object-cover ring-1 ring-white/10" >
+    `).join('');
                 } else {
                     container.innerHTML = '<div class="col-span-4 text-[10px] text-gray-600 italic text-center">Aucun membre.</div>';
                 }
@@ -1617,6 +1784,9 @@ const App = {
                     }
                 } else {
                     await sb.from('group_members').insert([{ group_id: groupId, user_id: App.state.user.id }]);
+                    if (this.currentGroup.created_by !== App.state.user.id) {
+                        App.Features.Notifications.create('group_join', this.currentGroup.created_by, groupId, `${App.state.user.username} a rejoint ${this.currentGroup.name}`);
+                    }
                     this.loadDetail(groupId);
                 }
             },
@@ -1644,7 +1814,7 @@ const App = {
             },
 
             share() {
-                const link = `${window.location.origin}${window.location.pathname}?view=group-detail&id=${this.currentGroup.id}`;
+                const link = `${window.location.origin}${window.location.pathname}?view = group - detail & id=${this.currentGroup.id} `;
                 navigator.clipboard.writeText(link).then(() => alert("Lien d'invitation copié ! 🙏"));
             },
 
@@ -1698,7 +1868,7 @@ const App = {
 
             renderCard(p) {
                 return `
-                    <div class="bg-gray-900 border border-white/5 rounded-2xl overflow-hidden hover:border-primary/50 transition-all group cursor-pointer" onclick="App.UI.navigateTo('group-detail', '${p.id}')">
+    < div class="bg-gray-900 border border-white/5 rounded-2xl overflow-hidden hover:border-primary/50 transition-all group cursor-pointer" onclick = "App.UI.navigateTo('group-detail', '${p.id}')" >
                         <div class="h-24 bg-blue-900/20 relative">
                              <div class="absolute inset-0 bg-gradient-to-t from-gray-900 via-transparent to-transparent"></div>
                              <div class="absolute top-2 right-2 bg-blue-500/20 text-blue-400 text-[8px] font-bold px-2 py-0.5 rounded-full uppercase">Page</div>
@@ -1708,8 +1878,8 @@ const App = {
                             <p class="text-xs text-gray-400 mb-3 line-clamp-2">${p.description || 'Pas de description'}</p>
                             <span class="text-primary text-[10px] font-bold uppercase tracking-tighter">Voir la page</span>
                         </div>
-                    </div>
-                `;
+                    </div >
+    `;
             },
 
             createModal() {
