@@ -300,6 +300,24 @@ const App = {
                             item.style.display = name.includes(val) ? 'flex' : 'none';
                         }
                     });
+
+                    // Add a hint if no items match
+                    const visibleItems = Array.from(items).filter(i => i.style.display !== 'none');
+                    const hintId = 'chat-search-hint';
+                    let hint = document.getElementById(hintId);
+
+                    if (visibleItems.length === 0 && val.length > 0) {
+                        if (!hint) {
+                            hint = document.createElement('div');
+                            hint.id = hintId;
+                            hint.className = 'p-4 text-center cursor-pointer hover:bg-white/5 transition';
+                            hint.innerHTML = `<p class="text-xs text-gray-500 mb-2">Pas d'ami trouvé pour "${val}"</p>
+                                             <button onclick="App.Features.Search.execute('${val}')" class="text-xs text-primary font-bold">Chercher dans tout FaithConnect</button>`;
+                            document.getElementById('conversations-list').appendChild(hint);
+                        }
+                    } else if (hint) {
+                        hint.remove();
+                    }
                 });
             }
 
@@ -1223,27 +1241,41 @@ const App = {
                 postContainer.innerHTML = '<div class="p-4 animate-pulse">Recherche de témoignages...</div>';
 
                 try {
-                    // 1. Search Users
-                    const { data: users } = await sb.from('profiles')
+                    // 1. Search Users (Username or Bio)
+                    const { data: users, error: userError } = await sb.from('profiles')
                         .select('*')
-                        .ilike('username', `%${query}%`)
-                        .limit(10);
+                        .or(`username.ilike.%${query}%,bio.ilike.%${query}%`)
+                        .neq('id', App.state.user.id) // Exclure soi-même
+                        .limit(20);
+
+                    if (userError) throw userError;
 
                     if (users && users.length > 0) {
                         userContainer.innerHTML = users.map(u => `
-                            <div class="glass-panel p-4 rounded-2xl flex items-center justify-between group">
+                            <div class="glass-panel p-4 rounded-2xl flex items-center justify-between group animate-slide-in-up">
                                 <div class="flex items-center gap-3">
-                                    <img src="${u.avatar_url || 'https://ui-avatars.com/api/?name=' + u.username}" class="w-12 h-12 rounded-full object-cover">
-                                    <span class="font-bold text-white">${u.username}</span>
+                                    <div class="relative">
+                                        <img src="${u.avatar_url || 'https://ui-avatars.com/api/?name=' + u.username}" class="w-12 h-12 rounded-full object-cover">
+                                        <div class="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 border-2 border-[#050510] rounded-full"></div>
+                                    </div>
+                                    <div class="flex flex-col">
+                                        <span class="font-bold text-white">${u.username}</span>
+                                        <span class="text-[10px] text-gray-500 truncate max-w-[150px]">${u.bio || 'Membre de FaithConnect'}</span>
+                                    </div>
                                 </div>
                                 <button onclick="App.Features.Chat.openChat('${u.id}', '${u.username}', '${u.avatar_url}'); App.UI.navigateTo('messages')" 
-                                        class="p-2 bg-primary/10 hover:bg-primary text-primary hover:text-white rounded-xl transition">
-                                    <i data-lucide="message-circle" class="w-5 h-5"></i>
+                                        class="flex items-center gap-2 px-4 py-2 bg-primary/10 hover:bg-primary text-primary hover:text-white rounded-xl transition font-bold text-xs">
+                                    <i data-lucide="message-circle" class="w-4 h-4"></i>
+                                    Parler
                                 </button>
                             </div>
                         `).join('');
                     } else {
-                        userContainer.innerHTML = '<div class="text-gray-500 p-4 italic text-sm">Aucun chrétien trouvé avec ce nom.</div>';
+                        userContainer.innerHTML = `
+                            <div class="col-span-full text-center py-6 glass-panel rounded-2xl">
+                                <p class="text-gray-400 text-sm italic">Aucun membre ne porte ce nom.</p>
+                                <p class="text-[10px] text-gray-600 mt-2">Essayez avec un nom différent ou vérifiez l'orthographe.</p>
+                            </div>`;
                     }
 
                     // 2. Search Posts
