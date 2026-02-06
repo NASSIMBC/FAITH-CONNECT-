@@ -35,7 +35,7 @@ const App = {
         },
 
         async loadProfile() {
-            let { data } = await sb.from('profiles').select('*').eq('id', App.state.user.id).single();
+            let { data } = await sb.from('profiles').select('*').eq('id', App.state.user.id).maybeSingle();
             if (!data) {
                 // Création profil auto si inexistant
                 const username = App.state.user.email.split('@')[0];
@@ -400,8 +400,13 @@ const App = {
                 }
                 countEl.innerText = count;
 
-                // Mise à jour Supabase (si colonne existe, sinon on simule)
-                await sb.from('posts').update({ likes: count }).eq('id', postId);
+                // Mise à jour Supabase (si colonne existe)
+                try {
+                    const { error } = await sb.from('posts').update({ likes: count }).eq('id', postId);
+                    if (error) console.warn("Supabase update error (maybe 'likes' column is missing?):", error.message);
+                } catch (err) {
+                    console.warn("Update error:", err);
+                }
             },
 
             commentPost(postId) {
@@ -1029,7 +1034,7 @@ const App = {
                         const { data: profiles } = await sb.from('profiles').select('*').in('id', friendIds);
                         if (profiles) {
                             container.innerHTML = profiles.map(p => `
-                                <div onclick="App.Features.Chat.openChat('${p.id}', '${p.username}', '${p.avatar_url}')" 
+                                <div onclick="App.Features.Chat.openChat('${p.id}', '${p.username}', '${p.avatar_url || ''}')" 
                                      class="p-4 flex items-center gap-3 hover:bg-white/5 cursor-pointer border-b border-white/5 transition-colors">
                                     <div class="relative">
                                         <img src="${p.avatar_url || 'https://ui-avatars.com/api/?name=' + p.username}" class="w-10 h-10 rounded-full object-cover bg-gray-800">
@@ -1077,7 +1082,7 @@ const App = {
                 if (header) header.innerHTML = `
                     <div class="flex items-center gap-3">
                         <button class="md:hidden p-1 mr-2" onclick="App.Features.Chat.closeMobileChat()"><i data-lucide="arrow-left"></i></button>
-                        <img src="${avatar || 'https://ui-avatars.com/api/?name=' + username}" class="w-8 h-8 rounded-full">
+                        <img src="${(avatar && avatar !== 'null') ? avatar : 'https://ui-avatars.com/api/?name=' + username}" class="w-8 h-8 rounded-full">
                         <span class="font-bold text-white">${username}</span>
                     </div>
                 `;
@@ -1214,7 +1219,7 @@ const App = {
                                             class="p-2 bg-primary/10 hover:bg-primary text-primary hover:text-white rounded-xl transition" title="Ajouter en ami">
                                         <i data-lucide="user-plus" class="w-4 h-4"></i>
                                     </button>
-                                    <button onclick="App.Features.Chat.openChat('${u.id}', '${u.username}', '${u.avatar_url}'); App.UI.navigateTo('messages')" 
+                                    <button onclick="App.Features.Chat.openChat('${u.id}', '${u.username}', '${u.avatar_url || ''}'); App.UI.navigateTo('messages')" 
                                             class="p-2 bg-white/5 hover:bg-white/10 text-white rounded-xl transition" title="Message">
                                         <i data-lucide="message-circle" class="w-4 h-4"></i>
                                     </button>
@@ -1375,7 +1380,7 @@ const App = {
                     if (editBtn) editBtn.classList.add('hidden');
                     if (tabLabel) tabLabel.innerText = "Posts";
 
-                    const { data: profile } = await sb.from('profiles').select('*').eq('id', id).single();
+                    const { data: profile } = await sb.from('profiles').select('*').eq('id', id).maybeSingle();
                     if (profile) {
                         if (title) title.innerText = profile.username;
                         this.renderProfileData(profile);
@@ -1410,7 +1415,7 @@ const App = {
                 const { data } = await sb.from('friends')
                     .select('*')
                     .or(`and(user_id.eq.${App.state.user.id},friend_id.eq.${targetId}),and(user_id.eq.${targetId},friend_id.eq.${App.state.user.id})`)
-                    .single();
+                    .maybeSingle();
 
                 if (data) {
                     if (data.status === 'accepted') {
