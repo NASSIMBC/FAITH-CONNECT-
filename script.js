@@ -1972,7 +1972,7 @@ const App = {
 
 
                 const actions = document.getElementById('profile-actions');
-                const editBtn = document.querySelector('[onclick="App.UI.modals.editProfile.open()"]')?.parentElement;
+                const editBtn = document.getElementById('btn-edit-profile');
                 const title = document.getElementById('profile-page-name');
                 const tabLabel = document.getElementById('tab-profile-posts');
 
