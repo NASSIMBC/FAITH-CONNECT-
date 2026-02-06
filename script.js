@@ -960,6 +960,7 @@ const App = {
     // 3. MARKETPLACE (Liaison Supabase complète)
     Marketplace: {
         selectedImage: null,
+        currentData: [],
 
         async load(filter = "") {
             const container = document.getElementById('marketplace-grid');
@@ -968,7 +969,7 @@ const App = {
             container.innerHTML = '<div class="col-span-full text-center py-20 animate-pulse text-gray-500">Chargement de la boutique...</div>';
 
             // Tentative de chargement avec jointure
-            let { data, error } = await sb.from('marketplace').select('*, profiles(username)');
+            let { data, error } = await sb.from('marketplace').select('*, profiles(username, avatar_url)');
 
             // Si la jointure échoue (manque de clé étrangère), on charge les données simples
             if (error && error.code === 'PGRST200') {
@@ -986,9 +987,12 @@ const App = {
                 return;
             }
 
-            const filtered = data.filter(p =>
+            this.currentData = data || [];
+
+            const filtered = this.currentData.filter(p =>
                 p.title.toLowerCase().includes(filter.toLowerCase()) ||
-                (p.profiles?.username || '').toLowerCase().includes(filter.toLowerCase())
+                (p.profiles?.username || '').toLowerCase().includes(filter.toLowerCase()) ||
+                (p.category || '').toLowerCase().includes(filter.toLowerCase())
             );
 
             if (filtered.length === 0) {
@@ -997,21 +1001,53 @@ const App = {
             }
 
             container.innerHTML = filtered.map(p => `
-                    <div class="glass-panel p-0 rounded-2xl overflow-hidden group cursor-pointer hover:border-primary/50 transition relative">
-                        <div class="absolute top-2 right-2 bg-black/60 text-white text-xs font-bold px-2 py-1 rounded-lg backdrop-blur-sm z-10">${p.price}€</div>
-                        <div class="h-40 overflow-hidden">
-                            <img src="${p.image_url || 'https://images.unsplash.com/photo-1550989460-0adf9ea622e2?w=500&auto=format&fit=crop&q=60'}" class="w-full h-full object-cover group-hover:scale-110 transition duration-500">
+                    <div onclick="App.Features.Marketplace.openDetails('${p.id}')" 
+                        class="glass-panel p-0 rounded-2xl overflow-hidden group cursor-pointer hover:border-primary/50 transition-all hover:-translate-y-1 relative">
+                        <div class="absolute top-2 right-2 bg-black/60 text-white text-[10px] font-black px-2 py-1 rounded-lg backdrop-blur-sm z-10 shadow-lg border border-white/10 text-primary">${p.price}€</div>
+                        ${p.category ? `<div class="absolute top-2 left-2 bg-primary/80 text-white text-[8px] font-bold px-2 py-1 rounded-md backdrop-blur-sm z-10 uppercase tracking-tighter">${p.category}</div>` : ''}
+                        <div class="h-40 overflow-hidden relative">
+                            <img src="${p.image_url || 'https://images.unsplash.com/photo-1550989460-0adf9ea622e2?w=500&auto=format&fit=crop&q=60'}" 
+                                 class="w-full h-full object-cover group-hover:scale-110 transition duration-500">
+                            <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-3">
+                                <span class="text-[10px] text-white font-bold">Voir les détails</span>
+                            </div>
                         </div>
                         <div class="p-3">
                             <h4 class="font-bold text-sm text-white truncate">${p.title}</h4>
                             <p class="text-[10px] text-gray-400 flex items-center gap-1 mt-1">
-                                <i data-lucide="store" class="w-3 h-3"></i> ${p.profiles?.username || 'Vendeur'}
+                                <i data-lucide="user" class="w-3 h-3"></i> ${p.profiles?.username || 'Vendeur'}
                             </p>
-                            <button onclick="App.Features.Marketplace.buy('${p.profiles?.username || 'Vendeur'}')" class="w-full mt-3 bg-white/10 hover:bg-primary text-xs font-bold py-2 rounded-lg transition-colors">Acheter</button>
                         </div>
                     </div>
                 `).join('');
             if (typeof lucide !== 'undefined') lucide.createIcons();
+        },
+
+        openDetails(itemId) {
+            const item = this.currentData.find(i => i.id === itemId);
+            if (!item) return;
+
+            const modal = document.getElementById('modal-item-details');
+            if (!modal) return;
+
+            // Populate modal
+            document.getElementById('item-detail-img').src = item.image_url || 'https://images.unsplash.com/photo-1550989460-0adf9ea622e2?w=500&auto=format&fit=crop&q=60';
+            document.getElementById('item-detail-title').innerText = item.title;
+            document.getElementById('item-detail-price').innerText = item.price + "€";
+            document.getElementById('item-detail-category').innerText = item.category || 'AUTRE';
+            document.getElementById('item-detail-description').innerText = item.description || "Pas de description détaillée pour cet article.";
+
+            const sellerAvatar = document.getElementById('item-detail-seller-avatar');
+            const sellerName = document.getElementById('item-detail-seller-name');
+
+            sellerName.innerText = item.profiles?.username || 'Vendeur FaithConnect';
+            sellerAvatar.src = item.profiles?.avatar_url || `https://ui-avatars.com/api/?name=${item.profiles?.username || 'V'}`;
+
+            // Buttons
+            document.getElementById('btn-contact-seller').onclick = () => this.buy(item.profiles?.username || 'le vendeur');
+            document.getElementById('btn-buy-now').onclick = () => this.buy(item.profiles?.username || 'le vendeur');
+
+            modal.classList.remove('hidden');
         },
 
         initSearch() {
@@ -1030,6 +1066,8 @@ const App = {
                 // Reset
                 document.getElementById('sell-title').value = '';
                 document.getElementById('sell-price').value = '';
+                document.getElementById('sell-category').value = 'autre';
+                document.getElementById('sell-description').value = '';
                 document.getElementById('sell-file').value = '';
                 document.getElementById('sell-preview-img').classList.add('hidden');
                 document.getElementById('sell-image-placeholder').classList.remove('hidden');
@@ -1053,8 +1091,10 @@ const App = {
         async publish() {
             const title = document.getElementById('sell-title').value;
             const price = document.getElementById('sell-price').value;
+            const category = document.getElementById('sell-category').value;
+            const description = document.getElementById('sell-description').value;
 
-            if (!title || !price) return alert("Veuillez remplir les champs.");
+            if (!title || !price) return alert("Veuillez remplir les champs obligatoires (titre et prix).");
             if (!App.state.user) return alert("Veuillez vous connecter.");
 
             let imageUrl = null;
@@ -1078,6 +1118,8 @@ const App = {
                 user_id: App.state.user.id,
                 title: title,
                 price: parseFloat(price),
+                category: category,
+                description: description,
                 image_url: imageUrl
             }]);
 
@@ -1086,9 +1128,6 @@ const App = {
             } else {
                 alert("Article mis en vente ! 🙏");
                 App.UI.modals.closeAll();
-                this.selectedImage = null;
-                document.getElementById('sell-preview-img').classList.add('hidden');
-                document.getElementById('sell-image-placeholder').classList.remove('hidden');
                 this.load();
             }
         },
