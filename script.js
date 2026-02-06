@@ -2358,8 +2358,6 @@ const App = {
             this.currentTargetId = id;
             const isMe = id === App.state.user.id;
 
-
-
             const actions = document.getElementById('profile-actions');
             const editBtn = document.getElementById('btn-edit-profile');
             const title = document.getElementById('profile-page-name');
@@ -2492,6 +2490,7 @@ const App = {
             }
         }
     },
+
     initAll() {
         App.Features.Feed.loadDailyVerse();
         App.Features.Feed.loadPosts();
@@ -2501,12 +2500,10 @@ const App = {
         if (App.Features.Marketplace && App.Features.Marketplace.initSearch) App.Features.Marketplace.initSearch();
         if (App.state.user && window.innerWidth > 768) App.Features.Chat.loadList();
 
-        // Initialisation Groupes & Pages & Realtime
         if (App.state.view === 'groups') App.Features.Groups.fetchAll();
         if (App.state.view === 'pages') App.Features.Pages.fetchAll();
         if (App.Features.Realtime) App.Features.Realtime.init();
 
-        // Search Listener (Chat Sidebar)
         const searchInput = document.querySelector('#msg-sidebar input');
         if (searchInput) {
             searchInput.addEventListener('input', (e) => {
@@ -2539,7 +2536,6 @@ const App = {
             });
         }
 
-        // Global Search Listener (Desktop & Mobile)
         ['global-search-desktop', 'mobile-search-input'].forEach(id => {
             const el = document.getElementById(id);
             if (el) {
@@ -2552,7 +2548,8 @@ const App = {
             }
         });
     }
-};
+}
+
 
 // Start App when DOM Ready
 document.addEventListener('DOMContentLoaded', App.init);
