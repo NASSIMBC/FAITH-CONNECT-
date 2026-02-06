@@ -662,14 +662,14 @@
 
     <!-- MODAL: SELL ITEM -->
     <div id="modal-sell"
-        class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm hidden">
+        class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm hidden text-white">
         <div class="glass-panel w-full max-w-sm p-6 rounded-[32px] m-4 animate-slide-in-up">
             <div class="flex justify-between items-center mb-6">
                 <h3 class="text-xl font-bold">Vendre un article</h3>
                 <button onclick="App.UI.modals.closeAll()" class="p-2 hover:bg-white/10 rounded-full"><i
                         data-lucide="x"></i></button>
             </div>
-            <div class="space-y-4">
+            <div class="space-y-4 max-h-[70vh] overflow-y-auto custom-scrollbar pr-2">
                 <div onclick="document.getElementById('sell-file').click()"
                     class="h-32 bg-gray-800 rounded-xl flex items-center justify-center border-2 border-dashed border-white/10 cursor-pointer hover:border-primary/50 transition relative overflow-hidden">
                     <input type="file" id="sell-file" accept="image/*" class="hidden"
@@ -680,15 +680,73 @@
                     </div>
                     <img id="sell-preview-img" class="hidden absolute inset-0 w-full h-full object-cover">
                 </div>
-                <input type="text" id="sell-title" placeholder="Titre de l'article (ex: Bible de luxe)"
+
+                <select id="sell-category" class="input-field w-full px-4 py-3 rounded-xl bg-gray-900 border-white/10">
+                    <option value="autre">Catégorie...</option>
+                    <option value="livre">Livres & Bibles</option>
+                    <option value="t-shirt">Vêtements</option>
+                    <option value="art">Artisanat & Déco</option>
+                    <option value="musique">Musique & Médias</option>
+                </select>
+
+                <input type="text" id="sell-title" placeholder="Titre de l'article"
                     class="input-field w-full px-4 py-3 rounded-xl">
+
+                <textarea id="sell-description" placeholder="Description de l'article..."
+                    class="input-field w-full px-4 py-3 rounded-xl h-24 resize-none text-sm"></textarea>
+
                 <div class="flex gap-2 relative">
                     <input type="number" id="sell-price" placeholder="Prix"
                         class="input-field w-full px-4 py-3 rounded-xl">
                     <span class="absolute right-4 top-3.5 text-gray-400 font-bold">€</span>
                 </div>
                 <button onclick="App.Features.Marketplace.publish()"
-                    class="btn-primary w-full py-3 rounded-xl font-bold">Mettre en vente</button>
+                    class="btn-primary w-full py-3 rounded-xl font-bold sticky bottom-0">Mettre en vente</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: ITEM DETAILS -->
+    <div id="modal-item-details"
+        class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm hidden text-white">
+        <div class="glass-panel w-full max-w-md rounded-[32px] overflow-hidden m-4 animate-slide-in-up">
+            <div class="relative h-64">
+                <img id="item-detail-img" src="" class="w-full h-full object-cover">
+                <button onclick="App.UI.modals.closeAll()"
+                    class="absolute top-4 right-4 p-2 bg-black/50 hover:bg-black/70 rounded-full backdrop-blur-md">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            <div class="p-6 space-y-4">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <span id="item-detail-category"
+                            class="text-[10px] font-bold uppercase tracking-wider text-primary bg-primary/10 px-2 py-0.5 rounded-full">CATÉGORIE</span>
+                        <h3 id="item-detail-title" class="text-2xl font-bold mt-1">Titre de l'article</h3>
+                    </div>
+                    <div class="text-2xl font-black text-white" id="item-detail-price">0€</div>
+                </div>
+
+                <div class="flex items-center gap-3 py-3 border-y border-white/5">
+                    <img id="item-detail-seller-avatar" src="" class="w-10 h-10 rounded-full border border-white/10">
+                    <div>
+                        <p class="text-xs text-gray-500 uppercase font-bold tracking-tighter">Vendu par</p>
+                        <p id="item-detail-seller-name" class="font-bold text-sm">Nom du vendeur</p>
+                    </div>
+                    <button id="btn-contact-seller"
+                        class="ml-auto text-primary text-xs font-bold hover:underline">Contacter</button>
+                </div>
+
+                <div class="py-2">
+                    <p class="text-xs text-gray-500 uppercase font-bold tracking-tighter mb-1">Description</p>
+                    <p id="item-detail-description" class="text-sm text-gray-300 leading-relaxed">Pas de description
+                        fournie.</p>
+                </div>
+
+                <button id="btn-buy-now"
+                    class="btn-primary w-full py-3 rounded-xl font-bold flex items-center justify-center gap-2">
+                    <i data-lucide="shopping-cart" class="w-5 h-5"></i> Acheter maintenant
+                </button>
             </div>
         </div>
     </div>
