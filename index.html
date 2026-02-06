@@ -106,9 +106,12 @@
                     data-lucide="arrow-left"></i></button>
             <div class="relative flex-1">
                 <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 w-4 h-4"></i>
-                <input type="text" id="mobile-search-input" placeholder="Rechercher sur FaithConnect..."
+                <input type="text" id="mobile-search-input" placeholder="Rechercher un membre..."
                     class="input-field w-full pl-10 pr-4 py-2 rounded-xl text-sm">
             </div>
+            <button
+                onclick="App.Features.Search.execute(document.getElementById('mobile-search-input').value); App.UI.toggleMobileSearch()"
+                class="bg-primary text-white p-2 rounded-xl"><i data-lucide="search" class="w-5 h-5"></i></button>
         </div>
 
         <div class="flex max-w-7xl mx-auto md:pt-6 md:px-6 gap-6">
@@ -124,11 +127,18 @@
 
                 <!-- GLOBAL SEARCH (Desktop Sidebar) -->
                 <div class="px-2 mb-6">
-                    <div class="relative">
-                        <i data-lucide="search"
-                            class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 w-4 h-4"></i>
-                        <input type="text" id="global-search-desktop" placeholder="Rechercher..."
-                            class="input-field w-full pl-10 pr-4 py-2.5 rounded-2xl text-xs bg-white/5 border-white/10 focus:border-primary/50 transition-all">
+                    <div class="flex items-center gap-2">
+                        <div class="relative flex-1">
+                            <i data-lucide="search"
+                                class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 w-4 h-4"></i>
+                            <input type="text" id="global-search-desktop" placeholder="Rechercher un membre..."
+                                class="input-field w-full pl-10 pr-4 py-2.5 rounded-2xl text-xs bg-white/5 border-white/10 focus:border-primary/50 transition-all">
+                        </div>
+                        <button
+                            onclick="App.Features.Search.execute(document.getElementById('global-search-desktop').value)"
+                            class="p-2 bg-primary/10 text-primary hover:bg-primary hover:text-white rounded-xl transition">
+                            <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                        </button>
                     </div>
                 </div>
 
