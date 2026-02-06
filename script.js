@@ -13,6 +13,16 @@ const App = {
         view: 'home'
     },
 
+    Utils: {
+        sanitizeFilename(filename) {
+            if (!filename) return `file_${Date.now()}`;
+            return filename.normalize("NFD")
+                .replace(/[\u0300-\u036f]/g, "") // Enlever les accents
+                .replace(/[^a-z0-9.]/gi, '_') // Remplacer tout ce qui n'est pas alphanumérique par _
+                .toLowerCase();
+        }
+    },
+
     // --- INITIALISATION ---
     init: async () => {
         console.log("🚀 FaithConnect v2.0 Starting...");
@@ -75,6 +85,57 @@ const App = {
         async logout() {
             await sb.auth.signOut();
             location.reload();
+        },
+
+        selectedAvatar: null,
+
+        handleAvatarSelect(input) {
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                this.selectedAvatar = input.files[0];
+                reader.onload = (e) => {
+                    document.getElementById('edit-avatar-preview').src = e.target.result;
+                }
+                reader.readAsDataURL(input.files[0]);
+            }
+        },
+
+        async saveProfile() {
+            const username = document.getElementById('edit-username').value;
+            const bio = document.getElementById('edit-bio').value;
+            let avatarUrl = App.state.profile.avatar_url;
+
+            if (!username) return alert("Le nom d'utilisateur est obligatoire.");
+
+            try {
+                // 1. Upload new avatar if selected
+                if (this.selectedAvatar) {
+                    const fileExt = this.selectedAvatar.name.split('.').pop();
+                    const cleanName = App.Utils.sanitizeFilename(this.selectedAvatar.name);
+                    const fileName = `avatar_${App.state.user.id}_${Date.now()}_${cleanName}`;
+                    const { error: uploadError } = await sb.storage.from('avatars').upload(fileName, this.selectedAvatar, { upsert: true });
+
+                    if (uploadError) throw new Error("Erreur upload avatar: " + uploadError.message);
+
+                    const { data: { publicUrl } } = sb.storage.from('avatars').getPublicUrl(fileName);
+                    avatarUrl = publicUrl;
+                }
+
+                // 2. Update profiles table
+                const { error: updateError } = await sb.from('profiles').update({
+                    username,
+                    bio,
+                    avatar_url: avatarUrl
+                }).eq('id', App.state.user.id);
+
+                if (updateError) throw updateError;
+
+                alert("Profil mis à jour ! 🙏");
+                location.reload(); // Hard reload to refresh all avatars
+            } catch (err) {
+                console.error("Save Profile Error:", err);
+                alert("Erreur lors de l'enregistrement : " + err.message);
+            }
         }
     },
 
@@ -172,8 +233,10 @@ const App = {
             },
             editProfile: {
                 open() {
-                    document.getElementById('edit-username').value = App.state.profile.username;
-                    document.getElementById('edit-bio').value = App.state.profile.bio || "";
+                    const p = App.state.profile;
+                    document.getElementById('edit-username').value = p.username;
+                    document.getElementById('edit-bio').value = p.bio || "";
+                    document.getElementById('edit-avatar-preview').src = p.avatar_url || `https://ui-avatars.com/api/?name=${p.username}`;
                     document.getElementById('modal-profile').classList.remove('hidden');
                 }
             },
@@ -458,8 +521,8 @@ const App = {
                 // Upload image if exists
                 if (this.selectedImage) {
                     try {
-                        const fileExt = this.selectedImage.name.split('.').pop();
-                        const fileName = `${Date.now()}.${fileExt}`;
+                        const cleanName = App.Utils.sanitizeFilename(this.selectedImage.name);
+                        const fileName = `${Date.now()}_${cleanName}`;
                         const { error: uploadError } = await sb.storage.from('posts').upload(fileName, this.selectedImage);
                         if (uploadError) {
                             console.error("Storage Error:", uploadError);
@@ -980,7 +1043,8 @@ const App = {
                 let imageUrl = null;
                 if (this.selectedImage) {
                     try {
-                        const fileName = `${Date.now()}_${this.selectedImage.name}`;
+                        const cleanName = App.Utils.sanitizeFilename(this.selectedImage.name);
+                        const fileName = `${Date.now()}_${cleanName}`;
                         const { error: uploadError } = await sb.storage.from('marketplace').upload(fileName, this.selectedImage);
                         if (uploadError) {
                             console.error("Marketplace Upload Error:", uploadError);
