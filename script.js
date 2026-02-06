@@ -312,7 +312,7 @@ const App = {
                             hint.id = hintId;
                             hint.className = 'p-4 text-center cursor-pointer hover:bg-white/5 transition';
                             hint.innerHTML = `<p class="text-xs text-gray-500 mb-2">Pas d'ami trouvé pour "${val}"</p>
-                                             <button onclick="App.Features.Search.execute('${val}')" class="text-xs text-primary font-bold">Chercher dans tout FaithConnect</button>`;
+                                             <button onclick="App.Features.Finder.query('${val}')" class="text-xs text-primary font-bold">Chercher dans tout FaithConnect</button>`;
                             document.getElementById('conversations-list').appendChild(hint);
                         }
                     } else if (hint) {
@@ -327,7 +327,7 @@ const App = {
                 if (el) {
                     el.addEventListener('keypress', (e) => {
                         if (e.key === 'Enter') {
-                            App.Features.Search.execute(e.target.value);
+                            App.Features.Finder.query(e.target.value);
                             if (id === 'mobile-search-input') App.UI.toggleMobileSearch();
                         }
                     });
@@ -1226,13 +1226,13 @@ const App = {
         },
 
         // 6. SEARCH & PROFILE
-        Search: {
-            async execute(query) {
-                if (!query) return;
+        Finder: {
+            async query(q) {
+                if (!q) return;
 
                 App.UI.navigateTo('search');
                 const queryText = document.getElementById('search-query-text');
-                if (queryText) queryText.innerText = `Résultats pour "${query}"`;
+                if (queryText) queryText.innerText = `Résultats pour "${q}"`;
 
                 const userContainer = document.getElementById('search-users-results');
                 const postContainer = document.getElementById('search-posts-results');
@@ -1244,8 +1244,8 @@ const App = {
                     // 1. Search Users (Username or Bio)
                     const { data: users, error: userError } = await sb.from('profiles')
                         .select('*')
-                        .or(`username.ilike.%${query}%,bio.ilike.%${query}%`)
-                        .neq('id', App.state.user.id) // Exclure soi-même
+                        .or(`username.ilike.%${q}%,bio.ilike.%${q}%`)
+                        .neq('id', App.state.user.id)
                         .limit(20);
 
                     if (userError) throw userError;
@@ -1274,14 +1274,13 @@ const App = {
                         userContainer.innerHTML = `
                             <div class="col-span-full text-center py-6 glass-panel rounded-2xl">
                                 <p class="text-gray-400 text-sm italic">Aucun membre ne porte ce nom.</p>
-                                <p class="text-[10px] text-gray-600 mt-2">Essayez avec un nom différent ou vérifiez l'orthographe.</p>
                             </div>`;
                     }
 
                     // 2. Search Posts
                     const { data: posts } = await sb.from('posts')
                         .select('*, profiles(username, avatar_url)')
-                        .ilike('content', `%${query}%`)
+                        .ilike('content', `%${q}%`)
                         .order('created_at', { ascending: false })
                         .limit(10);
 
@@ -1295,7 +1294,6 @@ const App = {
 
                 } catch (err) {
                     console.error("Search error:", err);
-                    userContainer.innerHTML = '<div class="text-red-400 p-4">Erreur lors de la recherche.</div>';
                 }
             }
         },
