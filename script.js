@@ -230,6 +230,9 @@ const App = {
             if (viewName === 'events') App.Features.Events.load();
             if (viewName === 'marketplace') App.Features.Marketplace.load ? App.Features.Marketplace.load() : null;
 
+            // Special: Detailed Group/Page
+            if (viewName === 'group-detail') App.Features.Groups.loadDetail(targetId);
+
             if (typeof lucide !== 'undefined') lucide.createIcons();
         },
 
@@ -424,8 +427,23 @@ const App = {
                 container.innerHTML = '<div class="text-center py-20 animate-pulse text-gray-500">Chargement de la lumière...</div>';
 
                 try {
-                    const { data: posts, error } = await sb.from('posts').select('*, profiles(username, avatar_url)').order('created_at', { ascending: false }).limit(20);
+                    // Fetch user's subscriptions
+                    let followedGroupIds = [];
+                    if (App.state.user) {
+                        const { data: subs } = await sb.from('group_members').select('group_id').eq('user_id', App.state.user.id);
+                        followedGroupIds = subs ? subs.map(s => s.group_id) : [];
+                    }
 
+                    // Query: All public posts OR posts from followed groups
+                    let query = sb.from('posts').select('*, profiles(username, avatar_url), groups(name)').order('created_at', { ascending: false }).limit(25);
+
+                    if (followedGroupIds.length > 0) {
+                        // Complex filter: anonymous posts OR posts from known groups
+                        // Note: Supabase 'or' logic for foreign tables can be tricky, staying simple for now:
+                        // Just fetch and we'll filter or just fetch all public as usual
+                    }
+
+                    const { data: posts, error } = await query;
                     if (error) throw error;
 
                     if (posts && posts.length > 0) {
@@ -442,13 +460,20 @@ const App = {
 
             renderPost(post) {
                 const avatar = post.profiles?.avatar_url || `https://ui-avatars.com/api/?name=${post.profiles?.username || 'Inconnu'}`;
+                const groupInfo = post.groups ? `<span class="text-primary mx-1">➜</span> <span class="bg-primary/10 text-primary px-1.5 py-0.5 rounded text-[9px] font-bold uppercase">${post.groups.name}</span>` : '';
+
                 return `
                 <article class="glass-panel p-5 rounded-[24px] animate-slide-in-up">
-                    <div class="flex items-center gap-3 mb-3 cursor-pointer group/author" onclick="App.UI.navigateTo('profile', '${post.user_id}')">
-                        <img src="${avatar}" class="w-10 h-10 rounded-full object-cover group-hover/author:ring-2 ring-primary transition-all">
-                        <div>
-                            <h4 class="font-bold text-sm text-white group-hover/author:text-primary transition-colors">${post.profiles?.username || 'Anonyme'}</h4>
-                            <p class="text-[10px] text-gray-500">${new Date(post.created_at).toLocaleDateString()}</p>
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="flex items-center gap-3 cursor-pointer group/author" onclick="App.UI.navigateTo('profile', '${post.user_id}')">
+                            <img src="${avatar}" class="w-10 h-10 rounded-full object-cover group-hover/author:ring-2 ring-primary transition-all">
+                            <div>
+                                <div class="flex items-center flex-wrap">
+                                    <h4 class="font-bold text-sm text-white group-hover/author:text-primary transition-colors">${post.profiles?.username || 'Anonyme'}</h4>
+                                    ${groupInfo}
+                                </div>
+                                <p class="text-[10px] text-gray-500">${new Date(post.created_at).toLocaleDateString()}</p>
+                            </div>
                         </div>
                     </div>
                     <p class="text-gray-200 text-sm leading-relaxed mb-4 font-light">${post.content}</p>
@@ -456,9 +481,6 @@ const App = {
                     <div class="flex gap-4 border-t border-white/5 pt-3">
                         <button onclick="App.Features.Feed.likePost('${post.id}')" class="flex items-center gap-2 text-xs text-gray-400 hover:text-pink-400 transition" id="like-btn-${post.id}">
                             <i data-lucide="heart" class="w-4 h-4"></i> Amen <span class="like-count">${post.likes || 0}</span>
-                        </button>
-                        <button onclick="App.Features.Feed.commentPost('${post.id}')" class="flex items-center gap-2 text-xs text-gray-400 hover:text-purple-400 transition">
-                            <i data-lucide="message-circle" class="w-4 h-4"></i> Commenter
                         </button>
                     </div>
                 </article>
@@ -1422,76 +1444,48 @@ const App = {
                 const queryText = document.getElementById('search-query-text');
                 if (queryText) queryText.innerText = `Résultats pour "${q}"`;
 
-                const userContainer = document.getElementById('search-users-results');
-                const postContainer = document.getElementById('search-posts-results');
+                const containers = {
+                    users: document.getElementById('search-users-results'),
+                    posts: document.getElementById('search-posts-results'),
+                    groups: document.getElementById('search-groups-results')
+                };
 
-                userContainer.innerHTML = '<div class="p-4 animate-pulse">Recherche d\'utilisateurs...</div>';
-                postContainer.innerHTML = '<div class="p-4 animate-pulse">Recherche de témoignages...</div>';
+                Object.values(containers).forEach(c => c ? c.innerHTML = '<div class="p-4 animate-pulse text-xs">...</div>' : null);
 
                 try {
-                    // 1. Search Users (Username or Bio)
-                    const { data: users, error: userError } = await sb.from('profiles')
-                        .select('*')
-                        .or(`username.ilike.%${q}%,bio.ilike.%${q}%`)
-                        .neq('id', App.state.user.id)
-                        .limit(20);
+                    // 1. Search Users
+                    const { data: users } = await sb.from('profiles').select('*').or(`username.ilike.%${q}%,bio.ilike.%${q}%`).limit(10);
+                    containers.users.innerHTML = (users && users.length > 0) ? users.map(u => `
+                        <div class="glass-panel p-3 rounded-xl flex items-center justify-between">
+                            <div class="flex items-center gap-2">
+                                <img src="${u.avatar_url || 'https://ui-avatars.com/api/?name=' + u.username}" class="w-10 h-10 rounded-full">
+                                <span class="text-sm font-bold text-white">${u.username}</span>
+                            </div>
+                            <button onclick="App.UI.navigateTo('profile', '${u.id}')" class="text-primary text-xs font-bold">Voir</button>
+                        </div>
+                    `).join('') : '<p class="text-gray-500 text-xs p-2">Aucun membre.</p>';
 
-                    if (userError) throw userError;
-
-                    if (users && users.length > 0) {
-                        userContainer.innerHTML = users.map(u => `
-                            <div class="glass-panel p-4 rounded-2xl flex items-center justify-between group animate-slide-in-up">
-                                <div class="flex items-center gap-3">
-                                    <div class="relative">
-                                        <img src="${u.avatar_url || 'https://ui-avatars.com/api/?name=' + u.username}" class="w-12 h-12 rounded-full object-cover">
-                                        <div class="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 border-2 border-[#050510] rounded-full"></div>
-                                    </div>
-                                <div class="flex flex-col">
-                                        <span class="font-bold text-white">${u.username}</span>
-                                        <span class="text-[10px] text-gray-500 truncate max-w-[150px]">${u.bio || 'Membre de FaithConnect'}</span>
-                                    </div>
-                                </div>
-                                <div class="flex gap-2">
-                                    <button onclick="App.UI.navigateTo('profile', '${u.id}')" 
-                                            class="p-2 bg-white/5 hover:bg-white/10 text-white rounded-xl transition" title="Voir profil">
-                                        <i data-lucide="user" class="w-4 h-4"></i>
-                                    </button>
-                                    <button onclick="App.Features.Friends.sendRequest('${u.id}')" 
-                                            class="p-2 bg-primary/10 hover:bg-primary text-primary hover:text-white rounded-xl transition" title="Ajouter en ami">
-                                        <i data-lucide="user-plus" class="w-4 h-4"></i>
-                                    </button>
-                                    <button onclick="App.Features.Chat.openChat('${u.id}', '${u.username}', '${u.avatar_url || ''}'); App.UI.navigateTo('messages')" 
-                                            class="p-2 bg-white/5 hover:bg-white/10 text-white rounded-xl transition" title="Message">
-                                        <i data-lucide="message-circle" class="w-4 h-4"></i>
-                                    </button>
+                    // 2. Search Groups & Pages
+                    const { data: groups } = await sb.from('groups').select('*').ilike('name', `%${q}%`).limit(10);
+                    containers.groups.innerHTML = (groups && groups.length > 0) ? groups.map(g => `
+                        <div class="glass-panel p-3 rounded-xl flex items-center justify-between">
+                            <div class="flex items-center gap-2">
+                                <div class="w-10 h-10 bg-white/5 rounded-lg flex items-center justify-center"><i data-lucide="${g.type === 'page' ? 'flag' : 'users'}" class="w-5 h-5 text-primary"></i></div>
+                                <div>
+                                    <p class="text-sm font-bold text-white">${g.name}</p>
+                                    <p class="text-[8px] uppercase text-gray-500 tracking-widest">${g.type}</p>
                                 </div>
                             </div>
-                        `).join('');
-                    } else {
-                        userContainer.innerHTML = `
-                            <div class="col-span-full text-center py-6 glass-panel rounded-2xl">
-                                <p class="text-gray-400 text-sm italic">Aucun membre ne porte ce nom.</p>
-                            </div>`;
-                    }
+                            <button onclick="App.UI.navigateTo('group-detail', '${g.id}')" class="text-primary text-xs font-bold">Entrer</button>
+                        </div>
+                    `).join('') : '<p class="text-gray-500 text-xs p-2">Aucun groupe/page.</p>';
 
-                    // 2. Search Posts
-                    const { data: posts } = await sb.from('posts')
-                        .select('*, profiles(username, avatar_url)')
-                        .ilike('content', `%${q}%`)
-                        .order('created_at', { ascending: false })
-                        .limit(10);
-
-                    if (posts && posts.length > 0) {
-                        postContainer.innerHTML = posts.map(post => App.Features.Feed.renderPost(post)).join('');
-                    } else {
-                        postContainer.innerHTML = '<div class="text-gray-500 p-4 italic text-sm">Aucun message ne contient ces mots.</div>';
-                    }
+                    // 3. Search Posts
+                    const { data: posts } = await sb.from('posts').select('*, profiles(username, avatar_url)').ilike('content', `%${q}%`).limit(10);
+                    containers.posts.innerHTML = (posts && posts.length > 0) ? posts.map(post => App.Features.Feed.renderPost(post)).join('') : '<p class="text-gray-500 text-xs p-2">Aucun post.</p>';
 
                     if (typeof lucide !== 'undefined') lucide.createIcons();
-
-                } catch (err) {
-                    console.error("Search error:", err);
-                }
+                } catch (err) { console.error(err); }
             }
         },
 
@@ -1528,36 +1522,145 @@ const App = {
 
         // 8. GROUPS
         Groups: {
+            currentGroup: null,
+
             async fetchAll() {
+                App.state.lastGroupsView = 'groups';
                 const container = document.getElementById('groups-container');
                 if (!container) return;
-
                 container.innerHTML = '<div class="col-span-full text-center text-xs text-gray-500 animate-pulse">Recherche des groupes...</div>';
+                const { data: groups } = await sb.from('groups').select('*').eq('type', 'group');
+                container.innerHTML = (groups && groups.length > 0) ? groups.map(g => this.renderCard(g)).join('') : '<p class="col-span-full text-center py-10 text-gray-500">Aucun groupe.</p>';
+                if (typeof lucide !== 'undefined') lucide.createIcons();
+            },
 
-                const { data: groups, error } = await sb.from('groups').select('*').eq('type', 'group');
-
-                if (error || !groups || groups.length === 0) {
-                    container.innerHTML = `
-                        <div class="col-span-full text-center py-10">
-                            <p class="text-gray-400 mb-4">Aucun groupe trouvé.</p>
-                            <button onclick="App.Features.Groups.createModal()" class="btn-primary px-4 py-2 rounded-xl">Créer le premier groupe</button>
-                        </div>
-                    `;
-                    return;
-                }
-
-                container.innerHTML = groups.map(g => `
-                    <div class="bg-gray-900 border border-white/5 rounded-2xl overflow-hidden hover:border-primary/50 transition-all group">
+            renderCard(g) {
+                return `
+                    <div class="bg-gray-900 border border-white/5 rounded-2xl overflow-hidden hover:border-primary/50 transition-all group cursor-pointer" onclick="App.UI.navigateTo('group-detail', '${g.id}')">
                         <div class="h-24 bg-gray-800 relative">
                              <div class="absolute inset-0 bg-gradient-to-t from-gray-900 via-transparent to-transparent"></div>
                         </div>
                         <div class="p-4 relative -mt-6">
                             <h4 class="font-bold text-white text-lg leading-tight mb-1">${g.name}</h4>
                             <p class="text-xs text-gray-400 mb-3 line-clamp-2">${g.description || 'Pas de description'}</p>
-                            <button onclick="alert('Ouverture du groupe : ${g.name}')" class="w-full bg-white/5 hover:bg-primary py-2 rounded-lg text-xs font-bold transition-colors">Voir le groupe</button>
+                            <span class="text-primary text-[10px] font-bold uppercase tracking-tighter">Entrer dans le groupe</span>
                         </div>
                     </div>
-                `).join('');
+                `;
+            },
+
+            async loadDetail(groupId) {
+                this.currentGroup = null;
+                const { data: g } = await sb.from('groups').select('*').eq('id', groupId).single();
+                if (!g) return App.UI.navigateTo('groups');
+                this.currentGroup = g;
+
+                document.getElementById('group-detail-name').innerText = g.name;
+                document.getElementById('group-detail-description').innerText = g.description || 'Bienvenue dans ce groupe.';
+                document.getElementById('group-detail-badge').innerText = g.type;
+                document.getElementById('group-detail-icon').setAttribute('data-lucide', g.type === 'page' ? 'flag' : 'users');
+
+                // Subscription Check
+                const { data: sub } = await sb.from('group_members').select('*').eq('group_id', groupId).eq('user_id', App.state.user.id).single();
+                const btnJoin = document.getElementById('btn-group-join');
+                const btnPost = document.getElementById('btn-group-post');
+                const btnEdit = document.getElementById('btn-group-edit');
+
+                const isCreator = g.created_by === App.state.user.id;
+
+                if (sub || isCreator) {
+                    btnJoin.innerHTML = '<i data-lucide="check" class="w-4 h-4"></i> Membre';
+                    btnJoin.className = "bg-white/10 text-white px-6 py-2.5 rounded-xl font-bold flex items-center gap-2 flex-1 md:flex-none justify-center";
+                    btnPost.classList.remove('hidden');
+                } else {
+                    btnJoin.innerHTML = '<i data-lucide="user-plus" class="w-4 h-4"></i> Rejoindre';
+                    btnJoin.className = "btn-primary px-6 py-2.5 rounded-xl font-bold flex items-center gap-2 flex-1 md:flex-none justify-center";
+                    btnPost.classList.add('hidden');
+                }
+
+                if (isCreator) {
+                    btnEdit.classList.remove('hidden');
+                } else {
+                    btnEdit.classList.add('hidden');
+                }
+
+                // Load Members & Posts
+                this.loadMembers(groupId);
+                this.loadPosts(groupId);
+                if (typeof lucide !== 'undefined') lucide.createIcons();
+            },
+
+            async loadMembers(groupId) {
+                const container = document.getElementById('group-detail-members-list');
+                const { data: members } = await sb.from('group_members').select('profiles(username, avatar_url)').eq('group_id', groupId).limit(8);
+                document.getElementById('group-detail-members-count').innerText = members ? members.length : 0;
+
+                if (members && members.length > 0) {
+                    container.innerHTML = members.map(m => `
+                        <img src="${m.profiles.avatar_url || 'https://ui-avatars.com/api/?name=' + m.profiles.username}" 
+                             title="${m.profiles.username}" 
+                             class="w-10 h-10 rounded-lg object-cover ring-1 ring-white/10">
+                    `).join('');
+                } else {
+                    container.innerHTML = '<div class="col-span-4 text-[10px] text-gray-600 italic text-center">Aucun membre.</div>';
+                }
+            },
+
+            async toggleSubscription() {
+                const groupId = this.currentGroup.id;
+                const { data: sub } = await sb.from('group_members').select('*').eq('group_id', groupId).eq('user_id', App.state.user.id).single();
+
+                if (sub) {
+                    if (confirm("Voulez-vous vraiment quitter ce groupe ?")) {
+                        await sb.from('group_members').delete().eq('id', sub.id);
+                        this.loadDetail(groupId);
+                    }
+                } else {
+                    await sb.from('group_members').insert([{ group_id: groupId, user_id: App.state.user.id }]);
+                    this.loadDetail(groupId);
+                }
+            },
+
+            async loadPosts(groupId) {
+                const container = document.getElementById('group-posts-container');
+                const { data: posts } = await sb.from('posts').select('*, profiles(username, avatar_url)').eq('group_id', groupId).order('created_at', { ascending: false });
+                container.innerHTML = (posts && posts.length > 0) ? posts.map(p => App.Features.Feed.renderPost(p)).join('') : '<div class="text-center py-10 text-gray-500 italic text-sm">Aucune publication pour le moment.</div>';
+                if (typeof lucide !== 'undefined') lucide.createIcons();
+            },
+
+            openPostModal() {
+                const content = prompt("Votre message pour le groupe :");
+                if (content) this.publishPost(content);
+            },
+
+            async publishPost(content) {
+                const { error } = await sb.from('posts').insert([{
+                    content,
+                    user_id: App.state.user.id,
+                    group_id: this.currentGroup.id
+                }]);
+                if (error) alert(error.message);
+                else this.loadPosts(this.currentGroup.id);
+            },
+
+            share() {
+                const link = `${window.location.origin}${window.location.pathname}?view=group-detail&id=${this.currentGroup.id}`;
+                navigator.clipboard.writeText(link).then(() => alert("Lien d'invitation copié ! 🙏"));
+            },
+
+            editModal() {
+                const newName = prompt("Nouveau nom du groupe :", this.currentGroup.name);
+                const newDesc = prompt("Nouvelle description :", this.currentGroup.description || "");
+                if (newName) this.update(newName, newDesc);
+            },
+
+            async update(name, description) {
+                const { error } = await sb.from('groups').update({ name, description }).eq('id', this.currentGroup.id);
+                if (error) alert(error.message);
+                else {
+                    alert("Groupe mis à jour ! ✨");
+                    this.loadDetail(this.currentGroup.id);
+                }
             },
 
             createModal() {
@@ -1584,25 +1687,18 @@ const App = {
         // 9. PAGES
         Pages: {
             async fetchAll() {
+                App.state.lastGroupsView = 'pages';
                 const container = document.getElementById('pages-container');
                 if (!container) return;
-
                 container.innerHTML = '<div class="col-span-full text-center text-xs text-gray-500 animate-pulse">Recherche des pages...</div>';
+                const { data: pages } = await sb.from('groups').select('*').eq('type', 'page');
+                container.innerHTML = (pages && pages.length > 0) ? pages.map(p => this.renderCard(p)).join('') : '<p class="col-span-full text-center py-10 text-gray-500">Aucune page.</p>';
+                if (typeof lucide !== 'undefined') lucide.createIcons();
+            },
 
-                const { data: pages, error } = await sb.from('groups').select('*').eq('type', 'page');
-
-                if (error || !pages || pages.length === 0) {
-                    container.innerHTML = `
-                        <div class="col-span-full text-center py-10">
-                            <p class="text-gray-400 mb-4">Aucune page trouvée.</p>
-                            <button onclick="App.Features.Pages.createModal()" class="btn-primary px-4 py-2 rounded-xl">Créer la première page</button>
-                        </div>
-                    `;
-                    return;
-                }
-
-                container.innerHTML = pages.map(p => `
-                    <div class="bg-gray-900 border border-white/5 rounded-2xl overflow-hidden hover:border-primary/50 transition-all group">
+            renderCard(p) {
+                return `
+                    <div class="bg-gray-900 border border-white/5 rounded-2xl overflow-hidden hover:border-primary/50 transition-all group cursor-pointer" onclick="App.UI.navigateTo('group-detail', '${p.id}')">
                         <div class="h-24 bg-blue-900/20 relative">
                              <div class="absolute inset-0 bg-gradient-to-t from-gray-900 via-transparent to-transparent"></div>
                              <div class="absolute top-2 right-2 bg-blue-500/20 text-blue-400 text-[8px] font-bold px-2 py-0.5 rounded-full uppercase">Page</div>
@@ -1610,10 +1706,10 @@ const App = {
                         <div class="p-4 relative -mt-6">
                             <h4 class="font-bold text-white text-lg leading-tight mb-1">${p.name}</h4>
                             <p class="text-xs text-gray-400 mb-3 line-clamp-2">${p.description || 'Pas de description'}</p>
-                            <button onclick="alert('Ouverture de la page : ${p.name}')" class="w-full bg-white/5 hover:bg-primary py-2 rounded-lg text-xs font-bold transition-colors">Suivre la page</button>
+                            <span class="text-primary text-[10px] font-bold uppercase tracking-tighter">Voir la page</span>
                         </div>
                     </div>
-                `).join('');
+                `;
             },
 
             createModal() {
