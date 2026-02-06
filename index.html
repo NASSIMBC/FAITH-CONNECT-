@@ -74,7 +74,7 @@
     </section>
 
     <!-- ================= MAIN APPLICATION ================= -->
-    <div id="app-conatiner" class="">
+    <div id="app-container" class="">
 
         <!-- HEADER MOBILE (Sticky Top) -->
         <header class="md:hidden sticky top-0 z-40 glass-nav px-5 py-3 flex justify-between items-center">
@@ -286,218 +286,222 @@
                         <button
                             class="px-4 py-1 bg-white/5 hover:bg-white/10 text-gray-300 rounded-full text-xs font-bold whitespace-nowrap transition">Musique</button>
                     </div>
+
+                    <div id="marketplace-grid" class="grid grid-cols-2 md:grid-cols-3 gap-4 pb-20">
+                        <!-- Products injected -->
+                        <div class="col-span-full text-center py-10 text-gray-500">Chargement des articles...</div>
+                    </div>
+                </section>
+
+                <!-- VIEW: BIBLE -->
+                <section id="view-bible" class="page-view hidden space-y-4 p-4 md:p-0">
+                    <div
+                        class="glass-panel p-4 rounded-[24px] flex flex-col md:flex-row justify-between items-center gap-4">
+                        <h2 class="text-xl font-bold flex items-center gap-2"><i data-lucide="book"
+                                class="text-primary"></i>
+                            Sainte Bible</h2>
+                        <select id="bible-version-select" onchange="App.Features.Bible.changeVersion(this.value)"
+                            class="bg-black/30 border border-white/10 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-primary">
+                            <option value="LSG">Louis Segond 1910 (FR)</option>
+                            <option value="BDS">La Bible du Semeur (FR)</option>
+                            <option value="OST">Ostervald (FR)</option>
+                            <option value="KJV">King James Version (EN)</option>
+                            <option value="YLT">Young's Literal (EN)</option>
+                        </select>
+                    </div>
+
+                    <!-- Bible Navigation (Books) -->
+                    <div class="glass-panel p-4 rounded-[24px]">
+                        <!-- Tabs OT/NT -->
+                        <div class="flex gap-4 mb-4 border-b border-white/5 pb-2">
+                            <button onclick="App.Features.Bible.filterBooks('all')"
+                                class="text-xs font-bold text-white border-b-2 border-primary pb-1">Tous</button>
+                            <button onclick="App.Features.Bible.filterBooks('OT')"
+                                class="text-xs font-bold text-gray-400 hover:text-white transition">Ancien
+                                Testament</button>
+                            <button onclick="App.Features.Bible.filterBooks('NT')"
+                                class="text-xs font-bold text-gray-400 hover:text-white transition">Nouveau
+                                Testament</button>
+                        </div>
+                        <div id="bible-books-nav" class="flex gap-2 overflow-x-auto pb-2 custom-scrollbar snap-x">
+                            <!-- Books injected -->
+                            <div class="text-center w-full py-4 text-gray-500 text-xs">Chargement des livres...</div>
+                        </div>
+                    </div>
+
+                    <!-- Bible Content -->
+                    <div
+                        class="glass-panel p-6 rounded-[24px] min-h-[60vh] max-h-[80vh] overflow-y-auto custom-scrollbar relative">
+                        <div
+                            class="sticky top-0 bg-[#141423]/95 backdrop-blur-md z-10 py-2 mb-4 border-b border-white/5 flex justify-between items-center">
+                            <h2 id="bible-current-ref" class="text-xl font-bold font-serif text-white">Jean 1</h2>
+                            <div class="flex gap-2">
+                                <button onclick="App.Features.Bible.prevChap()"
+                                    class="p-2 hover:bg-white/10 rounded-full transition"><i
+                                        data-lucide="chevron-left"></i></button>
+                                <button onclick="App.Features.Bible.nextChap()"
+                                    class="p-2 hover:bg-white/10 rounded-full transition"><i
+                                        data-lucide="chevron-right"></i></button>
+                            </div>
+                        </div>
+                        <div id="bible-content"
+                            class="bible-text text-justify text-lg leading-loose selection:bg-primary/30">
+                            <p class="text-center text-gray-500 mt-10 animate-pulse">Sélectionnez un livre...</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- VIEW: GROUPS -->
+                <section id="view-groups" class="page-view hidden p-4 md:p-0">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-2xl font-bold">Groupes & Pages</h2>
+                        <button onclick="App.Features.Groups.createModal()"
+                            class="btn-primary px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2">
+                            <i data-lucide="plus"></i> Créer
+                        </button>
+                    </div>
+                    <div id="groups-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <!-- Groups injected -->
+                    </div>
+                </section>
+
+                <!-- VIEW: PRAYERS -->
+                <section id="view-prayers" class="page-view hidden p-4 md:p-0">
+                    <div class="glass-panel p-6 rounded-[32px] mb-6">
+                        <h2 class="text-2xl font-bold mb-2 flex items-center gap-2">Mur de Prière <span
+                                class="text-sm bg-pink-500/20 text-pink-400 px-2 py-1 rounded-full">En direct</span>
+                        </h2>
+                        <p class="text-gray-400 text-sm mb-6">Portez-vous les uns les autres dans la prière.</p>
+
+                        <div class="flex gap-2">
+                            <input id="main-prayer-input" type="text" placeholder="Partagez votre sujet de prière..."
+                                class="input-field flex-1 px-4 py-3 rounded-xl">
+                            <button onclick="App.Features.Prayers.addMain()"
+                                class="btn-primary px-6 rounded-xl font-bold">Publier</button>
+                        </div>
+                    </div>
+                    <div id="prayers-container" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <!-- Prayers injected -->
+                        <div class="text-center text-gray-500 py-10 col-span-full">Chargement des prières...</div>
+                    </div>
+                </section>
+
+                <!-- VIEW: EVENTS -->
+                <section id="view-events" class="page-view hidden p-4 md:p-0">
+                    <div class="glass-panel p-6 rounded-[32px] mb-6 flex justify-between items-center">
+                        <div>
+                            <h2 class="text-2xl font-bold mb-1">Événements Chrétiens</h2>
+                            <p class="text-gray-400 text-sm">Ne manquez aucun rassemblement.</p>
+                        </div>
+                        <button
+                            class="bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-xl text-sm font-bold transition">Proposer
+                            un événement</button>
+                    </div>
+                    <div id="events-container" class="space-y-4">
+                        <!-- Events injected -->
+                        <div class="text-center text-gray-500 py-10">Chargement des événements...</div>
+                    </div>
+                </section>
+
+                <!-- VIEW: MESSAGES (Fixed Layout for Mobile) -->
+                <section id="view-messages"
+                    class="page-view hidden bg-[#030014] fixed inset-0 top-[60px] bottom-[85px] z-40 md:static md:h-[calc(100vh-4rem)] md:z-auto">
+                    <div class="glass-panel w-full h-full rounded-[24px] overflow-hidden flex">
+                        <!-- List (Sidebar) -->
+                        <div class="w-full md:w-80 border-r border-white/5 bg-gray-900/50 flex flex-col"
+                            id="msg-sidebar">
+                            <div class="p-4 border-b border-white/5">
+                                <input type="text" placeholder="Rechercher..."
+                                    class="input-field w-full px-4 py-2 rounded-xl text-xs">
+                            </div>
+                            <div id="conversations-list" class="flex-1 overflow-y-auto"></div>
+                        </div>
+                        <!-- Chat Area -->
+                        <div class="hidden md:flex flex-1 flex-col bg-[#050510]" id="msg-area">
+                            <div id="chat-header" class="p-4 border-b border-white/5 flex items-center justify-between">
+                                <span class="font-bold">Sélectionnez une discussion</span>
+                            </div>
+                            <div id="chat-messages" class="flex-1 overflow-y-auto p-4 space-y-4"></div>
+                            <div class="p-4 border-t border-white/5 flex gap-2">
+                                <input id="chat-input" type="text" class="input-field flex-1 rounded-xl px-4 py-2"
+                                    placeholder="Message..." disabled>
+                                <button onclick="App.Features.Chat.send()" class="btn-primary p-2 rounded-xl"><i
+                                        data-lucide="send"></i></button>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- VIEW: PROFILE -->
+                <section id="view-profile" class="page-view hidden p-4 md:p-0">
+                    <div class="glass-panel p-6 rounded-[32px] text-center relative overflow-hidden mb-6">
+                        <div class="w-24 h-24 mx-auto rounded-full p-1 bg-gradient-to-tr from-purple-500 to-pink-500 mb-4 cursor-pointer"
+                            onclick="App.UI.modals.editProfile.open()">
+                            <img id="profile-page-avatar" class="w-full h-full rounded-full object-cover bg-black">
+                        </div>
+                        <h2 id="profile-page-name" class="text-2xl font-black">Mon Profil</h2>
+                        <p id="profile-page-bio" class="text-gray-400 text-sm mt-2 max-w-md mx-auto">...</p>
+
+                        <div class="grid grid-cols-3 gap-4 mt-8 pt-6 border-t border-white/5">
+                            <div>
+                                <p class="font-black text-xl" id="stat-posts">0</p>
+                                <p class="text-[10px] text-gray-500 uppercase">Posts</p>
+                            </div>
+                            <div>
+                                <p class="font-black text-xl" id="stat-friends">0</p>
+                                <p class="text-[10px] text-gray-500 uppercase">Amis</p>
+                            </div>
+                            <div>
+                                <p class="font-black text-xl" id="stat-prayers">0</p>
+                                <p class="text-[10px] text-gray-500 uppercase">Prières</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Profile Tabs -->
+                    <div class="glass-panel p-2 rounded-[24px] mb-4 flex">
+                        <button onclick="App.UI.switchProfileTab('posts')" id="tab-profile-posts"
+                            class="flex-1 py-3 text-sm font-bold bg-white/10 rounded-xl text-white transition">Mes
+                            Posts</button>
+                        <button onclick="App.UI.switchProfileTab('friends')" id="tab-profile-friends"
+                            class="flex-1 py-3 text-sm font-bold text-gray-400 hover:text-white transition">Amis</button>
+                    </div>
+
+                    <!-- Profile Content -->
+                    <div id="profile-posts-container" class="space-y-4 pb-20">
+                        <!-- User posts injected here -->
+                        <div class="text-center text-gray-500 py-10 text-xs">Chargement...</div>
+                    </div>
+
+                    <div id="profile-friends-container" class="hidden grid grid-cols-2 md:grid-cols-3 gap-3 pb-20">
+                        <!-- Friends injected here -->
+                    </div>
+
+                    <button onclick="App.Auth.logout()"
+                        class="absolute top-6 right-6 text-red-400 hover:text-red-300"><i data-lucide="log-out"
+                            class="w-5 h-5"></i></button>
+                </section>
+
+            </main>
+
         </div>
 
-        <div id="marketplace-grid" class="grid grid-cols-2 md:grid-cols-3 gap-4 pb-20">
-            <!-- Products injected -->
-            <div class="col-span-full text-center py-10 text-gray-500">Chargement des articles...</div>
-        </div>
-        </section>
-
-        <!-- VIEW: BIBLE -->
-        <section id="view-bible" class="page-view hidden space-y-4 p-4 md:p-0">
-            <div class="glass-panel p-4 rounded-[24px] flex flex-col md:flex-row justify-between items-center gap-4">
-                <h2 class="text-xl font-bold flex items-center gap-2"><i data-lucide="book" class="text-primary"></i>
-                    Sainte Bible</h2>
-                <select id="bible-version-select" onchange="App.Features.Bible.changeVersion(this.value)"
-                    class="bg-black/30 border border-white/10 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-primary">
-                    <option value="LSG">Louis Segond 1910 (FR)</option>
-                    <option value="BDS">La Bible du Semeur (FR)</option>
-                    <option value="OST">Ostervald (FR)</option>
-                    <option value="KJV">King James Version (EN)</option>
-                    <option value="YLT">Young's Literal (EN)</option>
-                </select>
-            </div>
-
-            <!-- Bible Navigation (Books) -->
-            <div class="glass-panel p-4 rounded-[24px]">
-                <!-- Tabs OT/NT -->
-                <div class="flex gap-4 mb-4 border-b border-white/5 pb-2">
-                    <button onclick="App.Features.Bible.filterBooks('all')"
-                        class="text-xs font-bold text-white border-b-2 border-primary pb-1">Tous</button>
-                    <button onclick="App.Features.Bible.filterBooks('OT')"
-                        class="text-xs font-bold text-gray-400 hover:text-white transition">Ancien
-                        Testament</button>
-                    <button onclick="App.Features.Bible.filterBooks('NT')"
-                        class="text-xs font-bold text-gray-400 hover:text-white transition">Nouveau
-                        Testament</button>
-                </div>
-                <div id="bible-books-nav" class="flex gap-2 overflow-x-auto pb-2 custom-scrollbar snap-x">
-                    <!-- Books injected -->
-                    <div class="text-center w-full py-4 text-gray-500 text-xs">Chargement des livres...</div>
-                </div>
-            </div>
-
-            <!-- Bible Content -->
-            <div
-                class="glass-panel p-6 rounded-[24px] min-h-[60vh] max-h-[80vh] overflow-y-auto custom-scrollbar relative">
-                <div
-                    class="sticky top-0 bg-[#141423]/95 backdrop-blur-md z-10 py-2 mb-4 border-b border-white/5 flex justify-between items-center">
-                    <h2 id="bible-current-ref" class="text-xl font-bold font-serif text-white">Jean 1</h2>
-                    <div class="flex gap-2">
-                        <button onclick="App.Features.Bible.prevChap()"
-                            class="p-2 hover:bg-white/10 rounded-full transition"><i
-                                data-lucide="chevron-left"></i></button>
-                        <button onclick="App.Features.Bible.nextChap()"
-                            class="p-2 hover:bg-white/10 rounded-full transition"><i
-                                data-lucide="chevron-right"></i></button>
-                    </div>
-                </div>
-                <div id="bible-content" class="bible-text text-justify text-lg leading-loose selection:bg-primary/30">
-                    <p class="text-center text-gray-500 mt-10 animate-pulse">Sélectionnez un livre...</p>
-                </div>
-            </div>
-        </section>
-
-        <!-- VIEW: GROUPS -->
-        <section id="view-groups" class="page-view hidden p-4 md:p-0">
-            <div class="flex justify-between items-center mb-6">
-                <h2 class="text-2xl font-bold">Groupes & Pages</h2>
-                <button onclick="App.Features.Groups.createModal()"
-                    class="btn-primary px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2">
-                    <i data-lucide="plus"></i> Créer
-                </button>
-            </div>
-            <div id="groups-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                <!-- Groups injected -->
-            </div>
-        </section>
-
-        <!-- VIEW: PRAYERS -->
-        <section id="view-prayers" class="page-view hidden p-4 md:p-0">
-            <div class="glass-panel p-6 rounded-[32px] mb-6">
-                <h2 class="text-2xl font-bold mb-2 flex items-center gap-2">Mur de Prière <span
-                        class="text-sm bg-pink-500/20 text-pink-400 px-2 py-1 rounded-full">En direct</span>
-                </h2>
-                <p class="text-gray-400 text-sm mb-6">Portez-vous les uns les autres dans la prière.</p>
-
-                <div class="flex gap-2">
-                    <input id="main-prayer-input" type="text" placeholder="Partagez votre sujet de prière..."
-                        class="input-field flex-1 px-4 py-3 rounded-xl">
-                    <button onclick="App.Features.Prayers.addMain()"
-                        class="btn-primary px-6 rounded-xl font-bold">Publier</button>
-                </div>
-            </div>
-            <div id="prayers-container" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <!-- Prayers injected -->
-                <div class="text-center text-gray-500 py-10 col-span-full">Chargement des prières...</div>
-            </div>
-        </section>
-
-        <!-- VIEW: EVENTS -->
-        <section id="view-events" class="page-view hidden p-4 md:p-0">
-            <div class="glass-panel p-6 rounded-[32px] mb-6 flex justify-between items-center">
-                <div>
-                    <h2 class="text-2xl font-bold mb-1">Événements Chrétiens</h2>
-                    <p class="text-gray-400 text-sm">Ne manquez aucun rassemblement.</p>
-                </div>
-                <button
-                    class="bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-xl text-sm font-bold transition">Proposer
-                    un événement</button>
-            </div>
-            <div id="events-container" class="space-y-4">
-                <!-- Events injected -->
-                <div class="text-center text-gray-500 py-10">Chargement des événements...</div>
-            </div>
-        </section>
-
-        <!-- VIEW: MESSAGES (Fixed Layout for Mobile) -->
-        <section id="view-messages"
-            class="page-view hidden bg-[#030014] fixed inset-0 top-[60px] bottom-[85px] z-40 md:static md:h-[calc(100vh-4rem)] md:z-auto">
-            <div class="glass-panel w-full h-full rounded-[24px] overflow-hidden flex">
-                <!-- List (Sidebar) -->
-                <div class="w-full md:w-80 border-r border-white/5 bg-gray-900/50 flex flex-col" id="msg-sidebar">
-                    <div class="p-4 border-b border-white/5">
-                        <input type="text" placeholder="Rechercher..."
-                            class="input-field w-full px-4 py-2 rounded-xl text-xs">
-                    </div>
-                    <div id="conversations-list" class="flex-1 overflow-y-auto"></div>
-                </div>
-                <!-- Chat Area -->
-                <div class="hidden md:flex flex-1 flex-col bg-[#050510]" id="msg-area">
-                    <div id="chat-header" class="p-4 border-b border-white/5 flex items-center justify-between">
-                        <span class="font-bold">Sélectionnez une discussion</span>
-                    </div>
-                    <div id="chat-messages" class="flex-1 overflow-y-auto p-4 space-y-4"></div>
-                    <div class="p-4 border-t border-white/5 flex gap-2">
-                        <input id="chat-input" type="text" class="input-field flex-1 rounded-xl px-4 py-2"
-                            placeholder="Message..." disabled>
-                        <button onclick="App.Features.Chat.send()" class="btn-primary p-2 rounded-xl"><i
-                                data-lucide="send"></i></button>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- VIEW: PROFILE -->
-        <section id="view-profile" class="page-view hidden p-4 md:p-0">
-            <div class="glass-panel p-6 rounded-[32px] text-center relative overflow-hidden mb-6">
-                <div class="w-24 h-24 mx-auto rounded-full p-1 bg-gradient-to-tr from-purple-500 to-pink-500 mb-4 cursor-pointer"
-                    onclick="App.UI.modals.editProfile.open()">
-                    <img id="profile-page-avatar" class="w-full h-full rounded-full object-cover bg-black">
-                </div>
-                <h2 id="profile-page-name" class="text-2xl font-black">Mon Profil</h2>
-                <p id="profile-page-bio" class="text-gray-400 text-sm mt-2 max-w-md mx-auto">...</p>
-
-                <div class="grid grid-cols-3 gap-4 mt-8 pt-6 border-t border-white/5">
-                    <div>
-                        <p class="font-black text-xl" id="stat-posts">0</p>
-                        <p class="text-[10px] text-gray-500 uppercase">Posts</p>
-                    </div>
-                    <div>
-                        <p class="font-black text-xl" id="stat-friends">0</p>
-                        <p class="text-[10px] text-gray-500 uppercase">Amis</p>
-                    </div>
-                    <div>
-                        <p class="font-black text-xl" id="stat-prayers">0</p>
-                        <p class="text-[10px] text-gray-500 uppercase">Prières</p>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Profile Tabs -->
-            <div class="glass-panel p-2 rounded-[24px] mb-4 flex">
-                <button onclick="App.UI.switchProfileTab('posts')" id="tab-profile-posts"
-                    class="flex-1 py-3 text-sm font-bold bg-white/10 rounded-xl text-white transition">Mes
-                    Posts</button>
-                <button onclick="App.UI.switchProfileTab('friends')" id="tab-profile-friends"
-                    class="flex-1 py-3 text-sm font-bold text-gray-400 hover:text-white transition">Amis</button>
-            </div>
-
-            <!-- Profile Content -->
-            <div id="profile-posts-container" class="space-y-4 pb-20">
-                <!-- User posts injected here -->
-                <div class="text-center text-gray-500 py-10 text-xs">Chargement...</div>
-            </div>
-
-            <div id="profile-friends-container" class="hidden grid grid-cols-2 md:grid-cols-3 gap-3 pb-20">
-                <!-- Friends injected here -->
-            </div>
-
-            <button onclick="App.Auth.logout()" class="absolute top-6 right-6 text-red-400 hover:text-red-300"><i
-                    data-lucide="log-out" class="w-5 h-5"></i></button>
-    </div>
-    </section>
-
-    </main>
-
-    </div>
-
-    <!-- MOBILE BOTTOM NAV -->
-    <nav class="md:hidden fixed bottom-0 left-0 right-0 glass-nav px-6 py-4 pb-6 flex justify-between z-50">
-        <button onclick="App.UI.navigateTo('home')" class="nav-item text-gray-400 active" id="mob-nav-home"><i
-                data-lucide="home"></i></button>
-        <button onclick="App.UI.navigateTo('marketplace')" class="nav-item text-gray-400" id="mob-nav-marketplace"><i
-                data-lucide="shopping-bag"></i></button>
-        <button onclick="App.Features.Feed.openCreator()"
-            class="bg-primary text-white p-3 rounded-full -mt-8 shadow-glow"><i data-lucide="plus"></i></button>
-        <button onclick="App.UI.navigateTo('bible')" class="nav-item text-gray-400" id="mob-nav-bible"><i
-                data-lucide="book"></i></button>
-        <button onclick="App.UI.navigateTo('messages')" class="nav-item text-gray-400 relative" id="mob-nav-messages">
-            <i data-lucide="message-circle"></i>
-            <span class="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full hidden" id="mob-msg-badge"></span>
-        </button>
-    </nav>
+        <!-- MOBILE BOTTOM NAV -->
+        <nav class="md:hidden fixed bottom-0 left-0 right-0 glass-nav px-6 py-4 pb-6 flex justify-between z-50">
+            <button onclick="App.UI.navigateTo('home')" class="nav-item text-gray-400 active" id="mob-nav-home"><i
+                    data-lucide="home"></i></button>
+            <button onclick="App.UI.navigateTo('marketplace')" class="nav-item text-gray-400"
+                id="mob-nav-marketplace"><i data-lucide="shopping-bag"></i></button>
+            <button onclick="App.Features.Feed.openCreator()"
+                class="bg-primary text-white p-3 rounded-full -mt-8 shadow-glow"><i data-lucide="plus"></i></button>
+            <button onclick="App.UI.navigateTo('bible')" class="nav-item text-gray-400" id="mob-nav-bible"><i
+                    data-lucide="book"></i></button>
+            <button onclick="App.UI.navigateTo('messages')" class="nav-item text-gray-400 relative"
+                id="mob-nav-messages">
+                <i data-lucide="message-circle"></i>
+                <span class="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full hidden" id="mob-msg-badge"></span>
+            </button>
+        </nav>
 
     </div>
 
