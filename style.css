@@ -1,200 +1,138 @@
-/* ==========================================
-   FAITHCIRCLE - CELESTIAL GLASS DESIGN SYSTEM 2.0
-   ========================================== */
-
-/* === VARIABLES CSS === */
 :root {
-    /* ✨ Palette Céleste */
-    --celestial-bg: #030014;
-    /* Noir profond légèrement violet */
-    --celestial-card: rgba(20, 20, 35, 0.6);
-    --celestial-glass: rgba(255, 255, 255, 0.03);
-    --celestial-border: rgba(255, 255, 255, 0.08);
+    /* 🪐 Base Colors (Dark Mode) */
+    --bg-app: #030014;
+    --bg-surface: rgba(20, 20, 35, 0.6);
+    --bg-pure: #050510;
+    --bg-sidebar: rgba(3, 0, 20, 0.85);
+
+    --text-main: #F3F4F6;
+    --text-muted: #94A3B8;
+    --text-pure: #FFFFFF;
+
+    --border-main: rgba(255, 255, 255, 0.08);
+    --border-soft: rgba(255, 255, 255, 0.03);
 
     /* 🎨 Accents */
     --primary: #8B5CF6;
-    /* Violet vibrant */
-    --primary-soft: #A78BFA;
-    /* Violet doux */
+    --primary-alt: #6366F1;
     --accent: #F472B6;
-    /* Rose */
     --gold: #FCD34D;
-    /* Or spirituel */
 
-    /* 💡 Glow Effects */
+    /* 💡 Effects */
+    --glass-blur: blur(12px);
     --glow-primary: 0 0 20px rgba(139, 92, 246, 0.4);
-    --glow-text: 0 0 10px rgba(255, 255, 255, 0.3);
+    --shadow-main: 0 8px 32px rgba(0, 0, 0, 0.4);
 
     /* 📏 Spacing & Radius */
     --radius-xl: 24px;
     --radius-lg: 16px;
     --radius-md: 12px;
 
-    /* 🌙 Transition Theme */
-    --theme-transition: background 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+    --theme-transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* === LIGHT MODE OVERRIDES === */
+/* === LIGHT MODE DEFINITIONS === */
 .light-mode {
-    --celestial-bg: #F8FAFC;
-    --celestial-card: rgba(255, 255, 255, 0.8);
-    --celestial-glass: rgba(255, 255, 255, 0.5);
-    --celestial-border: rgba(0, 0, 0, 0.08);
-    --text-primary: #1E293B;
-    --text-secondary: #64748B;
+    --bg-app: #F1F5F9;
+    /* Slate 100 */
+    --bg-surface: #FFFFFF;
+    /* Pure White */
+    --bg-pure: #F8FAFC;
+    /* Slate 50 */
+    --bg-sidebar: rgba(255, 255, 255, 0.9);
+
+    --text-main: #1E293B;
+    /* Slate 800 */
+    --text-muted: #64748B;
+    /* Slate 500 */
+    --text-pure: #0F172A;
+    /* Slate 900 */
+
+    --border-main: #E2E8F0;
+    /* Slate 200 */
+    --border-soft: #F1F5F9;
+    /* Slate 100 */
+
     --primary: #7C3AED;
-    --glow-primary: 0 0 20px rgba(124, 58, 237, 0.2);
+    /* Deep Violet */
+    --glow-primary: 0 4px 12px rgba(124, 58, 237, 0.1);
+    --shadow-main: 0 10px 25px rgba(0, 0, 0, 0.05);
 }
 
 body {
-    background-color: var(--celestial-bg);
-    color: #F3F4F6;
+    background-color: var(--bg-app);
+    color: var(--text-main);
     transition: var(--theme-transition);
 }
 
 .light-mode body {
-    color: var(--text-primary);
     background-image:
-        radial-gradient(circle at 15% 50%, rgba(124, 58, 237, 0.05), transparent 25%),
-        radial-gradient(circle at 85% 30%, rgba(236, 72, 153, 0.05), transparent 25%);
+        radial-gradient(circle at 0% 0%, rgba(124, 58, 237, 0.03), transparent 25%),
+        radial-gradient(circle at 100% 100%, rgba(244, 114, 182, 0.03), transparent 25%);
 }
 
-.light-mode .text-white {
-    color: var(--text-primary) !important;
+/* === GLOBAL HELPERS === */
+.text-white {
+    color: var(--text-pure) !important;
 }
 
-.light-mode .text-gray-400 {
-    color: var(--text-secondary) !important;
+.text-gray-400 {
+    color: var(--text-muted) !important;
 }
 
-.light-mode .text-gray-200 {
-    color: #334155 !important;
+.text-gray-200 {
+    color: var(--text-main) !important;
 }
 
-.light-mode .glass-panel {
-    background: white;
-    border-color: rgba(0, 0, 0, 0.05);
+/* === GLASSMORPHISM === */
+.glass-panel {
+    background: var(--bg-surface);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
+    border: 1px solid var(--border-main);
+    box-shadow: var(--shadow-main);
 }
 
-.light-mode .glass-nav {
-    background: rgba(255, 255, 255, 0.9);
-    border-color: rgba(0, 0, 0, 0.05);
+.glass-nav {
+    background: var(--bg-sidebar);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-top: 1px solid var(--border-main);
 }
 
-.light-mode .input-field {
-    background: #F1F5F9;
-    color: var(--text-primary) !important;
-    border-color: #E2E8F0;
-}
-
-.light-mode .nav-btn-desktop:hover,
-.light-mode .nav-item:hover {
-    background: rgba(124, 58, 237, 0.05);
-}
-
+/* === TAILWIND BRIDGE UTILITIES === */
 .light-mode .bg-gray-900,
-.light-mode .bg-gray-800 {
-    background-color: #F1F5F9 !important;
+.light-mode .bg-gray-800,
+.light-mode .bg-\[\#050510\],
+.light-mode .bg-\[\#030014\],
+.light-mode .bg-black\/20,
+.light-mode .bg-black\/50 {
+    background-color: var(--bg-pure) !important;
 }
 
-.light-mode .bg-black\/20 {
-    background-color: rgba(0, 0, 0, 0.02) !important;
-}
-
-.light-mode .bg-black\/30 {
-    background-color: #fff !important;
-}
-
-.light-mode aside {
-    background: white;
-}
-
-.light-mode #msg-sidebar {
-    background: #f8fafc;
-}
-
-.light-mode #msg-area {
-    background: #ffffff;
-}
-
-/* Fixed visibility for Light Mode */
-.light-mode .text-purple-400,
-.light-mode .text-primary {
-    color: #7C3AED !important;
-}
-
-.light-mode .bg-primary {
-    background: #7C3AED !important;
-}
-
-.light-mode .bg-primary\/10 {
-    background: rgba(124, 58, 237, 0.1) !important;
-}
-
-.light-mode .bg-primary\/20 {
-    background: rgba(124, 58, 237, 0.1) !important;
-}
-
-.light-mode .bg-white\/5 {
-    background: rgba(0, 0, 0, 0.03) !important;
-}
-
+.light-mode .bg-white\/5,
 .light-mode .bg-white\/10 {
-    background: rgba(0, 0, 0, 0.05) !important;
+    background-color: var(--border-soft) !important;
 }
 
 .light-mode .border-white\/5,
 .light-mode .border-white\/10 {
-    border-color: rgba(0, 0, 0, 0.08) !important;
+    border-color: var(--border-main) !important;
 }
 
-.light-mode .hover\:bg-white\/5:hover {
-    background-color: rgba(124, 58, 237, 0.05) !important;
+.light-mode .text-gray-200,
+.light-mode .text-gray-300,
+.light-mode .text-gray-100 {
+    color: var(--text-main) !important;
 }
 
+.light-mode .text-white {
+    color: var(--text-pure) !important;
+}
+
+.light-mode .hover\:bg-white\/5:hover,
 .light-mode .hover\:bg-white\/10:hover {
-    background-color: rgba(124, 58, 237, 0.1) !important;
-}
-
-.light-mode .bible-text {
-    color: #1E293B;
-}
-
-.light-mode .bible-verse-num {
-    color: #7C3AED;
-}
-
-.light-mode .input-field::placeholder {
-    color: #94A3B8;
-}
-
-.light-mode .bg-black\/80 {
-    background-color: rgba(255, 255, 255, 0.95) !important;
-    backdrop-filter: blur(10px);
-}
-
-.light-mode .text-red-400 {
-    color: #DC2626 !important;
-}
-
-.light-mode .group:hover .text-gray-400 {
-    color: #7C3AED !important;
-}
-
-.light-mode .bg-gray-900\/50 {
-    background: #f1f5f9 !important;
-}
-
-.light-mode #msg-area {
-    background: #ffffff !important;
-}
-
-.light-mode .bg-\[\#050510\] {
-    background: #ffffff !important;
-}
-
-.light-mode .bg-\[\#030014\] {
-    background: #f8fafc !important;
+    background-color: var(--border-main) !important;
 }
 
 .font-serif {
@@ -203,19 +141,18 @@ body {
 
 /* === UTILITIES GLASSMORPHISM === */
 .glass-panel {
-    background: var(--celestial-card);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border: 1px solid var(--celestial-border);
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+    background: var(--bg-surface);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
+    border: 1px solid var(--border-main);
+    box-shadow: var(--shadow-main);
 }
 
 .glass-nav {
-    background: rgba(3, 0, 20, 0.85);
-    /* Plus opaque pour la lisibilité */
+    background: var(--bg-sidebar);
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
-    border-top: 1px solid var(--celestial-border);
+    border-top: 1px solid var(--border-main);
 }
 
 /* === ANIMATIONS === */
@@ -283,19 +220,42 @@ body {
 
 /* Inputs Célestes */
 .input-field {
-    background: rgba(0, 0, 0, 0.2);
-    border: 1px solid var(--celestial-border);
-    color: white;
-    transition: border-color 0.2s, box-shadow 0.2s;
+    background: var(--bg-pure);
+    border: 1px solid var(--border-main);
+    color: var(--text-main);
+    transition: var(--theme-transition);
 }
 
 .input-field:focus {
     border-color: var(--primary);
-    box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.2);
+    box-shadow: var(--glow-primary);
     outline: none;
 }
 
-/* Scrollbar invisible mais fonctionnelle */
+/* Scrollbars Personnalisées */
+.custom-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: var(--primary) transparent;
+    scrollbar-gutter: stable;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+    width: 5px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    background: var(--border-main);
+    border-radius: 10px;
+}
+
+.custom-scrollbar:hover::-webkit-scrollbar-thumb {
+    background: var(--primary);
+}
+
 .scrollbar-hide::-webkit-scrollbar {
     display: none;
 }
@@ -309,15 +269,16 @@ body {
 .bible-text {
     font-size: 1.125rem;
     line-height: 1.8;
-    color: #E2E8F0;
+    color: var(--text-main);
 }
 
 .bible-verse-num {
     font-size: 0.75em;
-    color: var(--primary-soft);
+    color: var(--primary);
     vertical-align: super;
     margin-right: 0.2em;
     user-select: none;
+    font-weight: bold;
 }
 
 /* === MOBILE NAVIGATION 2.0 === */
@@ -345,10 +306,10 @@ body {
 
 /* === NOTIFICATION SYSTEM === */
 .notification-toast {
-    background: rgba(13, 10, 31, 0.8);
+    background: var(--bg-sidebar);
     backdrop-filter: blur(12px);
-    border: 1px solid rgba(139, 92, 246, 0.2);
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+    border: 1px solid var(--border-main);
+    box-shadow: var(--shadow-main);
     border-radius: 20px;
     padding: 12px 16px;
     display: flex;
@@ -389,12 +350,12 @@ body {
 
 .notification-item {
     transition: all 0.3s;
-    border: 1px solid rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--border-soft);
 }
 
 .notification-item.unread {
     background: rgba(139, 92, 246, 0.05);
-    border-left: 3px solid #8B5CF6;
+    border-left: 3px solid var(--primary);
 }
 
 .notification-badge {
@@ -416,4 +377,44 @@ body {
         transform: scale(1);
         box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
     }
+}
+
+/* === SPIRITUAL OBJECTIVES === */
+.objective-item {
+    transition: var(--theme-transition);
+    border: 1px solid var(--border-soft);
+}
+
+.objective-item.completed {
+    border-color: rgba(139, 92, 246, 0.3);
+    background: rgba(139, 92, 246, 0.05);
+}
+
+.objective-item.completed .check-circle {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: white;
+}
+
+.objective-item.completed .objective-text {
+    opacity: 0.6;
+    text-decoration: line-through;
+}
+
+@keyframes objective-check {
+    0% {
+        transform: scale(1);
+    }
+
+    50% {
+        transform: scale(1.2);
+    }
+
+    100% {
+        transform: scale(1);
+    }
+}
+
+.check-animate {
+    animation: objective-check 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
