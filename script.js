@@ -2344,135 +2344,133 @@ const App = {
                         }
                     })
                     .subscribe();
-            }
-        },
-    },
+            },
 
-    // 9. PROFILE PAGE LOGIC
-    ProfilePage: {
-        currentTargetId: null,
+            // 9. PROFILE PAGE LOGIC (CORRECTEMENT PLACÉ DANS FEATURES)
+            ProfilePage: {
+                currentTargetId: null,
 
-        async load(userId = null) {
-            if (!App.state.user && !userId) return;
-            const id = userId || App.state.user.id;
-            this.currentTargetId = id;
-            const isMe = id === App.state.user.id;
+                async load(userId = null) {
+                    if (!App.state.user && !userId) return;
+                    const id = userId || App.state.user.id;
+                    this.currentTargetId = id;
+                    const isMe = id === App.state.user.id;
 
-            const actions = document.getElementById('profile-actions');
-            const editBtn = document.getElementById('btn-edit-profile');
-            const title = document.getElementById('profile-page-name');
-            const tabLabel = document.getElementById('tab-profile-posts');
+                    const actions = document.getElementById('profile-actions');
+                    const editBtn = document.getElementById('btn-edit-profile');
+                    const title = document.getElementById('profile-page-name');
+                    const tabLabel = document.getElementById('tab-profile-posts');
 
-            if (isMe) {
-                if (actions) actions.classList.add('hidden');
-                if (editBtn) editBtn.classList.remove('hidden');
-                if (title) title.innerText = "Mon Profil";
-                if (tabLabel) tabLabel.innerText = "Mes Posts";
-                this.renderProfileData(App.state.profile);
-                App.Features.Objectives.loadMonthly(id);
-            } else {
-                if (actions) actions.classList.remove('hidden');
-                if (editBtn) editBtn.classList.add('hidden');
-                if (tabLabel) tabLabel.innerText = "Posts";
+                    if (isMe) {
+                        if (actions) actions.classList.add('hidden');
+                        if (editBtn) editBtn.classList.remove('hidden');
+                        if (title) title.innerText = "Mon Profil";
+                        if (tabLabel) tabLabel.innerText = "Mes Posts";
+                        this.renderProfileData(App.state.profile);
+                        App.Features.Objectives.loadMonthly(id);
+                    } else {
+                        if (actions) actions.classList.remove('hidden');
+                        if (editBtn) editBtn.classList.add('hidden');
+                        if (tabLabel) tabLabel.innerText = "Posts";
 
-                const { data: profile } = await sb.from('profiles').select('*').eq('id', id).maybeSingle();
-                if (profile) {
-                    if (title) title.innerText = profile.username;
-                    this.renderProfileData(profile);
+                        const { data: profile } = await sb.from('profiles').select('*').eq('id', id).maybeSingle();
+                        if (profile) {
+                            if (title) title.innerText = profile.username;
+                            this.renderProfileData(profile);
 
-                    // Link message button
-                    const msgBtn = document.getElementById('btn-message-friend');
-                    if (msgBtn) {
-                        msgBtn.onclick = () => {
-                            App.Features.Chat.openChat(profile.id, profile.username, profile.avatar_url);
-                            App.UI.navigateTo('messages');
-                        };
+                            // Link message button
+                            const msgBtn = document.getElementById('btn-message-friend');
+                            if (msgBtn) {
+                                msgBtn.onclick = () => {
+                                    App.Features.Chat.openChat(profile.id, profile.username, profile.avatar_url);
+                                    App.UI.navigateTo('messages');
+                                };
+                            }
+                        }
+                        this.checkFriendship(id);
                     }
-                }
-                this.checkFriendship(id);
-            }
 
-            this.loadStats(id);
-            this.loadPosts(id);
-        },
+                    this.loadStats(id);
+                    this.loadPosts(id);
+                },
 
-        renderProfileData(p) {
-            const avatar = document.getElementById('profile-page-avatar');
-            const bio = document.getElementById('profile-page-bio');
-            if (avatar) avatar.src = p.avatar_url || `https://ui-avatars.com/api/?name=${p.username}`;
-            if (bio) bio.innerText = p.bio || "Membre de FaithConnect";
-        },
+                renderProfileData(p) {
+                    const avatar = document.getElementById('profile-page-avatar');
+                    const bio = document.getElementById('profile-page-bio');
+                    if (avatar) avatar.src = p.avatar_url || `https://ui-avatars.com/api/?name=${p.username}`;
+                    if (bio) bio.innerText = p.bio || "Membre de FaithConnect";
+                },
 
-        async checkFriendship(targetId) {
-            const btn = document.getElementById('btn-add-friend');
-            if (!btn) return;
+                async checkFriendship(targetId) {
+                    const btn = document.getElementById('btn-add-friend');
+                    if (!btn) return;
 
-            const { data: friendships } = await sb.from('friends')
-                .select('*')
-                .or(`and(user_id.eq.${App.state.user.id},friend_id.eq.${targetId}),and(user_id.eq.${targetId},friend_id.eq.${App.state.user.id})`)
-                .limit(1);
+                    const { data: friendships } = await sb.from('friends')
+                        .select('*')
+                        .or(`and(user_id.eq.${App.state.user.id},friend_id.eq.${targetId}),and(user_id.eq.${targetId},friend_id.eq.${App.state.user.id})`)
+                        .limit(1);
 
-            const data = friendships?.[0];
+                    const data = friendships?.[0];
 
-            if (data) {
-                if (data.status === 'accepted') {
-                    btn.innerHTML = '<i data-lucide="user-check" class="w-4 h-4"></i> Ami';
-                    btn.disabled = true;
-                    btn.className = "bg-green-600 text-white px-6 py-2 rounded-xl text-xs font-bold flex items-center gap-2";
-                } else {
-                    btn.innerHTML = '<i data-lucide="clock" class="w-4 h-4"></i> En attente';
-                    btn.disabled = true;
-                    btn.className = "bg-gray-700 text-white px-6 py-2 rounded-xl text-xs font-bold flex items-center gap-2";
-                }
-            } else {
-                btn.innerHTML = '<i data-lucide="user-plus" class="w-4 h-4"></i> Ajouter en ami';
-                btn.disabled = false;
-                btn.className = "btn-primary px-6 py-2 rounded-xl text-xs font-bold flex items-center gap-2";
-            }
-            if (typeof lucide !== 'undefined') lucide.createIcons();
-        },
+                    if (data) {
+                        if (data.status === 'accepted') {
+                            btn.innerHTML = '<i data-lucide="user-check" class="w-4 h-4"></i> Ami';
+                            btn.disabled = true;
+                            btn.className = "bg-green-600 text-white px-6 py-2 rounded-xl text-xs font-bold flex items-center gap-2";
+                        } else {
+                            btn.innerHTML = '<i data-lucide="clock" class="w-4 h-4"></i> En attente';
+                            btn.disabled = true;
+                            btn.className = "bg-gray-700 text-white px-6 py-2 rounded-xl text-xs font-bold flex items-center gap-2";
+                        }
+                    } else {
+                        btn.innerHTML = '<i data-lucide="user-plus" class="w-4 h-4"></i> Ajouter en ami';
+                        btn.disabled = false;
+                        btn.className = "btn-primary px-6 py-2 rounded-xl text-xs font-bold flex items-center gap-2";
+                    }
+                    if (typeof lucide !== 'undefined') lucide.createIcons();
+                },
 
-        async loadStats(userId) {
-            const id = userId || App.state.user.id;
-            const { count: postsCount } = await sb.from('posts').select('*', { count: 'exact', head: true }).eq('user_id', id);
-            document.getElementById('stat-posts').innerText = postsCount || 0;
+                async loadStats(userId) {
+                    const id = userId || App.state.user.id;
+                    const { count: postsCount } = await sb.from('posts').select('*', { count: 'exact', head: true }).eq('user_id', id);
+                    document.getElementById('stat-posts').innerText = postsCount || 0;
 
-            const { count: friendsCount } = await sb.from('friends').select('*', { count: 'exact', head: true }).or(`user_id.eq.${id},friend_id.eq.${id}`).eq('status', 'accepted');
-            document.getElementById('stat-friends').innerText = friendsCount || 0;
-        },
+                    const { count: friendsCount } = await sb.from('friends').select('*', { count: 'exact', head: true }).or(`user_id.eq.${id},friend_id.eq.${id}`).eq('status', 'accepted');
+                    document.getElementById('stat-friends').innerText = friendsCount || 0;
+                },
 
-        async loadPosts(userId) {
-            const id = userId || App.state.user.id;
-            const container = document.getElementById('profile-posts-container');
-            if (!container) return;
+                async loadPosts(userId) {
+                    const id = userId || App.state.user.id;
+                    const container = document.getElementById('profile-posts-container');
+                    if (!container) return;
 
-            container.innerHTML = '<div class="text-center py-10 animate-pulse text-xs text-gray-500">Chargement des témoignages...</div>';
+                    container.innerHTML = '<div class="text-center py-10 animate-pulse text-xs text-gray-500">Chargement des témoignages...</div>';
 
-            const { data: posts } = await sb.from('posts').select('*, profiles(username, avatar_url)')
-                .eq('user_id', id)
-                .order('created_at', { ascending: false });
+                    const { data: posts } = await sb.from('posts').select('*, profiles(username, avatar_url)')
+                        .eq('user_id', id)
+                        .order('created_at', { ascending: false });
 
-            if (posts && posts.length > 0) {
-                container.innerHTML = posts.map(post => App.Features.Feed.renderPost(post)).join('');
-                if (typeof lucide !== 'undefined') lucide.createIcons();
-            } else {
-                container.innerHTML = `<div class="text-center text-gray-500 py-10 text-xs">${id === App.state.user.id ? "Vous n'avez rien publié encore." : "Aucun post pour le moment."}</div>`;
-            }
-        },
+                    if (posts && posts.length > 0) {
+                        container.innerHTML = posts.map(post => App.Features.Feed.renderPost(post)).join('');
+                        if (typeof lucide !== 'undefined') lucide.createIcons();
+                    } else {
+                        container.innerHTML = `<div class="text-center text-gray-500 py-10 text-xs">${id === App.state.user.id ? "Vous n'avez rien publié encore." : "Aucun post pour le moment."}</div>`;
+                    }
+                },
 
-        async loadFriends() {
-            const container = document.getElementById('profile-friends-container');
-            const id = this.currentTargetId || App.state.user.id;
-            container.innerHTML = '<div class="col-span-full text-center py-10 animate-pulse text-xs text-gray-500">Chargement...</div>';
+                async loadFriends() {
+                    const container = document.getElementById('profile-friends-container');
+                    const id = this.currentTargetId || App.state.user.id;
+                    container.innerHTML = '<div class="col-span-full text-center py-10 animate-pulse text-xs text-gray-500">Chargement...</div>';
 
-            const { data: friendships } = await sb.from('friends').select('user_id, friend_id').or(`user_id.eq.${id},friend_id.eq.${id}`).eq('status', 'accepted');
+                    const { data: friendships } = await sb.from('friends').select('user_id, friend_id').or(`user_id.eq.${id},friend_id.eq.${id}`).eq('status', 'accepted');
 
-            if (friendships) {
-                const friendIds = friendships.map(f => f.user_id === id ? f.friend_id : f.user_id);
-                if (friendIds.length > 0) {
-                    const { data: users } = await sb.from('profiles').select('*').in('id', friendIds);
-                    if (users) {
-                        container.innerHTML = users.map(u => `
+                    if (friendships) {
+                        const friendIds = friendships.map(f => f.user_id === id ? f.friend_id : f.user_id);
+                        if (friendIds.length > 0) {
+                            const { data: users } = await sb.from('profiles').select('*').in('id', friendIds);
+                            if (users) {
+                                container.innerHTML = users.map(u => `
                                 <div class="glass-panel p-3 rounded-2xl flex flex-col items-center gap-2 group/f transition-all hover:border-primary/30 border border-transparent">
                                      <img src="${u.avatar_url || 'https://ui-avatars.com/api/?name=' + u.username}" 
                                           class="w-12 h-12 rounded-full object-cover cursor-pointer group-hover/f:ring-2 ring-primary transition-all"
@@ -2483,73 +2481,74 @@ const App = {
                                              class="w-full bg-white/5 hover:bg-primary py-1.5 rounded-lg text-[10px] transition-colors font-bold uppercase tracking-tighter">Voir Profil</button>
                                 </div>
                             `).join('');
+                            }
+                        } else {
+                            container.innerHTML = `<div class="col-span-full text-center py-10 text-gray-500 text-xs">Aucun ami trouvé.</div>`;
+                        }
                     }
-                } else {
-                    container.innerHTML = `<div class="col-span-full text-center py-10 text-gray-500 text-xs">Aucun ami trouvé.</div>`;
                 }
-            }
-        }
-    },
+            },
 
-    initAll() {
-        App.Features.Feed.loadDailyVerse();
-        App.Features.Feed.loadPosts();
-        App.Features.Bible.init();
-        App.Features.Prayers.load();
-        App.Features.Events.loadWidget();
-        if (App.Features.Marketplace && App.Features.Marketplace.initSearch) App.Features.Marketplace.initSearch();
-        if (App.state.user && window.innerWidth > 768) App.Features.Chat.loadList();
+            initAll() {
+                App.Features.Feed.loadDailyVerse();
+                App.Features.Feed.loadPosts();
+                App.Features.Bible.init();
+                App.Features.Prayers.load();
+                App.Features.Events.loadWidget();
+                if (App.Features.Marketplace && App.Features.Marketplace.initSearch) App.Features.Marketplace.initSearch();
+                if (App.state.user && window.innerWidth > 768) App.Features.Chat.loadList();
 
-        if (App.state.view === 'groups') App.Features.Groups.fetchAll();
-        if (App.state.view === 'pages') App.Features.Pages.fetchAll();
-        if (App.Features.Realtime) App.Features.Realtime.init();
+                if (App.state.view === 'groups') App.Features.Groups.fetchAll();
+                if (App.state.view === 'pages') App.Features.Pages.fetchAll();
+                if (App.Features.Realtime) App.Features.Realtime.init();
 
-        const searchInput = document.querySelector('#msg-sidebar input');
-        if (searchInput) {
-            searchInput.addEventListener('input', (e) => {
-                const val = e.target.value.toLowerCase();
-                const items = document.querySelectorAll('#conversations-list > div');
-                items.forEach(item => {
-                    const h4 = item.querySelector('h4');
-                    if (h4) {
-                        const name = h4.innerText.toLowerCase();
-                        item.style.display = name.includes(val) ? 'flex' : 'none';
-                    }
-                });
+                const searchInput = document.querySelector('#msg-sidebar input');
+                if (searchInput) {
+                    searchInput.addEventListener('input', (e) => {
+                        const val = e.target.value.toLowerCase();
+                        const items = document.querySelectorAll('#conversations-list > div');
+                        items.forEach(item => {
+                            const h4 = item.querySelector('h4');
+                            if (h4) {
+                                const name = h4.innerText.toLowerCase();
+                                item.style.display = name.includes(val) ? 'flex' : 'none';
+                            }
+                        });
 
-                const visibleItems = Array.from(items).filter(i => i.style.display !== 'none');
-                const hintId = 'chat-search-hint';
-                let hint = document.getElementById(hintId);
+                        const visibleItems = Array.from(items).filter(i => i.style.display !== 'none');
+                        const hintId = 'chat-search-hint';
+                        let hint = document.getElementById(hintId);
 
-                if (visibleItems.length === 0 && val.length > 0) {
-                    if (!hint) {
-                        hint = document.createElement('div');
-                        hint.id = hintId;
-                        hint.className = 'p-4 text-center cursor-pointer hover:bg-white/5 transition';
-                        hint.innerHTML = `<p class="text-xs text-gray-500 mb-2">Pas d'ami trouvé pour "${val}"</p>
+                        if (visibleItems.length === 0 && val.length > 0) {
+                            if (!hint) {
+                                hint = document.createElement('div');
+                                hint.id = hintId;
+                                hint.className = 'p-4 text-center cursor-pointer hover:bg-white/5 transition';
+                                hint.innerHTML = `<p class="text-xs text-gray-500 mb-2">Pas d'ami trouvé pour "${val}"</p>
                                                  <button onclick="App.Features.Finder.query('${val}')" class="text-xs text-primary font-bold">Chercher dans tout FaithConnect</button>`;
-                        document.getElementById('conversations-list').appendChild(hint);
-                    }
-                } else if (hint) {
-                    hint.remove();
+                                document.getElementById('conversations-list').appendChild(hint);
+                            }
+                        } else if (hint) {
+                            hint.remove();
+                        }
+                    });
                 }
-            });
-        }
 
-        ['global-search-desktop', 'mobile-search-input'].forEach(id => {
-            const el = document.getElementById(id);
-            if (el) {
-                el.addEventListener('keypress', (e) => {
-                    if (e.key === 'Enter') {
-                        App.Features.Finder.query(e.target.value);
-                        if (id === 'mobile-search-input') App.UI.toggleMobileSearch();
+                ['global-search-desktop', 'mobile-search-input'].forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el) {
+                        el.addEventListener('keypress', (e) => {
+                            if (e.key === 'Enter') {
+                                App.Features.Finder.query(e.target.value);
+                                if (id === 'mobile-search-input') App.UI.toggleMobileSearch();
+                            }
+                        });
                     }
                 });
             }
-        });
+        }
     }
-}
-
+};
 
 // Start App when DOM Ready
 document.addEventListener('DOMContentLoaded', App.init);
