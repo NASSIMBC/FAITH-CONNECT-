@@ -342,3 +342,78 @@ body {
     border-radius: 50%;
     box-shadow: 0 0 8px var(--primary);
 }
+
+/* === NOTIFICATION SYSTEM === */
+.notification-toast {
+    background: rgba(13, 10, 31, 0.8);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(139, 92, 246, 0.2);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+    border-radius: 20px;
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    animation: slide-in-right 0.4s ease-out forwards;
+    pointer-events: auto;
+    cursor: pointer;
+}
+
+.notification-toast.expiring {
+    animation: slide-out-right 0.4s ease-in forwards;
+}
+
+@keyframes slide-in-right {
+    from {
+        transform: translateX(120%);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes slide-out-right {
+    from {
+        transform: translateX(0);
+        opacity: 1;
+    }
+
+    to {
+        transform: translateX(120%);
+        opacity: 0;
+    }
+}
+
+.notification-item {
+    transition: all 0.3s;
+    border: 1px solid rgba(255, 255, 255, 0.03);
+}
+
+.notification-item.unread {
+    background: rgba(139, 92, 246, 0.05);
+    border-left: 3px solid #8B5CF6;
+}
+
+.notification-badge {
+    animation: pulse-red 2s infinite;
+}
+
+@keyframes pulse-red {
+    0% {
+        transform: scale(1);
+        box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+    }
+
+    70% {
+        transform: scale(1.1);
+        box-shadow: 0 0 0 5px rgba(239, 68, 68, 0);
+    }
+
+    100% {
+        transform: scale(1);
+        box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+    }
+}
