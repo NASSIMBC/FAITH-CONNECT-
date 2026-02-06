@@ -1086,6 +1086,16 @@ const App = {
                 sellerName.innerText = item.profiles?.username || 'Vendeur FaithConnect';
                 sellerAvatar.src = item.profiles?.avatar_url || `https://ui-avatars.com/api/?name=${item.profiles?.username || 'V'}`;
 
+                // Add click navigation to seller info
+                const sellerInfo = sellerName.parentElement.parentElement;
+                if (sellerInfo) {
+                    sellerInfo.classList.add('cursor-pointer', 'hover:bg-white/5', 'transition-colors');
+                    sellerInfo.onclick = () => {
+                        App.UI.navigateTo('profile', item.profiles?.id);
+                        App.UI.modals.closeAll();
+                    };
+                }
+
                 // Buttons
                 document.getElementById('btn-contact-seller').onclick = () => this.buy(item.profiles?.id, item.profiles?.username, item.profiles?.avatar_url);
                 document.getElementById('btn-buy-now').onclick = () => this.buy(item.profiles?.id, item.profiles?.username, item.profiles?.avatar_url);
@@ -1523,7 +1533,8 @@ const App = {
 
                 return `
                     <div class="glass-panel p-4 rounded-2xl flex items-center gap-4 ${n.is_read ? 'opacity-60' : 'notification-item unread'} cursor-pointer" onclick="App.Features.Notifications.handleClick('${n.id}', '${n.type}', '${n.target_id}')">
-                        <img src="${actorAvatar}" class="w-10 h-10 rounded-full object-cover">
+                        <img src="${actorAvatar}" class="w-10 h-10 rounded-full object-cover hover:ring-2 ring-primary transition-all" 
+                             onclick="event.stopPropagation(); App.UI.navigateTo('profile', '${n.actor_id}')">
                         <div class="flex-1">
                             <p class="text-xs text-white leading-snug"><b>${actorName}</b> ${message}</p>
                             <p class="text-[9px] text-gray-500 mt-1">${new Date(n.created_at).toLocaleString()}</p>
@@ -1653,9 +1664,9 @@ const App = {
                     const { data: users } = await sb.from('profiles').select('*').or(`username.ilike.%${q}%,bio.ilike.%${q}%`).limit(10);
                     containers.users.innerHTML = (users && users.length > 0) ? users.map(u => `
                         <div class="glass-panel p-3 rounded-xl flex items-center justify-between">
-                            <div class="flex items-center gap-2">
-                                <img src="${u.avatar_url || 'https://ui-avatars.com/api/?name=' + u.username}" class="w-10 h-10 rounded-full">
-                                <span class="text-sm font-bold text-white">${u.username}</span>
+                            <div class="flex items-center gap-2 cursor-pointer group/u" onclick="App.UI.navigateTo('profile', '${u.id}')">
+                                <img src="${u.avatar_url || 'https://ui-avatars.com/api/?name=' + u.username}" class="w-10 h-10 rounded-full group-hover/u:ring-2 ring-primary transition-all">
+                                <span class="text-sm font-bold text-white group-hover/u:text-primary transition-colors">${u.username}</span>
                             </div>
                             <button onclick="App.UI.navigateTo('profile', '${u.id}')" class="text-primary text-xs font-bold">Voir</button>
                         </div>
@@ -1796,7 +1807,8 @@ const App = {
                     container.innerHTML = members.map(m => `
                         <img src="${m.profiles.avatar_url || 'https://ui-avatars.com/api/?name=' + m.profiles.username}" 
                              title="${m.profiles.username}" 
-                             class="w-10 h-10 rounded-lg object-cover ring-1 ring-white/10">
+                             class="w-10 h-10 rounded-lg object-cover ring-1 ring-white/10 cursor-pointer hover:ring-primary transition-all"
+                             onclick="App.UI.navigateTo('profile', '${m.profiles.id}')">
                     `).join('');
                 } else {
                     container.innerHTML = '<div class="col-span-4 text-[10px] text-gray-600 italic text-center">Aucun membre.</div>';
@@ -2073,11 +2085,14 @@ const App = {
                         const { data: users } = await sb.from('profiles').select('*').in('id', friendIds);
                         if (users) {
                             container.innerHTML = users.map(u => `
-                                <div class="glass-panel p-3 rounded-2xl flex flex-col items-center gap-2">
-                                     <img src="${u.avatar_url || 'https://ui-avatars.com/api/?name=' + u.username}" class="w-12 h-12 rounded-full object-cover">
-                                     <span class="text-xs font-bold text-white truncate max-w-full">${u.username}</span>
+                                <div class="glass-panel p-3 rounded-2xl flex flex-col items-center gap-2 group/f transition-all hover:border-primary/30 border border-transparent">
+                                     <img src="${u.avatar_url || 'https://ui-avatars.com/api/?name=' + u.username}" 
+                                          class="w-12 h-12 rounded-full object-cover cursor-pointer group-hover/f:ring-2 ring-primary transition-all"
+                                          onclick="App.UI.navigateTo('profile', '${u.id}')">
+                                     <span class="text-xs font-bold text-white truncate max-w-full cursor-pointer group-hover/f:text-primary transition-colors"
+                                           onclick="App.UI.navigateTo('profile', '${u.id}')">${u.username}</span>
                                      <button onclick="App.UI.navigateTo('profile', '${u.id}')" 
-                                             class="w-full bg-white/5 hover:bg-primary py-1.5 rounded-lg text-[10px] transition-colors">Profil</button>
+                                             class="w-full bg-white/5 hover:bg-primary py-1.5 rounded-lg text-[10px] transition-colors font-bold uppercase tracking-tighter">Voir Profil</button>
                                 </div>
                             `).join('');
                         }
