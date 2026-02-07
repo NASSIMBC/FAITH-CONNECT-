@@ -1093,6 +1093,27 @@
         <!-- Toasts appear here -->
     </div>
 
+    <!-- GENERIC CUSTOM MODAL -->
+    <div id="custom-modal"
+        class="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm hidden">
+        <div class="glass-panel w-full max-w-sm p-6 rounded-[24px] m-4 animate-scale-in flex flex-col gap-4">
+            <h3 id="custom-modal-title" class="text-lg font-bold text-white">Title</h3>
+            <p id="custom-modal-message" class="text-sm text-gray-300">Message content goes here.</p>
+
+            <div id="custom-modal-input-container" class="hidden">
+                <input type="text" id="custom-modal-input" class="input-field w-full px-4 py-3 rounded-xl"
+                    placeholder="Saisissez votre texte...">
+            </div>
+
+            <div class="flex gap-3 mt-2 justify-end">
+                <button id="custom-modal-cancel"
+                    class="px-4 py-2 rounded-xl text-sm font-bold text-gray-400 hover:bg-white/5 transition hidden">Annuler</button>
+                <button id="custom-modal-confirm"
+                    class="btn-primary px-6 py-2 rounded-xl text-sm font-bold shadow-lg">OK</button>
+            </div>
+        </div>
+    </div>
+
     <!-- SCRIPT APPLICATION -->
     <script src="script.js"></script>
 </body>
