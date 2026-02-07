@@ -2064,7 +2064,10 @@ const App = {
                     if (!contentOverride) input.value = "";
                     this.clearReply();
                     input.focus();
-                    this.loadConversations(); // Update list to show latest msg
+                    this.loadConversations();
+
+                    // Créer une notification pour le destinataire
+                    App.Features.Notifications.create('message', this.activeContactId, App.state.user.id, content.substring(0, 50));
                 }
             },
 
@@ -2319,23 +2322,84 @@ const App = {
                 let message = "";
                 let icon = "bell";
                 let color = "text-primary";
+                let actionButtons = "";
 
                 switch (n.type) {
-                    case 'like': message = `a dit <b>Amen</b> à votre témoignage.`; icon = "heart"; color = "text-pink-400"; break;
-                    case 'comment': message = `a <b>commenté</b> votre publication.`; icon = "message-circle"; break;
-                    case 'friend_request': message = `vous a envoyé une <b>demande d'ami</b>.`; icon = "user-plus"; color = "text-green-400"; break;
-                    case 'group_invite': message = `vous invite à rejoindre un <b>groupe</b>.`; icon = "users"; color = "text-blue-400"; break;
+                    case 'like':
+                    case 'reaction':
+                        message = `a réagi à votre publication.`;
+                        icon = "heart";
+                        color = "text-pink-400";
+                        break;
+                    case 'comment':
+                        message = `a <b>commenté</b> votre publication.`;
+                        icon = "message-circle";
+                        color = "text-blue-400";
+                        if (n.content) message += `<br><span class="text-[10px] italic opacity-70">"${n.content.substring(0, 50)}..."</span>`;
+                        break;
+                    case 'friend_request':
+                        message = `vous a envoyé une <b>demande d'ami</b>.`;
+                        icon = "user-plus";
+                        color = "text-green-400";
+                        // Ajouter boutons Accepter/Refuser
+                        if (!n.is_read) {
+                            actionButtons = `
+                                <div class="flex gap-2 mt-2" onclick="event.stopPropagation()">
+                                    <button onclick="App.Features.Friends.acceptRequest('${n.id}', '${n.actor_id}')" 
+                                            class="bg-green-500 hover:bg-green-600 text-white text-xs px-3 py-1 rounded-lg transition">
+                                        Accepter
+                                    </button>
+                                    <button onclick="App.Features.Friends.declineRequest('${n.id}')" 
+                                            class="bg-gray-700 hover:bg-gray-600 text-white text-xs px-3 py-1 rounded-lg transition">
+                                        Refuser
+                                    </button>
+                                </div>
+                            `;
+                        }
+                        break;
+                    case 'friend_accept':
+                        message = `a <b>accepté</b> votre demande d'ami ! 🎉`;
+                        icon = "user-check";
+                        color = "text-green-400";
+                        break;
+                    case 'message':
+                        message = `vous a envoyé un <b>message</b>.`;
+                        icon = "mail";
+                        color = "text-purple-400";
+                        if (n.content) message += `<br><span class="text-[10px] italic opacity-70">"${n.content.substring(0, 50)}..."</span>`;
+                        break;
+                    case 'group_invite':
+                        message = `vous invite à rejoindre un <b>groupe</b>.`;
+                        icon = "users";
+                        color = "text-blue-400";
+                        break;
+                    case 'group_join':
+                        message = `a rejoint votre <b>groupe</b>.`;
+                        icon = "user-plus";
+                        color = "text-blue-400";
+                        break;
+                    case 'event_invite':
+                        message = `vous invite à un <b>événement</b>.`;
+                        icon = "calendar";
+                        color = "text-yellow-400";
+                        break;
+                    default:
+                        message = `vous a envoyé une notification.`;
                 }
 
                 return `
-                    <div class="glass-panel p-4 rounded-2xl flex items-center gap-4 ${n.is_read ? 'opacity-60' : 'notification-item unread'} cursor-pointer" onclick="App.Features.Notifications.handleClick('${n.id}', '${n.type}', '${n.target_id}')">
-                        <img src="${actorAvatar}" class="w-10 h-10 rounded-full object-cover hover:ring-2 ring-primary transition-all" 
-                             onclick="event.stopPropagation(); App.UI.navigateTo('profile', '${n.actor_id}')">
-                        <div class="flex-1">
-                            <p class="text-xs text-white leading-snug"><b>${actorName}</b> ${message}</p>
-                            <p class="text-[9px] text-gray-500 mt-1">${new Date(n.created_at).toLocaleString()}</p>
+                    <div class="glass-panel p-4 rounded-2xl ${n.is_read ? 'opacity-60' : 'notification-item unread border-l-4 border-primary'} cursor-pointer transition-all hover:bg-white/5" 
+                         onclick="App.Features.Notifications.handleClick('${n.id}', '${n.type}', '${n.target_id}')">
+                        <div class="flex items-start gap-4">
+                            <img src="${actorAvatar}" class="w-10 h-10 rounded-full object-cover hover:ring-2 ring-primary transition-all" 
+                                 onclick="event.stopPropagation(); App.UI.navigateTo('profile', '${n.actor_id}')">
+                            <div class="flex-1">
+                                <p class="text-xs text-white leading-snug"><b>${actorName}</b> ${message}</p>
+                                <p class="text-[9px] text-gray-500 mt-1">${new Date(n.created_at).toLocaleString()}</p>
+                                ${actionButtons}
+                            </div>
+                            <div class="${color}"><i data-lucide="${icon}" class="w-5 h-5"></i></div>
                         </div>
-                        <div class="${color}"><i data-lucide="${icon}" class="w-5 h-5"></i></div>
                     </div>
                 `;
             },
@@ -2418,23 +2482,79 @@ const App = {
 
             getToastText(type, name) {
                 switch (type) {
-                    case 'like': return 'a aimé votre message.';
-                    case 'comment': return 'a commenté votre post.';
-                    case 'friend_request': return 'vous a envoyé une invitation.';
-                    case 'group_invite': return 'vous invite dans un groupe.';
-                    default: return 'vous a envoyé une notification.';
+                    case 'like':
+                    case 'reaction':
+                        return 'a réagi à votre publication.';
+                    case 'comment':
+                        return 'a commenté votre publication.';
+                    case 'friend_request':
+                        return 'vous a envoyé une demande d\'ami.';
+                    case 'friend_accept':
+                        return 'a accepté votre demande d\'ami.';
+                    case 'message':
+                        return 'vous a envoyé un message.';
+                    case 'group_invite':
+                        return 'vous invite dans un groupe.';
+                    case 'group_join':
+                        return 'a rejoint votre groupe.';
+                    case 'event_invite':
+                        return 'vous invite à un événement.';
+                    default:
+                        return 'vous a envoyé une notification.';
+                }
+            },
+
+            async handleClick(notifId, type, targetId) {
+                await this.markAsRead(notifId);
+
+                switch (type) {
+                    case 'like':
+                    case 'reaction':
+                    case 'comment':
+                        // Aller au post (ou au feed si pas d'ID spécifique)
+                        App.UI.navigateTo('home');
+                        break;
+                    case 'friend_request':
+                    case 'friend_accept':
+                        // Aller au profil de la personne
+                        if (targetId) App.UI.navigateTo('profile', targetId);
+                        break;
+                    case 'message':
+                        // Ouvrir la conversation
+                        if (targetId) {
+                            App.UI.navigateTo('messages');
+                            setTimeout(() => App.Features.Chat.openDirectChat(targetId), 300);
+                        }
+                        break;
+                    case 'group_invite':
+                    case 'group_join':
+                        // Aller au groupe
+                        if (targetId) App.UI.navigateTo('group-detail', targetId);
+                        break;
+                    case 'event_invite':
+                        // Aller aux événements
+                        App.UI.navigateTo('events');
+                        break;
+                    default:
+                        App.UI.navigateTo('notifications');
                 }
             },
 
             async create(type, recipientId, targetId = null, content = "") {
                 if (!App.state.user || recipientId === App.state.user.id) return;
-                await sb.from('notifications').insert([{
-                    user_id: recipientId,
-                    actor_id: App.state.user.id,
-                    type,
-                    target_id: targetId,
-                    content
-                }]);
+
+                try {
+                    await sb.from('notifications').insert([{
+                        user_id: recipientId,
+                        actor_id: App.state.user.id,
+                        type,
+                        target_id: targetId,
+                        content,
+                        is_read: false
+                    }]);
+                } catch (err) {
+                    console.error("Notification creation error:", err);
+                }
             }
         },
 
@@ -2516,6 +2636,50 @@ const App = {
                             btn.innerHTML = '<i data-lucide="check" class="w-4 h-4"></i> En attente';
                             btn.disabled = true;
                             btn.classList.replace('btn-primary', 'bg-gray-700');
+                        }
+                    }
+                } catch (err) {
+                    console.error(err);
+                }
+            },
+
+            async acceptRequest(friendshipId, requesterId) {
+                try {
+                    const { error } = await sb.from('friends')
+                        .update({ status: 'accepted' })
+                        .eq('id', friendshipId);
+
+                    if (error) {
+                        await App.UI.Modal.alert("Erreur: " + error.message);
+                    } else {
+                        // Créer une notification pour informer que la demande a été acceptée
+                        App.Features.Notifications.create('friend_accept', requesterId, App.state.user.id);
+                        await App.UI.Modal.alert("Demande d'ami acceptée ! 🎉");
+
+                        // Recharger les notifications
+                        if (App.state.view === 'notifications') {
+                            App.Features.Notifications.fetch();
+                        }
+                    }
+                } catch (err) {
+                    console.error(err);
+                }
+            },
+
+            async declineRequest(friendshipId) {
+                try {
+                    const { error } = await sb.from('friends')
+                        .delete()
+                        .eq('id', friendshipId);
+
+                    if (error) {
+                        await App.UI.Modal.alert("Erreur: " + error.message);
+                    } else {
+                        await App.UI.Modal.alert("Demande refusée");
+
+                        // Recharger les notifications
+                        if (App.state.view === 'notifications') {
+                            App.Features.Notifications.fetch();
                         }
                     }
                 } catch (err) {
