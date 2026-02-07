@@ -177,7 +177,29 @@ const App = {
             if (pBio) pBio.innerText = p.bio || "Pas de bio";
         },
 
-        navigateTo(viewName, targetId = null) {
+        toggleUserMenu() {
+            const menu = document.getElementById('user-menu-modal');
+            if (menu) {
+                const isHidden = menu.classList.contains('hidden');
+                if (isHidden) {
+                    menu.classList.remove('hidden');
+                    // Update user info in menu
+                    if (App.state.profile) {
+                        document.getElementById('user-menu-avatar').src = App.state.profile.avatar_url;
+                        document.getElementById('user-menu-name').innerText = App.state.profile.username;
+                    }
+                    // Update theme icon text
+                    const isLight = document.documentElement.classList.contains('light-mode');
+                    document.getElementById('user-menu-theme-icon').setAttribute('data-lucide', isLight ? 'moon' : 'sun');
+                    document.getElementById('user-menu-theme-text').innerText = isLight ? 'Mode Sombre' : 'Mode Clair';
+                    if (typeof lucide !== 'undefined') lucide.createIcons();
+                } else {
+                    menu.classList.add('hidden');
+                }
+            }
+        },
+
+        navigateTo(viewName, targetId = null, filter = null) {
             // 1. Hide current view & handle mobile cleanup
             document.querySelectorAll('.page-view').forEach(el => {
                 el.classList.add('hidden');
@@ -220,6 +242,8 @@ const App = {
             }
 
             App.state.view = viewName;
+            // Store filter in state if needed, or pass directly
+            App.state.filter = filter;
 
             if (viewName === 'profile' && !App.state.user) {
                 this.showAuth();
@@ -227,8 +251,8 @@ const App = {
             }
 
             // Lazy Load Data
-            if (viewName === 'groups') App.Features.Groups.fetchAll();
-            if (viewName === 'pages') App.Features.Pages.fetchAll();
+            if (viewName === 'groups') App.Features.Groups.fetchAll(filter === 'mine');
+            if (viewName === 'pages') App.Features.Pages.fetchAll(filter === 'mine');
             if (viewName === 'messages' && App.state.user) App.Features.Chat.loadList();
             if (viewName === 'profile' && App.state.user) App.Features.ProfilePage.load(targetId || App.state.user.id);
             if (viewName === 'prayers' && App.state.user) App.Features.Prayers.load();
@@ -2264,13 +2288,28 @@ const App = {
         Groups: {
             currentGroup: null,
 
-            async fetchAll() {
+            async fetchAll(onlyMine = false) {
                 App.state.lastGroupsView = 'groups';
                 const container = document.getElementById('groups-container');
                 if (!container) return;
-                container.innerHTML = '<div class="col-span-full text-center text-xs text-gray-500 animate-pulse">Recherche des groupes...</div>';
-                const { data: groups } = await sb.from('groups').select('*').eq('type', 'group');
-                container.innerHTML = (groups && groups.length > 0) ? groups.map(g => this.renderCard(g)).join('') : '<p class="col-span-full text-center py-10 text-gray-500">Aucun groupe.</p>';
+
+                const title = onlyMine ? "Mes Groupes" : "Découvrir des Groupes";
+                container.innerHTML = `<div class="col-span-full mb-4"><h3 class="text-xl font-bold text-white">${title}</h3></div>` +
+                    '<div class="col-span-full text-center text-xs text-gray-500 animate-pulse">Recherche des groupes...</div>';
+
+                let query = sb.from('groups').select('*').eq('type', 'group');
+                if (onlyMine) {
+                    query = query.eq('created_by', App.state.user.id);
+                }
+
+                const { data: groups } = await query;
+
+                const gridHtml = (groups && groups.length > 0)
+                    ? groups.map(g => this.renderCard(g)).join('')
+                    : `<p class="col-span-full text-center py-10 text-gray-500">${onlyMine ? "Vous n'avez créé aucun groupe." : "Aucun groupe."}</p>`;
+
+                container.innerHTML = `<div class="col-span-full mb-4 px-2"><h3 class="text-xl font-bold text-white flex items-center gap-2"><i data-lucide="${onlyMine ? 'user' : 'users'}"></i> ${title}</h3></div>` + gridHtml;
+
                 if (typeof lucide !== 'undefined') lucide.createIcons();
             },
 
@@ -2432,13 +2471,28 @@ const App = {
 
         // 9. PAGES
         Pages: {
-            async fetchAll() {
+            async fetchAll(onlyMine = false) {
                 App.state.lastGroupsView = 'pages';
                 const container = document.getElementById('pages-container');
                 if (!container) return;
-                container.innerHTML = '<div class="col-span-full text-center text-xs text-gray-500 animate-pulse">Recherche des pages...</div>';
-                const { data: pages } = await sb.from('groups').select('*').eq('type', 'page');
-                container.innerHTML = (pages && pages.length > 0) ? pages.map(p => this.renderCard(p)).join('') : '<p class="col-span-full text-center py-10 text-gray-500">Aucune page.</p>';
+
+                const title = onlyMine ? "Mes Pages" : "Découvrir des Pages";
+                container.innerHTML = `<div class="col-span-full mb-4"><h3 class="text-xl font-bold text-white">${title}</h3></div>` +
+                    '<div class="col-span-full text-center text-xs text-gray-500 animate-pulse">Recherche des pages...</div>';
+
+                let query = sb.from('groups').select('*').eq('type', 'page');
+                if (onlyMine) {
+                    query = query.eq('created_by', App.state.user.id);
+                }
+
+                const { data: pages } = await query;
+
+                const gridHtml = (pages && pages.length > 0)
+                    ? pages.map(p => this.renderCard(p)).join('')
+                    : `<p class="col-span-full text-center py-10 text-gray-500">${onlyMine ? "Vous n'avez créé aucune page." : "Aucune page."}</p>`;
+
+                container.innerHTML = `<div class="col-span-full mb-4 px-2"><h3 class="text-xl font-bold text-white flex items-center gap-2"><i data-lucide="${onlyMine ? 'flag' : 'flags'}"></i> ${title}</h3></div>` + gridHtml;
+
                 if (typeof lucide !== 'undefined') lucide.createIcons();
             },
 
