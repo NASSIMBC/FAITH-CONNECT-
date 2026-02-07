@@ -1722,7 +1722,7 @@ const App = {
                     parent_id: this.replyToId
                 }]);
 
-                if (error) alert("Erreur envoi: " + error.message);
+                if (error) await App.UI.Modal.alert("Erreur envoi: " + error.message, "Erreur");
                 else {
                     if (!contentOverride) input.value = "";
                     this.clearReply();
@@ -1732,16 +1732,16 @@ const App = {
             },
 
             async deleteMessage(msgId) {
-                if (!confirm("Supprimer ce message pour tout le monde ?")) return;
+                if (!await App.UI.Modal.confirm("Supprimer ce message pour tout le monde ?")) return;
                 const { error } = await sb.from('messages').delete().eq('id', msgId);
-                if (error) alert("Erreur: " + error.message);
+                if (error) await App.UI.Modal.alert("Erreur: " + error.message);
                 else {
                     document.getElementById(`msg-${msgId}`)?.remove();
                 }
             },
 
             async editMessage(msgId, oldContent) {
-                const newContent = prompt("Modifier le message :", oldContent);
+                const newContent = await App.UI.Modal.prompt("Modifier le message :", oldContent);
                 if (!newContent || newContent === oldContent) return;
 
                 const { error } = await sb.from('messages').update({
@@ -1749,10 +1749,10 @@ const App = {
                     is_edited: true
                 }).eq('id', msgId);
 
-                if (error) alert("Erreur: " + error.message);
+                if (error) await App.UI.Modal.alert("Erreur: " + error.message);
                 else {
                     // RT will refresh or we can manually update
-                    alert("Message modifié.");
+                    await App.UI.Modal.alert("Message modifié.", "Succès");
                     this.openChat(this.activeContactId); // Full refresh for simplicity now
                 }
             },
@@ -1764,8 +1764,8 @@ const App = {
                     nickname: nickname
                 }, { onConflict: 'user_id,contact_id' });
 
-                if (error) alert("Erreur: " + error.message);
-                else alert("Surnom mis à jour !");
+                if (error) await App.UI.Modal.alert("Erreur: " + error.message);
+                else await App.UI.Modal.alert("Surnom mis à jour !");
             },
 
             async setTheme(theme) {
@@ -1776,9 +1776,8 @@ const App = {
                     theme: theme
                 }, { onConflict: 'user_id,contact_id' });
 
-                if (error) alert("Erreur: " + error.message);
+                if (error) await App.UI.Modal.alert("Erreur: " + error.message);
                 else {
-                    alert("Thème mis à jour !");
                     this.applyTheme(theme);
                 }
             },
@@ -1805,9 +1804,11 @@ const App = {
 
             async changeNickname() {
                 if (!this.activeContactId) return;
-                const newNick = prompt("Entrez un surnom pour ce contact :");
-                await this.setNickname(this.activeContactId, newNick);
-                this.openChat(this.activeContactId); // Refresh header
+                const newNick = await App.UI.Modal.prompt("Entrez un surnom pour ce contact :");
+                if (newNick) {
+                    await this.setNickname(this.activeContactId, newNick);
+                    this.openChat(this.activeContactId); // Refresh header
+                }
             },
 
             async toggleReaction(msgId, emoji) {
@@ -1822,7 +1823,7 @@ const App = {
                 }
 
                 const { error } = await sb.from('messages').update({ reactions }).eq('id', msgId);
-                if (error) alert("Erreur: " + error.message);
+                if (error) await App.UI.Modal.alert("Erreur: " + error.message);
             }
         },
 
@@ -2168,11 +2169,11 @@ const App = {
                     }]);
 
                     if (error) {
-                        if (error.code === '23505') alert("Demande déjà envoyée !");
-                        else alert("Erreur: " + error.message);
+                        if (error.code === '23505') await App.UI.Modal.alert("Demande déjà envoyée !");
+                        else await App.UI.Modal.alert("Erreur: " + error.message);
                     } else {
                         App.Features.Notifications.create('friend_request', id);
-                        alert("Demande d'ami envoyée ! 🙏");
+                        await App.UI.Modal.alert("Demande d'ami envoyée ! 🙏");
                         const btn = document.getElementById('btn-add-friend');
                         if (btn) {
                             btn.innerHTML = '<i data-lucide="check" class="w-4 h-4"></i> En attente';
@@ -2278,7 +2279,7 @@ const App = {
                 const { data: sub } = await sb.from('group_members').select('*').eq('group_id', groupId).eq('user_id', App.state.user.id).maybeSingle();
 
                 if (sub) {
-                    if (confirm("Voulez-vous vraiment quitter ce groupe ?")) {
+                    if (await App.UI.Modal.confirm("Voulez-vous vraiment quitter ce groupe ?")) {
                         await sb.from('group_members').delete().eq('id', sub.id);
                         this.loadDetail(groupId);
                     }
@@ -2298,8 +2299,8 @@ const App = {
                 if (typeof lucide !== 'undefined') lucide.createIcons();
             },
 
-            openPostModal() {
-                const content = prompt("Votre message pour le groupe :");
+            async openPostModal() {
+                const content = await App.UI.Modal.prompt("Votre message pour le groupe :");
                 if (content) this.publishPost(content);
             },
 
@@ -2309,32 +2310,34 @@ const App = {
                     user_id: App.state.user.id,
                     group_id: this.currentGroup.id
                 }]);
-                if (error) alert(error.message);
+                if (error) await App.UI.Modal.alert(error.message);
                 else this.loadPosts(this.currentGroup.id);
             },
 
             share() {
                 const link = `${window.location.origin}${window.location.pathname}?view=group-detail&id=${this.currentGroup.id}`;
-                navigator.clipboard.writeText(link).then(() => alert("Lien d'invitation copié ! 🙏"));
+                navigator.clipboard.writeText(link).then(() => App.UI.Modal.alert("Lien d'invitation copié ! 🙏"));
             },
 
-            editModal() {
-                const newName = prompt("Nouveau nom du groupe :", this.currentGroup.name);
-                const newDesc = prompt("Nouvelle description :", this.currentGroup.description || "");
+            async editModal() {
+                const newName = await App.UI.Modal.prompt("Nouveau nom du groupe :", this.currentGroup.name);
+                if (!newName) return;
+
+                const newDesc = await App.UI.Modal.prompt("Nouvelle description :", this.currentGroup.description || "");
                 if (newName) this.update(newName, newDesc);
             },
 
             async update(name, description) {
                 const { error } = await sb.from('groups').update({ name, description }).eq('id', this.currentGroup.id);
-                if (error) alert(error.message);
+                if (error) await App.UI.Modal.alert(error.message);
                 else {
-                    alert("Groupe mis à jour ! ✨");
+                    await App.UI.Modal.alert("Groupe mis à jour ! ✨");
                     this.loadDetail(this.currentGroup.id);
                 }
             },
 
-            createModal() {
-                const name = prompt("Nom du groupe ou de la page :");
+            async createModal() {
+                const name = await App.UI.Modal.prompt("Nom du groupe ou de la page :");
                 if (name) this.create(name);
             },
 
@@ -2346,9 +2349,9 @@ const App = {
                     created_by: App.state.user.id
                 }]);
 
-                if (error) alert("Erreur création : " + error.message);
+                if (error) await App.UI.Modal.alert("Erreur création : " + error.message);
                 else {
-                    alert("Groupe créé avec succès !");
+                    await App.UI.Modal.alert("Groupe créé avec succès !");
                     this.fetchAll();
                 }
             }
@@ -2382,8 +2385,8 @@ const App = {
                 `;
             },
 
-            createModal() {
-                const name = prompt("Nom de votre page :");
+            async createModal() {
+                const name = await App.UI.Modal.prompt("Nom de votre page :");
                 if (name) this.create(name);
             },
 
@@ -2395,9 +2398,9 @@ const App = {
                     created_by: App.state.user.id
                 }]);
 
-                if (error) alert("Erreur création : " + error.message);
+                if (error) await App.UI.Modal.alert("Erreur création : " + error.message);
                 else {
-                    alert("Page créée avec succès !");
+                    await App.UI.Modal.alert("Page créée avec succès !");
                     this.fetchAll();
                 }
             }
