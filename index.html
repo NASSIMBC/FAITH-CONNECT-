@@ -91,7 +91,7 @@
                     <span id="notif-badge-mobile"
                         class="absolute -top-0.5 -right-0.5 w-2 h-2 bg-red-500 rounded-full hidden"></span>
                 </button>
-                <div onclick="App.UI.navigateTo('profile')"
+                <div onclick="App.UI.toggleUserMenu()"
                     class="w-8 h-8 rounded-full bg-gradient-to-tr from-purple-500 to-indigo-500 p-[2px] cursor-pointer">
                     <img id="header-avatar" class="w-full h-full rounded-full object-cover bg-black"
                         src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7">
@@ -161,18 +161,6 @@
                         <i data-lucide="book" class="group-hover:text-blue-400 transition"></i> <span
                             class="font-semibold text-sm">Bible</span>
                     </button>
-                    <button onclick="App.UI.navigateTo('groups')"
-                        class="nav-btn-desktop w-full flex items-center gap-4 px-4 py-3 rounded-2xl text-gray-400 hover:text-white hover:bg-white/5 transition group"
-                        id="desk-nav-groups">
-                        <i data-lucide="users" class="group-hover:text-green-400 transition"></i> <span
-                            class="font-semibold text-sm">Groupes</span>
-                    </button>
-                    <button onclick="App.UI.navigateTo('pages')"
-                        class="nav-btn-desktop w-full flex items-center gap-4 px-4 py-3 rounded-2xl text-gray-400 hover:text-white hover:bg-white/5 transition group"
-                        id="desk-nav-pages">
-                        <i data-lucide="flag" class="group-hover:text-blue-400 transition"></i> <span
-                            class="font-semibold text-sm">Pages</span>
-                    </button>
                     <button onclick="App.UI.navigateTo('messages')"
                         class="nav-btn-desktop w-full flex items-center gap-4 px-4 py-3 rounded-2xl text-gray-400 hover:text-white hover:bg-white/5 transition group"
                         id="desk-nav-messages">
@@ -202,21 +190,22 @@
                 </nav>
 
                 <div class="mt-4 space-y-4 flex-none">
-                    <!-- Theme Toggle -->
-                    <button onclick="App.UI.toggleTheme()"
-                        class="flex items-center gap-3 w-full p-3 rounded-2xl hover:bg-white/5 transition text-gray-400 hover:text-white">
-                        <i data-lucide="sun" id="theme-icon-desktop"></i>
-                        <span class="font-semibold text-sm" id="theme-text-desktop">Mode Clair</span>
-                    </button>
-
-                    <button onclick="App.UI.navigateTo('profile')"
-                        class="flex items-center gap-3 w-full p-3 rounded-2xl hover:bg-white/5 transition">
-                        <img id="sidebar-avatar" class="w-10 h-10 rounded-full object-cover bg-gray-800"
-                            src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7">
-                        <div class="text-left overflow-hidden">
-                            <p id="sidebar-username" class="font-bold text-sm truncate">Chargement...</p>
-                            <p class="text-[10px] text-gray-500">Mon profil</p>
+                    <!-- Profile Button (Opens User Menu) -->
+                    <button onclick="App.UI.toggleUserMenu()"
+                        class="flex items-center gap-3 w-full p-3 rounded-2xl hover:bg-white/5 transition group">
+                        <div
+                            class="w-10 h-10 rounded-full p-[2px] bg-gradient-to-tr from-purple-500 to-indigo-500 group-hover:shadow-glow transition">
+                            <img id="sidebar-avatar" class="w-full h-full rounded-full object-cover bg-black"
+                                src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7">
                         </div>
+                        <div class="text-left overflow-hidden">
+                            <p id="sidebar-username"
+                                class="font-bold text-sm truncate group-hover:text-purple-400 transition">Chargement...
+                            </p>
+                            <p class="text-[10px] text-gray-500">Mon Compte</p>
+                        </div>
+                        <i data-lucide="chevron-up"
+                            class="w-4 h-4 text-gray-500 ml-auto group-hover:text-white transition"></i>
                     </button>
                 </div>
             </aside>
@@ -790,24 +779,37 @@
 
         </div>
 
-        <!-- MOBILE BOTTOM NAV -->
-        <nav class="md:hidden fixed bottom-0 left-0 right-0 glass-nav px-2 py-4 pb-6 flex justify-between z-50">
-            <button onclick="App.UI.navigateTo('home')" class="nav-item text-gray-400 active" id="mob-nav-home"><i
-                    data-lucide="home" class="w-5 h-5"></i></button>
-            <button onclick="App.UI.navigateTo('marketplace')" class="nav-item text-gray-400"
-                id="mob-nav-marketplace"><i data-lucide="shopping-bag" class="w-5 h-5"></i></button>
-            <button onclick="App.UI.navigateTo('groups')" class="nav-item text-gray-400" id="mob-nav-groups"><i
-                    data-lucide="users" class="w-5 h-5"></i></button>
-            <button onclick="App.Features.Feed.openCreator()"
-                class="bg-primary text-white p-3 rounded-full -mt-8 shadow-glow"><i data-lucide="plus"></i></button>
-            <button onclick="App.UI.navigateTo('pages')" class="nav-item text-gray-400" id="mob-nav-pages"><i
-                    data-lucide="flag" class="w-5 h-5"></i></button>
-            <button onclick="App.UI.navigateTo('bible')" class="nav-item text-gray-400" id="mob-nav-bible"><i
-                    data-lucide="book" class="w-5 h-5"></i></button>
-            <button onclick="App.UI.navigateTo('messages')" class="nav-item text-gray-400 relative"
-                id="mob-nav-messages">
-                <i data-lucide="message-circle" class="w-5 h-5"></i>
-                <span class="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full hidden" id="mob-msg-badge"></span>
+        <!-- MOBILE NAV BOTTOM -->
+        <nav
+            class="md:hidden fixed bottom-0 w-full glass-nav flex justify-around py-3 z-50 border-t border-white/10 safe-area-pb">
+            <button onclick="App.UI.navigateTo('home')"
+                class="nav-btn-mobile text-gray-400 flex flex-col items-center gap-1 active:scale-90 transition">
+                <i data-lucide="home" class="w-6 h-6"></i>
+            </button>
+            <button onclick="App.UI.navigateTo('marketplace')"
+                class="nav-btn-mobile text-gray-400 flex flex-col items-center gap-1 active:scale-90 transition">
+                <i data-lucide="shopping-bag" class="w-6 h-6"></i>
+            </button>
+            <button onclick="App.UI.modals.faithAI.open()"
+                class="nav-btn-mobile text-gray-400 flex flex-col items-center gap-1 active:scale-90 transition">
+                <div
+                    class="bg-gradient-to-tr from-purple-500 to-indigo-500 p-3 rounded-full -mt-8 shadow-glow border-4 border-[#030014]">
+                    <i data-lucide="sparkles" class="w-6 h-6 text-white"></i>
+                </div>
+            </button>
+            <button onclick="App.UI.navigateTo('messages')"
+                class="nav-btn-mobile text-gray-400 flex flex-col items-center gap-1 active:scale-90 transition icon-badge-container">
+                <i data-lucide="message-circle" class="w-6 h-6"></i>
+                <span id="badge-msg-mobile"
+                    class="hidden absolute top-0 right-0 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-[#030014]"></span>
+            </button>
+            <!-- Profile Tab (Opens Menu) -->
+            <button onclick="App.UI.toggleUserMenu()"
+                class="nav-btn-mobile text-gray-400 flex flex-col items-center gap-1 active:scale-90 transition">
+                <div class="w-6 h-6 rounded-full overflow-hidden border border-white/20">
+                    <img id="nav-avatar-mobile" class="w-full h-full object-cover"
+                        src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7">
+                </div>
             </button>
         </nav>
 
@@ -1002,6 +1004,73 @@
                     <i data-lucide="shopping-cart" class="w-5 h-5"></i> Acheter maintenant
                 </button>
             </div>
+        </div>
+    </div>
+
+    <!-- MODAL: USER MENU (New Profile Interaction) -->
+    <div id="user-menu-modal"
+        class="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-black/60 backdrop-blur-sm hidden animate-fade-in"
+        onclick="if(event.target === this) App.UI.toggleUserMenu()">
+        <div
+            class="glass-panel w-full md:w-80 p-6 rounded-t-[32px] md:rounded-[24px] m-0 md:m-4 flex flex-col gap-2 animate-slide-in-up md:animate-scale-in border border-white/10 shadow-2xl">
+
+            <!-- User Header -->
+            <div class="flex items-center gap-4 mb-4 pb-4 border-b border-white/10">
+                <div class="w-12 h-12 rounded-full p-[2px] bg-gradient-to-tr from-purple-500 to-indigo-500">
+                    <img id="user-menu-avatar" src="" class="w-full h-full rounded-full object-cover bg-black">
+                </div>
+                <div>
+                    <h3 id="user-menu-name" class="font-bold text-white text-lg leading-tight">Chargement...</h3>
+                    <p class="text-xs text-gray-400">Membre FaithConnect</p>
+                </div>
+            </div>
+
+            <!-- Menu Options -->
+            <button onclick="App.UI.navigateTo('profile'); App.UI.toggleUserMenu()"
+                class="flex items-center gap-3 p-3 rounded-xl hover:bg-white/5 transition text-gray-200 group">
+                <div
+                    class="p-2 rounded-lg bg-purple-500/10 text-purple-400 group-hover:bg-purple-500 group-hover:text-white transition">
+                    <i data-lucide="user" class="w-5 h-5"></i>
+                </div>
+                <span class="font-semibold">Mon Profil</span>
+            </button>
+
+            <button onclick="App.UI.navigateTo('groups', 'mine'); App.UI.toggleUserMenu()"
+                class="flex items-center gap-3 p-3 rounded-xl hover:bg-white/5 transition text-gray-200 group">
+                <div
+                    class="p-2 rounded-lg bg-green-500/10 text-green-400 group-hover:bg-green-500 group-hover:text-white transition">
+                    <i data-lucide="users" class="w-5 h-5"></i>
+                </div>
+                <span class="font-semibold">Mes Groupes</span>
+            </button>
+
+            <button onclick="App.UI.navigateTo('pages', 'mine'); App.UI.toggleUserMenu()"
+                class="flex items-center gap-3 p-3 rounded-xl hover:bg-white/5 transition text-gray-200 group">
+                <div
+                    class="p-2 rounded-lg bg-blue-500/10 text-blue-400 group-hover:bg-blue-500 group-hover:text-white transition">
+                    <i data-lucide="flag" class="w-5 h-5"></i>
+                </div>
+                <span class="font-semibold">Mes Pages</span>
+            </button>
+
+            <button onclick="App.UI.toggleTheme()"
+                class="flex items-center gap-3 p-3 rounded-xl hover:bg-white/5 transition text-gray-200 group">
+                <div
+                    class="p-2 rounded-lg bg-yellow-500/10 text-yellow-400 group-hover:bg-yellow-500 group-hover:text-white transition">
+                    <i id="user-menu-theme-icon" data-lucide="moon" class="w-5 h-5"></i>
+                </div>
+                <span id="user-menu-theme-text" class="font-semibold">Mode Sombre</span>
+            </button>
+
+            <div class="h-px bg-white/10 my-2"></div>
+
+            <button onclick="App.Auth.logout()"
+                class="flex items-center gap-3 p-3 rounded-xl hover:bg-red-500/10 transition text-red-400 group">
+                <div class="p-2 rounded-lg bg-red-500/10 group-hover:bg-red-500 group-hover:text-white transition">
+                    <i data-lucide="log-out" class="w-5 h-5"></i>
+                </div>
+                <span class="font-semibold">Déconnexion</span>
+            </button>
         </div>
     </div>
 
