@@ -2692,6 +2692,174 @@ const App = {
             }
         },
 
+        // 10. QUIZ & CHALLENGES
+        Quiz: {
+            currentQuiz: null,
+            userScore: 0,
+            currentQuestionIndex: 0,
+            answers: [],
+
+            async load() {
+                const loading = document.getElementById('quiz-loading');
+                const start = document.getElementById('quiz-start');
+                const game = document.getElementById('quiz-game');
+                const result = document.getElementById('quiz-result');
+
+                // Reset Views
+                loading.classList.remove('hidden');
+                start.classList.add('hidden');
+                game.classList.add('hidden');
+                result.classList.add('hidden');
+
+                this.loadLeaderboard();
+
+                // Check for this week's quiz
+                const now = new Date();
+                const day = now.getDay();
+                const diff = now.getDate() - day + (day == 0 ? -6 : 1);
+                const monday = new Date(now.setDate(diff)).toISOString().split('T')[0];
+
+                const { data: quiz } = await sb.from('weekly_quizzes')
+                    .select('*')
+                    .eq('week_start', monday)
+                    .maybeSingle();
+
+                if (quiz) {
+                    this.currentQuiz = quiz;
+                    this.showStart(quiz);
+                } else {
+                    this.generate(monday);
+                }
+            },
+
+            async generate(weekStart) {
+                const prompt = "Génère un quiz biblique de 5 questions (QCM). Thème aléatoire. Format JSON strict: { \"theme\": \"Titre\", \"questions\": [ { \"q\": \"Question?\", \"options\": [\"A\", \"B\", \"C\", \"D\"], \"answer\": 0 } ] }";
+
+                try {
+                    // Simulation of AI generation if function not available
+                    // In real app, call Edge Function
+                    const mockQuiz = {
+                        theme: "Les Paraboles de Jésus",
+                        questions: [
+                            { q: "Qui a aidé l'homme blessé dans la parabole du bon Samaritain ?", options: ["Un prêtre", "Un lévite", "Un Samaritain", "Un soldat"], answer: 2 },
+                            { q: "Qu'a perdu la femme dans la parabole de la drachme perdue ?", options: ["Une brebis", "Une pièce d'argent", "Un collier", "Une perle"], answer: 1 },
+                            { q: "Dans la parabole du semeur, que représentent les oiseaux ?", options: ["Les anges", "Le diable", "Les soucis", "La richesse"], answer: 1 },
+                            { q: "Quel fils a demandé sa part d'héritage ?", options: ["Le plus jeune", "L'aîné", "Le troisième", "Aucun"], answer: 0 },
+                            { q: "A quoi est comparé le Royaume des Cieux ?", options: ["Une graine de moutarde", "Un grand arbre", "Une montagne", "Une rivière"], answer: 0 }
+                        ]
+                    };
+
+                    setTimeout(async () => {
+                        // Try insert real DB
+                        const { data: newQuiz } = await sb.from('weekly_quizzes').insert({
+                            week_start: weekStart,
+                            theme: mockQuiz.theme,
+                            questions: mockQuiz.questions
+                        }).select().maybeSingle();
+
+                        this.currentQuiz = newQuiz || { ...mockQuiz, id: 'temp' };
+                        this.showStart(this.currentQuiz);
+                    }, 1500);
+
+                } catch (e) {
+                    console.error(e);
+                }
+            },
+
+            showStart(quiz) {
+                document.getElementById('quiz-loading').classList.add('hidden');
+                document.getElementById('quiz-start').classList.remove('hidden');
+                document.getElementById('quiz-theme-title').innerText = quiz.theme;
+            },
+
+            start() {
+                if (!this.currentQuiz) return;
+                this.userScore = 0;
+                this.currentQuestionIndex = 0;
+
+                document.getElementById('quiz-start').classList.add('hidden');
+                document.getElementById('quiz-game').classList.remove('hidden');
+                this.renderQuestion();
+            },
+
+            renderQuestion() {
+                const q = this.currentQuiz.questions[this.currentQuestionIndex];
+                document.getElementById('quiz-progress').innerText = `Question ${this.currentQuestionIndex + 1}/${this.currentQuiz.questions.length}`;
+                document.getElementById('quiz-question-text').innerText = q.q;
+
+                const optsContainer = document.getElementById('quiz-options-container');
+                optsContainer.innerHTML = q.options.map((opt, idx) => `
+                    <button onclick="App.Features.Quiz.submitAnswer(${idx})" 
+                            class="w-full text-left p-4 rounded-xl bg-white/5 hover:bg-white/10 border border-white/5 hover:border-primary/50 transition flex items-center gap-3 group">
+                        <span class="w-8 h-8 rounded-full bg-black/30 flex items-center justify-center text-xs font-bold text-gray-400 group-hover:bg-primary group-hover:text-white transition">${['A', 'B', 'C', 'D'][idx]}</span>
+                        <span class="font-medium text-sm">${opt}</span>
+                    </button>
+                `).join('');
+            },
+
+            async submitAnswer(idx) {
+                const q = this.currentQuiz.questions[this.currentQuestionIndex];
+                const isCorrect = idx === q.answer;
+
+                if (isCorrect) this.userScore += 20;
+                document.getElementById('quiz-score-live').innerText = `Score: ${this.userScore}`;
+
+                this.currentQuestionIndex++;
+                if (this.currentQuestionIndex < this.currentQuiz.questions.length) {
+                    this.renderQuestion();
+                } else {
+                    this.endGame();
+                }
+            },
+
+            async endGame() {
+                document.getElementById('quiz-game').classList.add('hidden');
+                document.getElementById('quiz-result').classList.remove('hidden');
+                document.getElementById('quiz-final-score').innerText = `${this.userScore}/100`;
+
+                if (App.state.user && this.currentQuiz.id !== 'temp') {
+                    await sb.from('quiz_scores').insert({
+                        quiz_id: this.currentQuiz.id,
+                        user_id: App.state.user.id,
+                        score: this.userScore
+                    });
+                    this.loadLeaderboard();
+                }
+            },
+
+            async loadLeaderboard() {
+                const container = document.getElementById('quiz-leaderboard');
+                if (!container || !this.currentQuiz?.id) return;
+
+                const { data: scores } = await sb.from('quiz_scores')
+                    .select('score, profiles(username, avatar_url)')
+                    .eq('quiz_id', this.currentQuiz.id)
+                    .order('score', { ascending: false })
+                    .limit(5);
+
+                if (scores && scores.length > 0) {
+                    container.innerHTML = scores.map((s, i) => `
+                        <div class="flex items-center gap-3 p-3 rounded-xl bg-white/5 border border-white/5">
+                            <div class="font-black text-xl w-6 text-center ${i === 0 ? 'text-yellow-400' : 'text-gray-500'}">#${i + 1}</div>
+                            <img src="${s.profiles.avatar_url || 'https://ui-avatars.com/api/?name=' + s.profiles.username}" class="w-10 h-10 rounded-full object-cover">
+                            <div class="flex-1">
+                                <p class="font-bold text-sm">${s.profiles.username}</p>
+                            </div>
+                            <div class="font-black text-lg text-primary">${s.score}</div>
+                        </div>
+                    `).join('');
+                } else {
+                    container.innerHTML = '<p class="text-center text-gray-500 text-xs py-4">Aucun score pour le moment.</p>';
+                }
+            },
+
+            share() {
+                const text = `J'ai fait ${this.userScore}/100 au quiz FaithConnect ! 🏆`;
+                if (navigator.share) navigator.share({ title: 'FaithConnect', text, url: window.location.href });
+                else navigator.clipboard.writeText(text).then(() => App.UI.Modal.alert("Copié !"));
+            }
+        },
+
     },
 };
 
