@@ -480,3 +480,21 @@ body {
 .chat-theme-default {
     background: #050510 !important;
 }
+/* === STORIES SYSTEM STYLES === */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+.story-ring {
+    padding: 2px;
+    background: linear-gradient(45deg, var(--gold), var(--accent), var(--primary));
+    border-radius: 50%;
+}
+
+.shadow-glow {
+    box-shadow: 0 0 15px rgba(139, 92, 246, 0.4);
+}
+
+@keyframes progress-load {
+    from { width: 0%; }
+    to { width: 100%; }
+}
