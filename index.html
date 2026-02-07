@@ -20,7 +20,6 @@
 
     <!-- Design System -->
     <link rel="stylesheet" href="style.css">
-    <link rel="stylesheet" href="marketplace_styles.css">
 
     <!-- Tailwind Config pour les couleurs personnalisées -->
     <script>
@@ -284,109 +283,42 @@
                 </section>
 
                 <!-- VIEW: MARKETPLACE -->
-                <section id="view-marketplace" class="page-view hidden space-y-6 p-4 md:p-0 pb-20">
-
-                    <!-- Header avec onglets -->
-                    <div class="glass-panel p-6 rounded-[32px] sticky top-0 z-30">
-                        <h2 class="text-2xl md:text-3xl font-black mb-4"><span class="text-primary">Faith</span>Market
+                <section id="view-marketplace" class="page-view hidden p-4 md:p-0">
+                    <div class="glass-panel p-6 rounded-[32px] mb-6">
+                        <h2 class="text-2xl font-bold mb-4 flex items-center gap-2">
+                            <i data-lucide="shopping-bag" class="text-pink-400"></i> Marketplace Chrétien
                         </h2>
-
-                        <!-- Onglets -->
-                        <div class="flex gap-2 overflow-x-auto no-scrollbar">
-                            <button onclick="App.Features.Marketplace.filterByType('all', event)"
-                                class="market-tab active px-4 py-2 rounded-xl text-sm font-bold whitespace-nowrap transition">
-                                Tout
-                            </button>
-                            <button onclick="App.Features.Marketplace.filterByType('product', event)"
-                                class="market-tab px-4 py-2 rounded-xl text-sm font-bold whitespace-nowrap transition">
-                                <i data-lucide="shopping-bag" class="w-4 h-4 inline mr-1"></i> Produits
-                            </button>
-                            <button onclick="App.Features.Marketplace.filterByType('donation', event)"
-                                class="market-tab px-4 py-2 rounded-xl text-sm font-bold whitespace-nowrap transition">
-                                <i data-lucide="gift" class="w-4 h-4 inline mr-1"></i> Dons
-                            </button>
-                            <button onclick="App.Features.Marketplace.filterByType('job', event)"
-                                class="market-tab px-4 py-2 rounded-xl text-sm font-bold whitespace-nowrap transition">
-                                <i data-lucide="briefcase" class="w-4 h-4 inline mr-1"></i> Emplois
-                            </button>
-                            <button onclick="App.Features.Marketplace.filterByType('service', event)"
-                                class="market-tab px-4 py-2 rounded-xl text-sm font-bold whitespace-nowrap transition">
-                                <i data-lucide="wrench" class="w-4 h-4 inline mr-1"></i> Services
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- Barre de recherche et filtres -->
-                    <div class="glass-panel p-4 rounded-[24px] space-y-3">
-                        <div class="flex gap-2">
-                            <input type="text" id="marketplace-search" placeholder="Rechercher..."
-                                class="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm text-white placeholder-gray-500">
-                            <button onclick="App.Features.Marketplace.toggleFilters()"
-                                class="bg-white/5 hover:bg-white/10 px-4 py-2 rounded-xl transition">
-                                <i data-lucide="filter" class="w-5 h-5"></i>
-                            </button>
-                            <button onclick="App.Features.Marketplace.openAddForm()"
-                                class="bg-primary hover:bg-primary/80 px-4 py-2 rounded-xl transition font-bold text-sm">
-                                <i data-lucide="plus" class="w-5 h-5 inline mr-1"></i> Vendre
-                            </button>
-                        </div>
-
-                        <!-- Filters Panel (hidden by default) -->
-                        <div id="marketplace-filters" class="hidden space-y-3 pt-3 border-t border-white/10">
-                            <div>
-                                <label class="text-xs text-gray-400 mb-2 block">Categorie</label>
-                                <select id="filter-category"
-                                    class="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white">
-                                    <option value="">Toutes les categories</option>
-                                </select>
+                        <div class="flex gap-2 mb-4">
+                            <div class="relative flex-1">
+                                <i data-lucide="search"
+                                    class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 w-4 h-4"></i>
+                                <input type="text" id="marketplace-search"
+                                    placeholder="Rechercher un livre, un t-shirt..."
+                                    class="input-field w-full pl-10 pr-4 py-2 rounded-xl text-sm">
                             </div>
-
-                            <div class="grid grid-cols-2 gap-2">
-                                <div>
-                                    <label class="text-xs text-gray-400 mb-2 block">Prix min</label>
-                                    <input type="number" id="filter-price-min" placeholder="0"
-                                        class="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white">
-                                </div>
-                                <div>
-                                    <label class="text-xs text-gray-400 mb-2 block">Prix max</label>
-                            <input type="number" id="filter-price-max" placeholder="infini"
-                                class="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white">
                         </div>
+                        <button onclick="App.Features.Marketplace.openSellModal()"
+                            class="bg-primary hover:bg-primary/80 text-white px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 transition">
+                            <i data-lucide="plus-circle" class="w-4 h-4"></i> <span
+                                class="hidden md:inline">Vendre</span>
+                        </button>
+                    </div>
+                    <div class="flex gap-2 overflow-x-auto pb-4 custom-scrollbar mb-6">
+                        <button onclick="App.Features.Marketplace.load('')"
+                            class="px-4 py-1.5 bg-primary text-white rounded-full text-xs font-bold whitespace-nowrap">Tout</button>
+                        <button onclick="App.Features.Marketplace.load('livre')"
+                            class="px-4 py-1.5 bg-white/5 hover:bg-white/10 text-gray-300 rounded-full text-xs font-bold whitespace-nowrap transition">Livres</button>
+                        <button onclick="App.Features.Marketplace.load('t-shirt')"
+                            class="px-4 py-1.5 bg-white/5 hover:bg-white/10 text-gray-300 rounded-full text-xs font-bold whitespace-nowrap transition">Vêtements</button>
+                        <button onclick="App.Features.Marketplace.load('art')"
+                            class="px-4 py-1.5 bg-white/5 hover:bg-white/10 text-gray-300 rounded-full text-xs font-bold whitespace-nowrap transition">Artisanat</button>
+                        <button onclick="App.Features.Marketplace.load('musique')"
+                            class="px-4 py-1.5 bg-white/5 hover:bg-white/10 text-gray-300 rounded-full text-xs font-bold whitespace-nowrap transition">Musique</button>
                     </div>
 
-                    <div>
-                        <label class="text-xs text-gray-400 mb-2 block">Lieu</label>
-                        <input type="text" id="filter-location" placeholder="Ville, pays ou paroisse"
-                            class="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white">
-                    </div>
-
-                    <div>
-                        <label class="text-xs text-gray-400 mb-2 block">Etat</label>
-                        <select id="filter-condition"
-                            class="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white">
-                            <option value="">Tous</option>
-                                    <option value="new">Neuf</option>
-                                    <option value="like_new">Comme neuf</option>
-                                    <option value="good">Bon etat</option>
-                                    <option value="fair">Etat correct</option>
-                                    <option value="poor">Mauvais etat</option>
-                                </select>
-                            </div>
-
-                            <button onclick="App.Features.Marketplace.applyFilters()"
-                                class="w-full bg-primary hover:bg-primary/80 py-2 rounded-xl font-bold text-sm transition">
-                                Appliquer les filtres
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- Items Grid -->
-                    <div id="marketplace-items-container"
-                        class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                        <!-- Les items seront injectes ici -->
-                        <div class="col-span-full text-center py-20 text-gray-500 animate-pulse">
-                            Chargement des articles...
-                        </div>
+                    <div id="marketplace-grid" class="grid grid-cols-2 md:grid-cols-3 gap-4 pb-20">
+                        <!-- Products injected -->
+                        <div class="col-span-full text-center py-10 text-gray-500">Chargement des articles...</div>
                     </div>
                 </section>
 
@@ -1068,201 +1000,93 @@
         </div>
     </div>
 
-    <!-- MODAL: MARKETPLACE FORM -->
-    <div id="modal-marketplace-form" class="modal-overlay hidden">
-        <div class="modal-content max-w-2xl max-h-[90vh] overflow-y-auto">
+    <!-- MODAL: SELL ITEM -->
+    <div id="modal-sell"
+        class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm hidden text-white">
+        <div class="glass-panel w-full max-w-sm p-6 rounded-[32px] m-4 animate-slide-in-up">
             <div class="flex justify-between items-center mb-6">
-                <h3 class="text-2xl font-bold">Vendre un article</h3>
-                <button onclick="App.Features.Marketplace.closeForm()" class="text-gray-400 hover:text-white">
-                    <i data-lucide="x" class="w-6 h-6"></i>
-                </button>
+                <h3 class="text-xl font-bold">Vendre un article</h3>
+                <button onclick="App.UI.modals.closeAll()" class="p-2 hover:bg-white/10 rounded-full"><i
+                        data-lucide="x"></i></button>
             </div>
-
-            <form id="marketplace-item-form" class="space-y-4" onsubmit="App.Features.Marketplace.submitItem(event)">
-
-                <!-- Type -->
-                <div>
-                    <label class="text-sm font-bold text-white mb-2 block">Type d'annonce *</label>
-                    <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
-                        <label class="radio-card">
-                            <input type="radio" name="item-type" value="product" checked class="hidden">
-                            <div class="radio-card-content">
-                                <i data-lucide="shopping-bag" class="w-5 h-5 mb-1"></i>
-                                <span class="text-xs">Produit</span>
-                            </div>
-                        </label>
-                        <label class="radio-card">
-                            <input type="radio" name="item-type" value="donation" class="hidden">
-                            <div class="radio-card-content">
-                                <i data-lucide="gift" class="w-5 h-5 mb-1"></i>
-                                <span class="text-xs">Don</span>
-                            </div>
-                        </label>
-                        <label class="radio-card">
-                            <input type="radio" name="item-type" value="job" class="hidden">
-                            <div class="radio-card-content">
-                                <i data-lucide="briefcase" class="w-5 h-5 mb-1"></i>
-                                <span class="text-xs">Emploi</span>
-                            </div>
-                        </label>
-                        <label class="radio-card">
-                            <input type="radio" name="item-type" value="service" class="hidden">
-                            <div class="radio-card-content">
-                                <i data-lucide="wrench" class="w-5 h-5 mb-1"></i>
-                                <span class="text-xs">Service</span>
-                            </div>
-                        </label>
+            <div class="space-y-4 max-h-[70vh] overflow-y-auto custom-scrollbar pr-2">
+                <div onclick="document.getElementById('sell-file').click()"
+                    class="h-32 bg-gray-800 rounded-xl flex items-center justify-center border-2 border-dashed border-white/10 cursor-pointer hover:border-primary/50 transition relative overflow-hidden">
+                    <input type="file" id="sell-file" accept="image/*" class="hidden"
+                        onchange="App.Features.Marketplace.handleImageSelect(this)">
+                    <div id="sell-image-placeholder" class="text-center text-gray-500">
+                        <i data-lucide="image" class="w-8 h-8 mx-auto mb-2 opacity-50"></i>
+                        <span class="text-xs">Ajouter une photo</span>
                     </div>
+                    <img id="sell-preview-img" class="hidden absolute inset-0 w-full h-full object-cover">
                 </div>
 
-                <!-- Titre -->
-                <div>
-                    <label class="text-sm font-bold text-white mb-2 block">Titre *</label>
-                    <input type="text" id="item-title" required
-                        class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white"
-                        placeholder="Ex: iPhone 13 Pro Max 256GB">
-                </div>
+                <select id="sell-category" class="input-field w-full px-4 py-3 rounded-xl bg-gray-900 border-white/10">
+                    <option value="autre">Catégorie...</option>
+                    <option value="livre">Livres & Bibles</option>
+                    <option value="t-shirt">Vêtements</option>
+                    <option value="art">Artisanat & Déco</option>
+                    <option value="musique">Musique & Médias</option>
+                </select>
 
-                <!-- Description -->
-                <div>
-                    <label class="text-sm font-bold text-white mb-2 block">Description *</label>
-                    <textarea id="item-description" required rows="4"
-                        class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white resize-none"
-                        placeholder="Décrivez votre article en détail..."></textarea>
-                </div>
+                <input type="text" id="sell-title" placeholder="Titre de l'article"
+                    class="input-field w-full px-4 py-3 rounded-xl">
 
-                <!-- Catégorie -->
-                <div>
-                    <label class="text-sm font-bold text-white mb-2 block">Catégorie *</label>
-                    <select id="item-category" required
-                        class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white">
-                        <option value="">Choisir une catégorie</option>
-                    </select>
-                </div>
+                <textarea id="sell-description" placeholder="Description de l'article..."
+                    class="input-field w-full px-4 py-3 rounded-xl h-24 resize-none text-sm"></textarea>
 
-                <!-- Prix et Quantité -->
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="text-sm font-bold text-white mb-2 block">Prix (FCFA)</label>
-                        <input type="number" id="item-price" min="0" step="100"
-                            class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white"
-                            placeholder="0" oninput="App.Features.Marketplace.togglePriceFields()">
-                        <label class="flex items-center gap-2 mt-2 text-xs text-gray-400">
-                            <input type="checkbox" id="item-free" class="rounded"
-                                onchange="App.Features.Marketplace.togglePriceFields()">
-                            <span>Gratuit</span>
-                        </label>
-                    </div>
-                    <div>
-                        <label class="text-sm font-bold text-white mb-2 block">Quantité</label>
-                        <input type="number" id="item-quantity" min="1" value="1"
-                            class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white">
-                    </div>
+                <div class="flex gap-2 relative">
+                    <input type="number" id="sell-price" placeholder="Prix"
+                        class="input-field w-full px-4 py-3 rounded-xl">
+                    <span class="absolute right-4 top-3.5 text-gray-400 font-bold">€</span>
                 </div>
-
-                <!-- État -->
-                <div>
-                    <label class="text-sm font-bold text-white mb-2 block">État *</label>
-                    <select id="item-condition" required
-                        class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white">
-                        <option value="new">Neuf</option>
-                        <option value="like_new">Comme neuf</option>
-                        <option value="good">Bon état</option>
-                        <option value="fair">État correct</option>
-                        <option value="poor">Mauvais état</option>
-                    </select>
-                </div>
-
-                <!-- Note indicative -->
-                <div>
-                    <label class="text-sm font-bold text-white mb-2 block">Notation (1 à 5)</label>
-                    <div class="flex items-center gap-3">
-                        <input type="number" id="item-rating" min="1" max="5" step="0.1" value="4.8"
-                            class="w-24 bg-white/5 border border-white/10 rounded-xl px-3 py-3 text-white">
-                        <p class="text-xs text-gray-400">Note indicative visible sur la fiche produit</p>
-                    </div>
-                </div>
-
-                <!-- Localisation -->
-                <div>
-                    <label class="text-sm font-bold text-white mb-2 block">Localisation *</label>
-                    <input type="text" id="item-location" required
-                        class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white"
-                        placeholder="Ex: Yaoundé, Cameroun">
-                </div>
-
-                <!-- Méthodes de paiement -->
-                <div>
-                    <label class="text-sm font-bold text-white mb-2 block">Méthodes de paiement acceptées</label>
-                    <div class="grid grid-cols-2 gap-2">
-                        <label class="flex items-center gap-2 text-sm">
-                            <input type="checkbox" name="payment-method" value="cash" class="rounded">
-                            <span>Espèces</span>
-                        </label>
-                        <label class="flex items-center gap-2 text-sm">
-                            <input type="checkbox" name="payment-method" value="mobile_money" class="rounded">
-                            <span>Mobile Money</span>
-                        </label>
-                        <label class="flex items-center gap-2 text-sm">
-                            <input type="checkbox" name="payment-method" value="bank_transfer" class="rounded">
-                            <span>Virement</span>
-                        </label>
-                        <label class="flex items-center gap-2 text-sm">
-                            <input type="checkbox" name="payment-method" value="paypal" class="rounded">
-                            <span>PayPal</span>
-                        </label>
-                    </div>
-                </div>
-
-                <!-- Livraison -->
-                <div>
-                    <label class="flex items-center gap-2 text-sm font-bold mb-2">
-                        <input type="checkbox" id="item-delivery" class="rounded"
-                            onchange="App.Features.Marketplace.toggleDeliveryPrice()">
-                        <span>Livraison disponible</span>
-                    </label>
-                    <div id="delivery-price-container" class="hidden">
-                        <input type="number" id="item-delivery-price" min="0" step="100"
-                            class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white"
-                            placeholder="Frais de livraison (FCFA)">
-                    </div>
-                </div>
-
-                <!-- Upload photos -->
-                <div>
-                    <label class="text-sm font-bold text-white mb-2 block">Photos (max 5)</label>
-                    <div class="border-2 border-dashed border-white/20 rounded-xl p-4 text-center cursor-pointer hover:border-primary transition"
-                        onclick="document.getElementById('item-images').click()">
-                        <i data-lucide="upload" class="w-8 h-8 mx-auto mb-2 text-gray-400"></i>
-                        <p class="text-sm text-gray-400">Cliquez pour ajouter des photos</p>
-                        <input type="file" id="item-images" accept="image/*" multiple class="hidden"
-                            onchange="App.Features.Marketplace.handleImageSelect(this)">
-                    </div>
-                    <div id="image-preview-container" class="grid grid-cols-5 gap-2 mt-3 hidden">
-                        <!-- Previews will be added here -->
-                    </div>
-                </div>
-
-                <!-- Boutons -->
-                <div class="flex gap-3 pt-4">
-                    <button type="button" onclick="App.Features.Marketplace.closeForm()"
-                        class="flex-1 bg-white/5 hover:bg-white/10 py-3 rounded-xl font-bold transition">
-                        Annuler
-                    </button>
-                    <button type="submit"
-                        class="flex-1 bg-primary hover:bg-primary/80 py-3 rounded-xl font-bold transition">
-                        Publier
-                    </button>
-                </div>
-            </form>
+                <button onclick="App.Features.Marketplace.publish()"
+                    class="btn-primary w-full py-3 rounded-xl font-bold sticky bottom-0">Mettre en vente</button>
+            </div>
         </div>
     </div>
 
-    <!-- MODAL: ITEM DETAIL -->
-    <div id="modal-item-detail" class="modal-overlay hidden">
-        <div class="modal-content max-w-4xl max-h-[90vh] overflow-y-auto">
-            <div id="item-detail-content">
-                <!-- Content will be injected here -->
+    <!-- MODAL: ITEM DETAILS -->
+    <div id="modal-item-details"
+        class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm hidden text-white">
+        <div class="glass-panel w-full max-w-md rounded-[32px] overflow-hidden m-4 animate-slide-in-up">
+            <div class="relative h-64">
+                <img id="item-detail-img" src="" class="w-full h-full object-cover">
+                <button onclick="App.UI.modals.closeAll()"
+                    class="absolute top-4 right-4 p-2 bg-black/50 hover:bg-black/70 rounded-full backdrop-blur-md">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            <div class="p-6 space-y-4">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <span id="item-detail-category"
+                            class="text-[10px] font-bold uppercase tracking-wider text-primary bg-primary/10 px-2 py-0.5 rounded-full">CATÉGORIE</span>
+                        <h3 id="item-detail-title" class="text-2xl font-bold mt-1">Titre de l'article</h3>
+                    </div>
+                    <div class="text-2xl font-black text-white" id="item-detail-price">0€</div>
+                </div>
+
+                <div class="flex items-center gap-3 py-3 border-y border-white/5">
+                    <img id="item-detail-seller-avatar" src="" class="w-10 h-10 rounded-full border border-white/10">
+                    <div>
+                        <p class="text-xs text-gray-500 uppercase font-bold tracking-tighter">Vendu par</p>
+                        <p id="item-detail-seller-name" class="font-bold text-sm">Nom du vendeur</p>
+                    </div>
+                    <button id="btn-contact-seller"
+                        class="ml-auto text-primary text-xs font-bold hover:underline">Contacter</button>
+                </div>
+
+                <div class="py-2">
+                    <p class="text-xs text-gray-500 uppercase font-bold tracking-tighter mb-1">Description</p>
+                    <p id="item-detail-description" class="text-sm text-gray-300 leading-relaxed">Pas de description
+                        fournie.</p>
+                </div>
+
+                <button id="btn-buy-now"
+                    class="btn-primary w-full py-3 rounded-xl font-bold flex items-center justify-center gap-2">
+                    <i data-lucide="shopping-cart" class="w-5 h-5"></i> Acheter maintenant
+                </button>
             </div>
         </div>
     </div>
