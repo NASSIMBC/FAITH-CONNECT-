@@ -37,24 +37,6 @@ const App = {
         if (typeof lucide !== 'undefined') lucide.createIcons();
     },
 
-navigateTo(viewName) {
-        // Cache toutes les vues
-        document.querySelectorAll('.view').forEach(v => v.classList.add('hidden'));
-        
-        // Affiche la vue demandée
-        const targetView = document.getElementById(`view-${viewName}`);
-        if (targetView) targetView.classList.remove('hidden');
-
-        this.state.view = viewName;
-
-        // --- ACTION DE CHARGEMENT ---
-        if (viewName === 'home') {
-            App.Features.Posts.load(); 
-        } else if (viewName === 'devotionals') {
-            App.Features.Devotionals.load();
-        }
-    },
-
     // --- AUTHENTIFICATION ---
     Auth: {
         async checkSession() {
@@ -279,7 +261,6 @@ navigateTo(viewName) {
             if (viewName === 'marketplace') App.Features.Marketplace.load ? App.Features.Marketplace.load() : null;
             if (viewName === 'notifications') App.Features.Notifications.fetch();
             if (viewName === 'quiz') App.Features.Quiz.load();
-            if (viewName === 'devotionals') App.Features.Devotionals.load();
 
             // Special: Detailed Group/Page
             if (viewName === 'group-detail') App.Features.Groups.loadDetail(targetId);
@@ -3351,8 +3332,6 @@ navigateTo(viewName) {
                 }
             },
 
-
-
             async loadLeaderboard() {
                 const container = document.getElementById('quiz-leaderboard');
                 if (!container || !this.currentQuiz?.id) return;
@@ -3379,168 +3358,18 @@ navigateTo(viewName) {
                 }
             },
 
-                      share() {
+            share() {
                 const text = `J'ai fait ${this.userScore}/100 au quiz FaithConnect ! 🏆`;
                 if (navigator.share) navigator.share({ title: 'FaithConnect', text, url: window.location.href });
                 else navigator.clipboard.writeText(text).then(() => App.UI.Modal.alert("Copié !"));
             }
-        }, // <--- VIRGULE IMPORTANTE ICI (Fin du Quiz)
-
-Posts: {
-    async load() {
-        const container = document.getElementById('posts-feed');
-        if (!container) return;
-        
-        const { data, error } = await sb.from('posts')
-            .select('*, profiles(username, avatar_url)')
-            .order('created_at', { ascending: false });
-
-        if (data) {
-            container.innerHTML = data.map(p => `
-                <div class="glass-panel p-4 mb-4 rounded-xl">
-                    <p class="text-white">${p.content}</p>
-                </div>
-            `).join('');
-        }
-    }
-}
-
-       // === MODULE DÉVOTIONNELS RE-CORRIGÉ ===
-        Devotionals: {
-            activePlan: null,
-            userProgress: null,
-
-            async load() {
-                const container = document.getElementById('devotionals-container');
-                if (!container) return;
-                container.innerHTML = '<div class="text-center py-20 animate-pulse text-gray-500">Chargement de la Parole...</div>';
-
-                if (!App.state.user) return;
-
-                try {
-                    const { data: progress } = await sb.from('user_devotionals')
-                        .select('*, devotional_plans(*)')
-                        .eq('user_id', App.state.user.id)
-                        .eq('status', 'active')
-                        .maybeSingle();
-
-                    if (progress && progress.devotional_plans) {
-                        this.userProgress = progress;
-                        this.activePlan = progress.devotional_plans;
-                        this.renderCurrentDay();
-                    } else {
-                        this.renderSelector();
-                    }
-                } catch (e) {
-                    container.innerHTML = '<div class="text-center text-red-400">Erreur Supabase : Vérifiez vos tables.</div>';
-                }
-            },
-
-            renderSelector() {
-                const themes = [
-                    { id: 'anxiety', label: 'Vaincre l\'anxiété', icon: 'wind' },
-                    { id: 'patience', label: 'La patience', icon: 'clock' },
-                    { id: 'gratitude', label: 'La gratitude', icon: 'sun' },
-                    { id: 'faith', label: 'Fortifier sa foi', icon: 'shield' }
-                ];
-                document.getElementById('devotionals-container').innerHTML = `
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 animate-slide-in-up">
-                        ${themes.map(t => `
-                            <div onclick="App.Features.Devotionals.startNew('${t.label}')" class="glass-panel p-6 rounded-2xl cursor-pointer hover:border-primary text-center group">
-                                <div class="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:bg-primary transition">
-                                    <i data-lucide="${t.icon}" class="text-primary group-hover:text-white"></i>
-                                </div>
-                                <h4 class="font-bold text-white">${t.label}</h4>
-                                <p class="text-[10px] text-gray-500 mt-2">Plan de 7 jours par Faith AI</p>
-                            </div>
-                        `).join('')}
-                    </div>`;
-                if (typeof lucide !== 'undefined') lucide.createIcons();
-            },
-
-            async startNew(theme) {
-                alert("Faith AI génère votre parcours... 🙏");
-                const prompt = `Génère un plan de dévotion chrétien de 7 jours sur le thème "${theme}". Format JSON strict : [{"day":1,"title":"..","verse":"..","meditation":".."}]`;
-                try {
-                    const res = await fetch(`${SUPABASE_URL}/functions/v1/faith-ai`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${SUPABASE_KEY}` },
-                        body: JSON.stringify({ question: prompt })
-                    });
-                    const data = await res.json();
-                    let jsonStr = data.answer.substring(data.answer.indexOf('['), data.answer.lastIndexOf(']') + 1);
-                    const days = JSON.parse(jsonStr);
-
-                    const { data: plan, error: pError } = await sb.from('devotional_plans').insert({ 
-                        theme, 
-                        title: theme, 
-                        days_json: days 
-                    }).select().single();
-                    
-                    if (pError) throw pError;
-
-                    await sb.from('user_devotionals').insert({ 
-                        user_id: App.state.user.id, 
-                        plan_id: plan.id,
-                        status: 'active',
-                        current_day: 1
-                    });
-                    
-                    this.load();
-                } catch (e) { 
-                    console.error(e);
-                    alert("Erreur IA : " + e.message); 
-                }
-            },
-
-            renderCurrentDay() {
-                const day = this.activePlan.days_json[this.userProgress.current_day - 1];
-                const progress = (this.userProgress.current_day / 7) * 100;
-                document.getElementById('devotionals-container').innerHTML = `
-                    <div class="glass-panel p-6 rounded-[32px] border-t-4 border-primary">
-                        <div class="flex justify-between mb-4 text-[10px] font-bold text-primary">
-                            <span>JOUR ${this.userProgress.current_day} / 7</span>
-                            <span>${Math.round(progress)}%</span>
-                        </div>
-                        <h3 class="text-xl font-black mb-4 text-white">${day.title}</h3>
-                        <div class="bg-white/5 p-4 rounded-xl mb-6 italic text-sm text-gray-200 border-l-4 border-primary">
-                            "${day.verse}"
-                        </div>
-                        <p class="text-gray-300 text-sm leading-relaxed mb-8">${day.meditation}</p>
-                        <button onclick="App.Features.Devotionals.completeDay()" class="btn-primary w-full py-4 rounded-xl font-bold">
-                            Marquer comme terminé
-                        </button>
-                    </div>`;
-            },
-
-            async completeDay() {
-                const next = this.userProgress.current_day + 1;
-                try {
-                    if (next > 7) {
-                        await sb.from('user_devotionals').update({ status: 'completed' }).eq('id', this.userProgress.id);
-                        alert("Félicitations ! Parcours terminé. 🎉");
-                    } else {
-                        await sb.from('user_devotionals').update({ current_day: next }).eq('id', this.userProgress.id);
-                    }
-                    this.load();
-                } catch (e) {
-                    alert("Erreur lors de la mise à jour : " + e.message);
-                }
-            }
         },
 
-        // --- AJOUT DE L'INITIALISATION GLOBALE ---
-        initAll() {
-            App.Features.Bible.init();
-            App.Features.Prayers.load();
-            App.Features.Stories.load();
-            // On charge les dévotionnels si on est sur la bonne vue
-            if (App.state.view === 'devotionals') App.Features.Devotionals.load();
-        }
-    }
+    },
 };
 
-// Initialisation au chargement du DOM
-document.addEventListener('DOMContentLoaded', () => {
-    App.init();
-});
+
+        
+
+// Start App when DOM Ready
+document.addEventListener('DOMContentLoaded', App.init);
