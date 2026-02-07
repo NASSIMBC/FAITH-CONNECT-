@@ -37,6 +37,24 @@ const App = {
         if (typeof lucide !== 'undefined') lucide.createIcons();
     },
 
+navigateTo(viewName) {
+        // Cache toutes les vues
+        document.querySelectorAll('.view').forEach(v => v.classList.add('hidden'));
+        
+        // Affiche la vue demandée
+        const targetView = document.getElementById(`view-${viewName}`);
+        if (targetView) targetView.classList.remove('hidden');
+
+        this.state.view = viewName;
+
+        // --- ACTION DE CHARGEMENT ---
+        if (viewName === 'home') {
+            App.Features.Posts.load(); 
+        } else if (viewName === 'devotionals') {
+            App.Features.Devotionals.load();
+        }
+    },
+
     // --- AUTHENTIFICATION ---
     Auth: {
         async checkSession() {
@@ -3368,52 +3386,6 @@ const App = {
             }
         }, // <--- VIRGULE IMPORTANTE ICI (Fin du Quiz)
 
-Posts: {
-            async load() {
-                const container = document.getElementById('posts-feed');
-                if (!container) return;
-
-                // On affiche un petit indicateur de chargement
-                container.innerHTML = '<div class="text-center py-10 opacity-50">Chargement du flux...</div>';
-
-                try {
-                    const { data: posts, error } = await sb
-                        .from('posts')
-                        .select('*, profiles(username, avatar_url)')
-                        .order('created_at', { ascending: false });
-
-                    if (error) throw error;
-
-                    if (posts && posts.length > 0) {
-                        this.render(posts);
-                    } else {
-                        container.innerHTML = '<div class="text-center py-20 text-gray-500">Aucune publication pour le moment. 🙏</div>';
-                    }
-                } catch (e) {
-                    console.error("Erreur flux:", e);
-                    container.innerHTML = '<div class="text-center text-red-400">Erreur lors du chargement des posts.</div>';
-                }
-            },
-
-            render(posts) {
-                const container = document.getElementById('posts-feed');
-                container.innerHTML = posts.map(post => `
-                    <div class="glass-panel p-4 rounded-2xl mb-4 animate-slide-in-up">
-                        <div class="flex items-center gap-3 mb-3">
-                            <img src="${post.profiles?.avatar_url || 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + post.profiles?.username}" 
-                                 class="w-10 h-10 rounded-full object-cover border border-primary/20">
-                            <div>
-                                <h4 class="font-bold text-sm text-white">${post.profiles?.username || 'Anonyme'}</h4>
-                                <p class="text-[10px] text-gray-500">${new Date(post.created_at).toLocaleDateString()}</p>
-                            </div>
-                        </div>
-                        <p class="text-sm text-gray-200 leading-relaxed">${post.content}</p>
-                        ${post.image_url ? `<img src="${post.image_url}" class="mt-3 rounded-xl w-full object-cover max-h-64">` : ''}
-                    </div>
-                `).join('');
-            }
-        },
-        
        // === MODULE DÉVOTIONNELS RE-CORRIGÉ ===
         Devotionals: {
             activePlan: null,
