@@ -457,6 +457,7 @@ const App = {
     // --- FONCTIONNALITÉS MÉTIERS ---
     Features: {
         initAll() {
+            App.Features.Stories.load();
             App.Features.Feed.loadDailyVerse();
             App.Features.Feed.loadPosts();
             App.Features.Bible.init();
@@ -3096,6 +3097,106 @@ const App = {
             }
         },
 
+        // 📸 SYSTÈME DE STORIES
+        Stories: {
+            list: [],
+            currentIndex: 0,
+            timer: null,
+
+            async load() {
+                const yesterday = new Date(Date.now() - 86400000).toISOString();
+                const { data, error } = await sb.from('stories')
+                    .select('*, profiles(username, avatar_url)')
+                    .gt('created_at', yesterday)
+                    .order('created_at', { ascending: false });
+
+                if (error) return console.error("Error loading stories:", error);
+                this.list = data || [];
+                this.render();
+            },
+
+            render() {
+                const container = document.getElementById('stories-list');
+                if (!container) return;
+                container.innerHTML = this.list.map((s, i) => `
+                    <div onclick="App.Features.Stories.open(${i})" class="flex flex-col items-center gap-2 cursor-pointer flex-none animate-scale-in">
+                        <div class="w-16 h-16 story-ring shadow-glow">
+                            <img src="${s.profiles?.avatar_url || 'https://ui-avatars.com/api/?name='+s.profiles?.username}" 
+                                 class="w-full h-full rounded-full object-cover border-2 border-black bg-black">
+                        </div>
+                        <span class="text-[10px] font-bold text-gray-400 truncate w-16 text-center">${s.profiles?.username}</span>
+                    </div>
+                `).join('');
+            },
+
+            async handleUpload(input) {
+                if (!input.files || !input.files[0]) return;
+                const file = input.files[0];
+                try {
+                    App.UI.Modal.alert("Votre story est en cours d'envoi... 🙏", "FaithConnect");
+                    const fileName = `story_${App.state.user.id}_${Date.now()}`;
+                    const { error: upErr } = await sb.storage.from('stories').upload(fileName, file);
+                    if (upErr) throw upErr;
+
+                    const { data: { publicUrl } } = sb.storage.from('stories').getPublicUrl(fileName);
+                    const { error: dbErr } = await sb.from('stories').insert({
+                        user_id: App.state.user.id,
+                        media_url: publicUrl
+                    });
+                    if (dbErr) throw dbErr;
+
+                    await this.load();
+                    App.UI.Modal.alert("Story publiée ! Elle sera visible 24h.");
+                } catch (err) {
+                    App.UI.Modal.alert("Erreur story: " + err.message);
+                }
+            },
+
+            open(index) {
+                this.currentIndex = index;
+                const story = this.list[index];
+                const modal = document.getElementById('modal-story-viewer');
+                
+                document.getElementById('story-viewer-avatar').src = story.profiles?.avatar_url || 'https://ui-avatars.com/api/?name='+story.profiles?.username;
+                document.getElementById('story-viewer-name').innerText = story.profiles?.username;
+                document.getElementById('story-viewer-content').src = story.media_url;
+                
+                modal.classList.remove('hidden');
+                this.startTimer();
+                if (typeof lucide !== 'undefined') lucide.createIcons();
+            },
+
+            startTimer() {
+                clearTimeout(this.timer);
+                this.renderProgress();
+                this.timer = setTimeout(() => this.next(), 5000); // 5 secondes par story
+            },
+
+            renderProgress() {
+                const container = document.getElementById('story-progress-container');
+                container.innerHTML = this.list.map((_, i) => `
+                    <div class="h-[2px] flex-1 bg-white/20 rounded-full overflow-hidden">
+                        <div class="h-full bg-white transition-all duration-[5000ms] linear" 
+                             style="width: ${i < this.currentIndex ? '100%' : (i === this.currentIndex ? '100%' : '0%')}"></div>
+                    </div>
+                `).join('');
+            },
+
+            next() {
+                if (this.currentIndex < this.list.length - 1) this.open(this.currentIndex + 1);
+                else this.close();
+            },
+
+            prev() {
+                if (this.currentIndex > 0) this.open(this.currentIndex - 1);
+            },
+
+            close() {
+                clearTimeout(this.timer);
+                document.getElementById('modal-story-viewer').classList.add('hidden');
+            }
+        },
+
         // 10. QUIZ & CHALLENGES
         Quiz: {
             currentQuiz: null,
@@ -3266,6 +3367,9 @@ const App = {
 
     },
 };
+
+
+        
 
 // Start App when DOM Ready
 document.addEventListener('DOMContentLoaded', App.init);
