@@ -3368,64 +3368,62 @@ const App = {
             }
         }, // <--- VIRGULE IMPORTANTE ICI (Fin du Quiz)
 
-        // === MODULE DÉVOTIONNELS (Bien placé ici) ===
+        // === MODULE DÉVOTIONNELS RE-CORRIGÉ ===
         Devotionals: {
             activePlan: null,
             userProgress: null,
 
             async load() {
                 const container = document.getElementById('devotionals-container');
-                if (!container) {
-                    console.error("Erreur: #devotionals-container introuvable dans le HTML");
-                    return;
-                }
-
-                container.innerHTML = '<div class="text-center py-20 animate-pulse text-gray-500">Chargement...</div>';
+                if (!container) return;
+                container.innerHTML = '<div class="text-center py-20 animate-pulse text-gray-500">Chargement de la Parole...</div>';
 
                 if (!App.state.user) return;
 
-                const { data: progress } = await sb.from('user_devotionals')
-                    .select('*, devotional_plans(*)')
-                    .eq('user_id', App.state.user.id)
-                    .eq('status', 'active')
-                    .maybeSingle();
+                try {
+                    const { data: progress } = await sb.from('user_devotionals')
+                        .select('*, devotional_plans(*)')
+                        .eq('user_id', App.state.user.id)
+                        .eq('status', 'active')
+                        .maybeSingle();
 
-                if (progress) {
-                    this.userProgress = progress;
-                    this.activePlan = progress.devotional_plans;
-                    this.renderCurrentDay();
-                } else {
-                    this.renderSelector();
+                    if (progress && progress.devotional_plans) {
+                        this.userProgress = progress;
+                        this.activePlan = progress.devotional_plans;
+                        this.renderCurrentDay();
+                    } else {
+                        this.renderSelector();
+                    }
+                } catch (e) {
+                    container.innerHTML = '<div class="text-center text-red-400">Erreur Supabase : Vérifiez vos tables.</div>';
                 }
             },
 
             renderSelector() {
                 const themes = [
-                    { id: 'anxiety', label: 'Anti-Stress', icon: 'wind' },
-                    { id: 'patience', label: 'Patience', icon: 'clock' },
-                    { id: 'gratitude', label: 'Gratitude', icon: 'sun' },
-                    { id: 'faith', label: 'Foi', icon: 'shield' }
+                    { id: 'anxiety', label: 'Vaincre l\'anxiété', icon: 'wind' },
+                    { id: 'patience', label: 'La patience', icon: 'clock' },
+                    { id: 'gratitude', label: 'La gratitude', icon: 'sun' },
+                    { id: 'faith', label: 'Fortifier sa foi', icon: 'shield' }
                 ];
-
                 document.getElementById('devotionals-container').innerHTML = `
-                    <div class="grid grid-cols-2 gap-4">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 animate-slide-in-up">
                         ${themes.map(t => `
-                            <div onclick="App.Features.Devotionals.startNew('${t.label}')" class="glass-panel p-4 rounded-xl cursor-pointer hover:border-primary text-center">
-                                <div class="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-2">
-                                    <i data-lucide="${t.icon}" class="text-primary"></i>
+                            <div onclick="App.Features.Devotionals.startNew('${t.label}')" class="glass-panel p-6 rounded-2xl cursor-pointer hover:border-primary text-center group">
+                                <div class="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:bg-primary transition">
+                                    <i data-lucide="${t.icon}" class="text-primary group-hover:text-white"></i>
                                 </div>
-                                <h4 class="font-bold text-white text-sm">${t.label}</h4>
+                                <h4 class="font-bold text-white">${t.label}</h4>
+                                <p class="text-[10px] text-gray-500 mt-2">Plan de 7 jours par Faith AI</p>
                             </div>
                         `).join('')}
-                    </div>
-                `;
+                    </div>`;
                 if (typeof lucide !== 'undefined') lucide.createIcons();
             },
 
             async startNew(theme) {
-                App.UI.Modal.alert("L'IA prépare votre plan... 🙏");
-                const prompt = `Plan 7 jours "${theme}". JSON: [{"day":1,"title":"..","verse":"..","meditation":".."}]`;
-                
+                alert("Faith AI génère votre parcours... 🙏");
+                const prompt = `Plan 7 jours thème "${theme}". JSON: [{"day":1,"title":"..","verse":"..","meditation":".."}]`;
                 try {
                     const res = await fetch('https://uduajuxobmywmkjnawjn.supabase.co/functions/v1/faith-ai', {
                         method: 'POST',
@@ -3433,42 +3431,47 @@ const App = {
                         body: JSON.stringify({ question: prompt })
                     });
                     const data = await res.json();
-                    let json = data.answer.replace(/```json|```/g, '').trim();
-                    if(json.includes('[')) json = json.substring(json.indexOf('[')); // Nettoyage forcé
+                    let jsonStr = data.answer.substring(data.answer.indexOf('['), data.answer.lastIndexOf(']') + 1);
+                    const days = JSON.parse(jsonStr);
 
-                    const { data: newPlan } = await sb.from('devotional_plans').insert({ theme, title: theme, days_json: JSON.parse(json) }).select().single();
-                    await sb.from('user_devotionals').insert({ user_id: App.state.user.id, plan_id: newPlan.id });
+                    const { data: plan } = await sb.from('devotional_plans').insert({ theme, title: theme, days_json: days }).select().single();
+                    await sb.from('user_devotionals').insert({ user_id: App.state.user.id, plan_id: plan.id });
                     this.load();
-                } catch (e) { alert("Erreur IA: " + e.message); }
+                } catch (e) { alert("Erreur IA : " + e.message); }
             },
 
             renderCurrentDay() {
-                const d = this.activePlan.days_json[this.userProgress.current_day - 1];
-                if(!d) return this.completeDay();
-                
+                const day = this.activePlan.days_json[this.userProgress.current_day - 1];
+                const progress = (this.userProgress.current_day / 7) * 100;
                 document.getElementById('devotionals-container').innerHTML = `
-                    <div class="glass-panel p-6 rounded-2xl border-t-4 border-primary">
-                        <h3 class="text-xl font-bold mb-4">Jour ${this.userProgress.current_day}: ${d.title}</h3>
-                        <p class="italic text-gray-400 mb-4">"${d.verse}"</p>
-                        <p class="mb-6">${d.meditation}</p>
-                        <button onclick="App.Features.Devotionals.completeDay()" class="btn-primary w-full py-3 rounded-xl">Terminer</button>
-                    </div>
-                `;
+                    <div class="glass-panel p-6 rounded-[32px] border-t-4 border-primary">
+                        <div class="flex justify-between mb-4 text-[10px] font-bold text-primary">
+                            <span>JOUR ${this.userProgress.current_day} / 7</span>
+                            <span>${Math.round(progress)}%</span>
+                        </div>
+                        <h3 class="text-xl font-black mb-4 text-white">${day.title}</h3>
+                        <div class="bg-white/5 p-4 rounded-xl mb-6 italic text-sm text-gray-200 border-l-4 border-primary">
+                            "${day.verse}"
+                        </div>
+                        <p class="text-gray-300 text-sm leading-relaxed mb-8">${day.meditation}</p>
+                        <button onclick="App.Features.Devotionals.completeDay()" class="btn-primary w-full py-4 rounded-xl font-bold">
+                            Marquer comme terminé
+                        </button>
+                    </div>`;
             },
 
             async completeDay() {
                 const next = this.userProgress.current_day + 1;
                 if (next > 7) {
                     await sb.from('user_devotionals').update({ status: 'completed' }).eq('id', this.userProgress.id);
-                    alert("Plan terminé !");
+                    alert("Félicitations ! Parcours terminé. 🎉");
                 } else {
                     await sb.from('user_devotionals').update({ current_day: next }).eq('id', this.userProgress.id);
                 }
                 this.load();
             }
-        } // Fin Devotionals
-    }, // Fin Features
-}; // Fin App (TRÈS IMPORTANT)
+        }
+    }
+};
 
-// Start
 document.addEventListener('DOMContentLoaded', App.init);
