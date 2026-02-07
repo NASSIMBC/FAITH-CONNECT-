@@ -418,3 +418,23 @@ body {
 .check-animate {
     animation: objective-check 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
+
+/* === CHAT THEMES === */
+.chat-theme-eden {
+    background: linear-gradient(135deg, #064e3b, #065f46) !important;
+    /* Emerald 900/800 */
+}
+
+.chat-theme-grace {
+    background: linear-gradient(135deg, #4c1d95, #5b21b6) !important;
+    /* Violet 900/800 */
+}
+
+.chat-theme-night {
+    background: linear-gradient(to bottom, #0f172a, #1e293b) !important;
+    /* Slate 900/800 */
+}
+
+.chat-theme-default {
+    background: #050510 !important;
+}
