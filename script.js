@@ -287,7 +287,7 @@ const App = {
                 open() { document.getElementById('modal-creator').classList.remove('hidden'); }
             },
             sell: {
-                open() { App.Features.Marketplace.openSellModal(); }
+                open() { App.Features.Marketplace.openAddForm(); }
             }
         },
 
@@ -1398,196 +1398,648 @@ const App = {
             }
         },
 
-        // 3. MARKETPLACE (Liaison Supabase complète)
+        // 3. MARKETPLACE (expérience avancée)
         Marketplace: {
-            selectedImage: null,
-            currentData: [],
-
-            async load(filter = "") {
-                const container = document.getElementById('marketplace-grid');
-                if (!container) return;
-
-                container.innerHTML = '<div class="col-span-full text-center py-20 animate-pulse text-gray-500">Chargement de la boutique...</div>';
-
-                // Tentative de chargement avec jointure
-                let { data, error } = await sb.from('marketplace').select('*, profiles(id, username, avatar_url)');
-
-                // Si la jointure échoue (manque de clé étrangère), on charge les données simples
-                if (error && error.code === 'PGRST200') {
-                    console.warn("Lien profiles manquant, chargement sans noms d'utilisateurs");
-                    const fallback = await sb.from('marketplace').select('*');
-                    data = fallback.data;
-                    error = fallback.error;
+            initDone: false,
+            state: {
+                items: [],
+                filters: {
+                    type: 'all',
+                    search: '',
+                    category: '',
+                    priceMin: null,
+                    priceMax: null,
+                    condition: '',
+                    location: ''
+                },
+                pendingImages: []
+            },
+            categories: [
+                { value: 'product', label: 'Produits & Boutique' },
+                { value: 'donation', label: 'Dons solidaires' },
+                { value: 'job', label: 'Emplois & Missions' },
+                { value: 'service', label: 'Services' },
+                { value: 'books', label: 'Livres & Bibles' },
+                { value: 'music', label: 'Musique & Médiathèque' },
+                { value: 'education', label: 'Formation & Éducation' },
+                { value: 'equipment', label: "Matériel d'église" },
+                { value: 'tech', label: 'Tech & Audio/Video' },
+                { value: 'events', label: 'Évènements' },
+                { value: 'solidarity', label: 'Solidarité & Aide' }
+            ],
+            sampleItems: [
+                {
+                    id: 'sample-1',
+                    type: 'product',
+                    title: "Kit d'étude biblique premium",
+                    description: "Bible d'étude, cahier de notes et surligneurs. Parfait pour les groupes de maison.",
+                    price: 25000,
+                    free: false,
+                    category: 'books',
+                    condition: 'like_new',
+                    location: "Abidjan, Côte d'Ivoire",
+                    quantity: 4,
+                    paymentMethods: ['cash', 'mobile_money', 'bank_transfer'],
+                    delivery: true,
+                    deliveryPrice: 1500,
+                    rating: 4.9,
+                    images: ['https://images.unsplash.com/photo-1524995997946-a1c2e315a42f?auto=format&fit=crop&w=800&q=60'],
+                    seller: { id: 'community-shop', name: 'Boutique Solidaire', avatar: 'https://ui-avatars.com/api/?name=Boutique+Solidaire' },
+                    createdAt: new Date().toISOString()
+                },
+                {
+                    id: 'sample-2',
+                    type: 'donation',
+                    title: 'Dons de vêtements pour la chorale',
+                    description: 'Lot de tuniques, tailles S à XL. Idéal chorales/jeunes.',
+                    price: 0,
+                    free: true,
+                    category: 'solidarity',
+                    condition: 'good',
+                    location: 'Douala, Cameroun',
+                    quantity: 20,
+                    paymentMethods: [],
+                    delivery: false,
+                    rating: 4.7,
+                    images: ['https://images.unsplash.com/photo-1521572267360-ee0c2909d518?auto=format&fit=crop&w=800&q=60'],
+                    seller: { id: 'solidarity', name: 'Équipe solidarité', avatar: 'https://ui-avatars.com/api/?name=Solidarité' },
+                    createdAt: new Date().toISOString()
+                },
+                {
+                    id: 'sample-3',
+                    type: 'job',
+                    title: 'Chargé(e) de communication paroissiale',
+                    description: 'Mission bénévole 6 mois, gestion réseaux + visuels hebdo.',
+                    price: 0,
+                    free: true,
+                    category: 'job',
+                    condition: 'new',
+                    location: 'Paris, France',
+                    quantity: 1,
+                    paymentMethods: [],
+                    delivery: false,
+                    rating: 4.8,
+                    images: ['https://images.unsplash.com/photo-1581093458791-9d1db1e147e3?auto=format&fit=crop&w=800&q=60'],
+                    seller: { id: 'paroisse', name: 'Paroisse Saint Paul', avatar: 'https://ui-avatars.com/api/?name=Saint+Paul' },
+                    createdAt: new Date().toISOString()
                 }
+            ],
 
-                if (error) {
-                    console.error("Marketplace Error:", error);
-                    container.innerHTML = `<div class="col-span-full text-center py-10 text-gray-400">
-                        <p class="mb-4">Erreur de chargement du Marketplace : ${error.message}</p>
-                    </div>`;
-                    return;
-                }
-
-                this.currentData = data || [];
-
-                const filtered = this.currentData.filter(p =>
-                    p.title.toLowerCase().includes(filter.toLowerCase()) ||
-                    (p.profiles?.username || '').toLowerCase().includes(filter.toLowerCase()) ||
-                    (p.category || '').toLowerCase().includes(filter.toLowerCase())
-                );
-
-                if (filtered.length === 0) {
-                    container.innerHTML = `<div class="col-span-full text-center py-10 text-gray-500">Aucun article trouvé pour "${filter}".</div>`;
-                    return;
-                }
-
-                container.innerHTML = filtered.map(p => `
-                    <div onclick="App.Features.Marketplace.openDetails('${p.id}')" 
-                        class="glass-panel p-0 rounded-2xl overflow-hidden group cursor-pointer hover:border-primary/50 transition-all hover:-translate-y-1 relative">
-                        <div class="absolute top-2 right-2 bg-black/60 text-white text-[10px] font-black px-2 py-1 rounded-lg backdrop-blur-sm z-10 shadow-lg border border-white/10 text-primary">${p.price}€</div>
-                        ${p.category ? `<div class="absolute top-2 left-2 bg-primary/80 text-white text-[8px] font-bold px-2 py-1 rounded-md backdrop-blur-sm z-10 uppercase tracking-tighter">${p.category}</div>` : ''}
-                        <div class="h-40 overflow-hidden relative">
-                            <img src="${p.image_url || 'https://images.unsplash.com/photo-1550989460-0adf9ea622e2?w=500&auto=format&fit=crop&q=60'}" 
-                                 class="w-full h-full object-cover group-hover:scale-110 transition duration-500">
-                            <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-3">
-                                <span class="text-[10px] text-white font-bold">Voir les détails</span>
-                            </div>
-                        </div>
-                        <div class="p-3">
-                            <h4 class="font-bold text-sm text-white truncate">${p.title}</h4>
-                            <p class="text-[10px] text-gray-400 flex items-center gap-1 mt-1">
-                                <i data-lucide="user" class="w-3 h-3"></i> ${p.profiles?.username || 'Vendeur'}
-                            </p>
-                        </div>
-                    </div>
-                `).join('');
-                if (typeof lucide !== 'undefined') lucide.createIcons();
+            ensureInit() {
+                if (this.initDone) return;
+                this.populateCategories();
+                this.initSearch();
+                this.initDone = true;
             },
 
-            openDetails(itemId) {
-                const item = this.currentData.find(i => i.id === itemId);
-                if (!item) return;
+            populateCategories() {
+                const formSelect = document.getElementById('item-category');
+                const filterSelect = document.getElementById('filter-category');
 
-                const modal = document.getElementById('modal-item-details');
-                if (!modal) return;
-
-                // Populate modal
-                document.getElementById('item-detail-img').src = item.image_url || 'https://images.unsplash.com/photo-1550989460-0adf9ea622e2?w=500&auto=format&fit=crop&q=60';
-                document.getElementById('item-detail-title').innerText = item.title;
-                document.getElementById('item-detail-price').innerText = item.price + "€";
-                document.getElementById('item-detail-category').innerText = item.category || 'AUTRE';
-                document.getElementById('item-detail-description').innerText = item.description || "Pas de description détaillée pour cet article.";
-
-                const sellerAvatar = document.getElementById('item-detail-seller-avatar');
-                const sellerName = document.getElementById('item-detail-seller-name');
-
-                sellerName.innerText = item.profiles?.username || 'Vendeur FaithConnect';
-                sellerAvatar.src = item.profiles?.avatar_url || `https://ui-avatars.com/api/?name=${item.profiles?.username || 'V'}`;
-
-                // Add click navigation to seller info
-                const sellerInfo = sellerName.parentElement.parentElement;
-                if (sellerInfo) {
-                    sellerInfo.classList.add('cursor-pointer', 'hover:bg-white/5', 'transition-colors');
-                    sellerInfo.onclick = () => {
-                        App.UI.navigateTo('profile', item.profiles?.id);
-                        App.UI.modals.closeAll();
-                    };
+                if (formSelect && formSelect.options.length <= 1) {
+                    this.categories.forEach(cat => {
+                        const opt = document.createElement('option');
+                        opt.value = cat.value;
+                        opt.textContent = cat.label;
+                        formSelect.appendChild(opt);
+                    });
                 }
 
-                // Buttons
-                document.getElementById('btn-contact-seller').onclick = () => this.buy(item.profiles?.id, item.profiles?.username, item.profiles?.avatar_url);
-                document.getElementById('btn-buy-now').onclick = () => this.buy(item.profiles?.id, item.profiles?.username, item.profiles?.avatar_url);
-
-                modal.classList.remove('hidden');
-            },
-
-            initSearch() {
-                const input = document.getElementById('marketplace-search');
-                if (input) {
-                    input.addEventListener('input', (e) => {
-                        this.load(e.target.value);
+                if (filterSelect && filterSelect.options.length <= 1) {
+                    this.categories.forEach(cat => {
+                        const opt = document.createElement('option');
+                        opt.value = cat.value;
+                        opt.textContent = cat.label;
+                        filterSelect.appendChild(opt);
                     });
                 }
             },
 
-            openSellModal() {
-                const modal = document.getElementById('modal-sell');
-                if (modal) {
-                    modal.classList.remove('hidden');
-                    // Reset
-                    document.getElementById('sell-title').value = '';
-                    document.getElementById('sell-price').value = '';
-                    document.getElementById('sell-category').value = 'autre';
-                    document.getElementById('sell-description').value = '';
-                    document.getElementById('sell-file').value = '';
-                    document.getElementById('sell-preview-img').classList.add('hidden');
-                    document.getElementById('sell-image-placeholder').classList.remove('hidden');
-                    this.selectedImage = null;
+            getLocalItems() {
+                try {
+                    const raw = localStorage.getItem('fc_marketplace_items');
+                    if (!raw) return [];
+                    return JSON.parse(raw).map(i => this.normalizeItem(i));
+                } catch (err) {
+                    console.warn("Marketplace local read error", err);
+                    return [];
                 }
+            },
+
+            saveLocalItems() {
+                try {
+                    const locals = this.state.items.filter(i => ('' + i.id).startsWith('local-'));
+                    localStorage.setItem('fc_marketplace_items', JSON.stringify(locals));
+                } catch (err) {
+                    console.warn("Marketplace local save error", err);
+                }
+            },
+
+            normalizeItem(raw) {
+                const sellerName = raw?.seller?.name || raw?.seller_name || raw?.username || 'Vendeur FaithConnect';
+                return {
+                    id: raw.id || `local-${Date.now()}`,
+                    type: raw.type || 'product',
+                    title: raw.title || 'Article FaithConnect',
+                    description: raw.description || '',
+                    price: raw.price ? Number(raw.price) : 0,
+                    free: raw.free || raw.type === 'donation' || Number(raw.price) === 0,
+                    category: raw.category || 'product',
+                    condition: raw.condition || 'good',
+                    location: raw.location || '',
+                    quantity: raw.quantity ? Number(raw.quantity) : 1,
+                    paymentMethods: raw.paymentMethods || raw.payment_methods || [],
+                    delivery: Boolean(raw.delivery),
+                    deliveryPrice: raw.deliveryPrice ?? raw.delivery_price ?? null,
+                    rating: raw.rating ? Number(raw.rating) : 4.8,
+                    images: (raw.images && raw.images.length ? raw.images : (raw.image_url ? [raw.image_url] : [])),
+                    seller: raw.seller || {
+                        id: raw.user_id || 'anonyme',
+                        name: sellerName,
+                        avatar: raw.avatar || raw.avatar_url || `https://ui-avatars.com/api/?name=${sellerName.replace(/\s+/g, '+')}`
+                    },
+                    createdAt: raw.createdAt || raw.created_at || new Date().toISOString()
+                };
+            },
+
+            async fetchSupabaseItems() {
+                if (typeof sb === 'undefined') return [];
+                try {
+                    let { data, error } = await sb.from('marketplace').select('*, profiles(username, avatar_url)');
+                    if (error && error.code === 'PGRST200') {
+                        const fallback = await sb.from('marketplace').select('*');
+                        data = fallback.data;
+                        error = fallback.error;
+                    }
+                    if (error) throw error;
+                    return (data || []).map(row => this.normalizeItem({
+                        ...row,
+                        seller: {
+                            id: row.user_id,
+                            name: row.profiles?.username || row.seller_name || 'Vendeur FaithConnect',
+                            avatar: row.profiles?.avatar_url || row.avatar_url
+                        }
+                    }));
+                } catch (err) {
+                    console.warn("Marketplace remote skipped:", err.message);
+                    return [];
+                }
+            },
+
+            async load(filterText = "") {
+                this.ensureInit();
+                this.state.filters.search = filterText;
+
+                const container = document.getElementById('marketplace-items-container');
+                if (!container) return;
+                container.innerHTML = '<div class="col-span-full text-center py-20 text-gray-500 animate-pulse">Chargement des articles...</div>';
+
+                const localItems = this.getLocalItems();
+                const remoteItems = await this.fetchSupabaseItems();
+
+                const aggregated = [...this.sampleItems.map(i => this.normalizeItem(i)), ...remoteItems, ...localItems];
+                const unique = [];
+                const seen = new Set();
+                aggregated.forEach(item => {
+                    const norm = this.normalizeItem(item);
+                    if (!seen.has(norm.id)) {
+                        seen.add(norm.id);
+                        unique.push(norm);
+                    }
+                });
+
+                this.state.items = unique;
+                this.render();
+            },
+
+            getFilteredItems() {
+                const f = this.state.filters;
+                return this.state.items.filter(item => {
+                    if (f.type !== 'all' && item.type !== f.type) return false;
+                    if (f.search && ![item.title, item.description, item.category, item.location].some(t => (t || '').toLowerCase().includes(f.search.toLowerCase()))) return false;
+                    if (f.category && item.category !== f.category) return false;
+                    if (f.condition && item.condition !== f.condition) return false;
+                    if (f.location && !(item.location || '').toLowerCase().includes(f.location.toLowerCase())) return false;
+                    if (f.priceMin !== null && Number(item.price || 0) < f.priceMin) return false;
+                    if (f.priceMax !== null && Number(item.price || 0) > f.priceMax) return false;
+                    return true;
+                });
+            },
+
+            render() {
+                const container = document.getElementById('marketplace-items-container');
+                if (!container) return;
+
+                const items = this.getFilteredItems();
+                if (items.length === 0) {
+                    container.innerHTML = '<div class="col-span-full text-center py-14 text-gray-500">Aucun article ne correspond aux filtres.</div>';
+                    return;
+                }
+
+                container.innerHTML = items.map(item => this.renderCard(item)).join('');
+                if (typeof lucide !== 'undefined') lucide.createIcons();
+            },
+
+            renderCard(item) {
+                const priceLabel = this.formatPrice(item);
+                const conditionLabel = {
+                    new: 'Neuf',
+                    like_new: 'Comme neuf',
+                    good: 'Bon état',
+                    fair: 'État correct',
+                    poor: 'Usagé'
+                }[item.condition] || '—';
+
+                const typeBadge = {
+                    product: 'Produit',
+                    donation: 'Don',
+                    job: 'Emploi',
+                    service: 'Service'
+                }[item.type] || 'Annonce';
+
+                const firstImage = (item.images && item.images[0]) || 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=800&q=60';
+
+                return `
+                    <article class="market-card" onclick="App.Features.Marketplace.openDetails('${item.id}')">
+                        <div class="market-card-image">
+                            <img src="${firstImage}" alt="${item.title}">
+                            <span class="market-chip">${typeBadge}</span>
+                            <div class="market-card-actions">
+                                <button class="icon-btn" title="Partager" onclick="event.stopPropagation(); App.Features.Marketplace.shareItemById('${item.id}')">
+                                    <i data-lucide="share-2" class="w-4 h-4"></i>
+                                </button>
+                                <button class="icon-btn" title="Discuter" onclick="event.stopPropagation(); App.Features.Marketplace.contactSellerById('${item.id}')">
+                                    <i data-lucide="message-circle" class="w-4 h-4"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="market-card-body">
+                            <div class="flex items-center justify-between gap-2 mb-1">
+                                <span class="price-tag">${priceLabel}</span>
+                                ${this.ratingStars(item.rating)}
+                            </div>
+                            <h4 class="market-title">${item.title}</h4>
+                            <p class="market-location"><i data-lucide="map-pin" class="w-3 h-3"></i>${item.location || 'Lieu à préciser'}</p>
+                            <div class="market-meta">
+                                <span class="chip">${conditionLabel}</span>
+                                <span class="chip">${item.quantity || 1} unité(s)</span>
+                                ${item.delivery ? `<span class="chip chip-success">Livraison</span>` : ''}
+                            </div>
+                            <div class="market-footer">
+                                <span class="category-badge">${item.category || 'Catégorie'}</span>
+                                <button class="link-btn">Voir le détail</button>
+                            </div>
+                        </div>
+                    </article>
+                `;
+            },
+
+            ratingStars(rating = 4.8) {
+                const safeRating = Math.min(5, Math.max(1, Number(rating) || 4.8));
+                const full = Math.round(safeRating);
+                let stars = '';
+                for (let i = 0; i < 5; i++) {
+                    stars += i < full ? '&#9733;' : '&#9734;';
+                }
+                return `<span class="rating-badge">${stars} <span class="ml-1 text-[10px] font-bold">${safeRating.toFixed(1)}</span></span>`;
+            },
+
+            formatPrice(item) {
+                if (item.free || item.type === 'donation') return 'Gratuit';
+                if (!item.price && item.price !== 0) return 'Prix sur demande';
+                return `${Number(item.price).toLocaleString('fr-FR')} FCFA`;
+            },
+
+            openDetails(id) {
+                const item = this.state.items.find(i => i.id === id);
+                const modal = document.getElementById('modal-item-detail');
+                const content = document.getElementById('item-detail-content');
+                if (!item || !modal || !content) return;
+
+                content.innerHTML = this.buildDetailContent(item);
+                modal.classList.remove('hidden');
+                modal.onclick = (e) => { if (e.target === modal) modal.classList.add('hidden'); };
+                if (typeof lucide !== 'undefined') lucide.createIcons();
+            },
+
+            buildDetailContent(item) {
+                const priceLabel = this.formatPrice(item);
+                const paymentTags = (item.paymentMethods || []).map(p => `<span class="chip">${p}</span>`).join('') || '<span class="chip">À convenir</span>';
+                const galleryThumbs = (item.images || []).slice(0, 5).map((img, idx) => `
+                    <img src="${img}" class="detail-thumb ${idx === 0 ? 'ring-2 ring-primary' : ''}" alt="Photo ${idx + 1}">
+                `).join('');
+
+                const conditionLabel = {
+                    new: 'Neuf',
+                    like_new: 'Comme neuf',
+                    good: 'Bon état',
+                    fair: 'État correct',
+                    poor: 'Usagé'
+                }[item.condition] || 'Condition non précisée';
+
+                return `
+                    <div class="flex items-start justify-between gap-4 mb-4">
+                        <div class="flex items-center gap-3">
+                            <img src="${item.seller?.avatar || 'https://ui-avatars.com/api/?name=Vendeur'}" class="w-12 h-12 rounded-full object-cover border border-white/10">
+                            <div>
+                                <p class="font-bold text-white leading-tight">${item.seller?.name || 'Vendeur FaithConnect'}</p>
+                                <p class="text-xs text-gray-400">${item.location || 'Lieu à préciser'}</p>
+                            </div>
+                        </div>
+                        <button class="icon-btn" onclick="App.UI.modals.closeAll()"><i data-lucide="x" class="w-5 h-5"></i></button>
+                    </div>
+
+                    <div class="grid md:grid-cols-2 gap-6">
+                        <div class="space-y-3">
+                            <div class="detail-hero">
+                                <img src="${(item.images && item.images[0]) || 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=900&q=60'}" class="w-full h-full object-cover rounded-2xl">
+                                <span class="market-chip absolute top-3 left-3">${item.category || 'Catégorie'}</span>
+                            </div>
+                            <div class="detail-thumbs">${galleryThumbs}</div>
+                        </div>
+
+                        <div class="space-y-3">
+                            <div class="flex items-center gap-3">
+                                <span class="price-tag text-lg">${priceLabel}</span>
+                                ${this.ratingStars(item.rating)}
+                                ${item.delivery ? `<span class="chip chip-success">Livraison ${item.deliveryPrice ? `${item.deliveryPrice} FCFA` : ''}</span>` : '<span class="chip">Remise en main propre</span>'}
+                            </div>
+                            <h3 class="text-xl font-black text-white">${item.title}</h3>
+                            <p class="text-sm text-gray-300 leading-relaxed">${item.description || 'Pas de description détaillée pour cet article.'}</p>
+
+                            <div class="grid grid-cols-2 gap-2 text-sm text-gray-300">
+                                <div class="info-row"><i data-lucide="map-pin" class="w-4 h-4"></i><span>${item.location || 'Lieu à préciser'}</span></div>
+                                <div class="info-row"><i data-lucide="tag" class="w-4 h-4"></i><span>${item.type || 'Annonce'}</span></div>
+                                <div class="info-row"><i data-lucide="layers" class="w-4 h-4"></i><span>${conditionLabel}</span></div>
+                                <div class="info-row"><i data-lucide="package" class="w-4 h-4"></i><span>${item.quantity || 1} unité(s)</span></div>
+                            </div>
+
+                            <div class="flex flex-wrap gap-2">${paymentTags}</div>
+
+                            <div class="flex gap-2 pt-2">
+                                <button class="btn-primary flex-1" onclick="App.Features.Marketplace.contactSellerById('${item.id}')">
+                                    <i data-lucide="message-circle" class="w-5 h-5 mr-2"></i>Discuter avec le vendeur
+                                </button>
+                                <button class="btn-secondary" onclick="App.Features.Marketplace.shareItemById('${item.id}')">
+                                    <i data-lucide="share-2" class="w-5 h-5"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            },
+
+            shareItemById(id) {
+                const item = this.state.items.find(i => i.id === id);
+                if (item) this.shareItem(item);
+            },
+
+            shareItem(item) {
+                const url = `${window.location.origin}#marketplace-${item.id}`;
+                const payload = {
+                    title: item.title,
+                    text: item.description || 'Découvre cet article sur FaithConnect',
+                    url
+                };
+
+                if (navigator.share) {
+                    navigator.share(payload).catch(() => navigator.clipboard?.writeText(url));
+                } else if (navigator.clipboard) {
+                    navigator.clipboard.writeText(url);
+                    alert("Lien copié dans le presse-papiers 📎");
+                } else {
+                    alert(url);
+                }
+            },
+
+            contactSellerById(id) {
+                const item = this.state.items.find(i => i.id === id);
+                if (item) this.contactSeller(item);
+            },
+
+            contactSeller(item) {
+                if (!item.seller?.id) return alert("Vendeur introuvable.");
+                if (App.Features.Chat?.openChat) {
+                    App.Features.Chat.openChat(item.seller.id, item.seller.name, item.seller.avatar);
+                    App.UI.navigateTo('messages');
+                    App.UI.modals.closeAll();
+                } else {
+                    alert("Messagerie indisponible pour le moment.");
+                }
+            },
+
+            openAddForm() {
+                this.resetForm();
+                const modal = document.getElementById('modal-marketplace-form');
+                if (modal) modal.classList.remove('hidden');
+            },
+
+            closeForm() {
+                const modal = document.getElementById('modal-marketplace-form');
+                if (modal) modal.classList.add('hidden');
+                this.state.pendingImages = [];
+                this.renderPreviews();
+            },
+
+            resetForm() {
+                const form = document.getElementById('marketplace-item-form');
+                if (form) form.reset();
+                const defaultType = document.querySelector('input[name="item-type"][value="product"]');
+                if (defaultType) defaultType.checked = true;
+                const ratingInput = document.getElementById('item-rating');
+                if (ratingInput) ratingInput.value = 4.8;
+                const qty = document.getElementById('item-quantity');
+                if (qty) qty.value = 1;
+                const free = document.getElementById('item-free');
+                if (free) free.checked = false;
+                const del = document.getElementById('item-delivery');
+                if (del) del.checked = false;
+                const priceInput = document.getElementById('item-price');
+                if (priceInput) priceInput.disabled = false;
+                const deliveryPrice = document.getElementById('delivery-price-container');
+                if (deliveryPrice) deliveryPrice.classList.add('hidden');
+                this.renderPreviews();
             },
 
             handleImageSelect(input) {
-                if (input.files && input.files[0]) {
-                    this.selectedImage = input.files[0];
-                    const reader = new FileReader();
-                    reader.onload = (e) => {
-                        document.getElementById('sell-preview-img').src = e.target.result;
-                        document.getElementById('sell-preview-img').classList.remove('hidden');
-                        document.getElementById('sell-image-placeholder').classList.add('hidden');
-                    };
-                    reader.readAsDataURL(input.files[0]);
+                if (!input?.files) return;
+                this.state.pendingImages = Array.from(input.files).slice(0, 5);
+                this.renderPreviews();
+            },
+
+            renderPreviews() {
+                const container = document.getElementById('image-preview-container');
+                if (!container) return;
+
+                if (this.state.pendingImages.length === 0) {
+                    container.classList.add('hidden');
+                    container.innerHTML = '';
+                    return;
+                }
+
+                container.classList.remove('hidden');
+                container.innerHTML = this.state.pendingImages.map((file, idx) => {
+                    const url = URL.createObjectURL(file);
+                    return `
+                        <div class="preview-thumb relative">
+                            <img src="${url}" class="w-full h-full object-cover rounded-lg">
+                            <button class="icon-btn absolute top-1 right-1" onclick="App.Features.Marketplace.removePreview(${idx}); event.stopPropagation();">
+                                <i data-lucide="x" class="w-4 h-4"></i>
+                            </button>
+                        </div>
+                    `;
+                }).join('');
+                if (typeof lucide !== 'undefined') lucide.createIcons();
+            },
+
+            removePreview(index) {
+                this.state.pendingImages.splice(index, 1);
+                this.renderPreviews();
+            },
+
+            togglePriceFields() {
+                const free = document.getElementById('item-free')?.checked;
+                const priceInput = document.getElementById('item-price');
+                if (priceInput) {
+                    priceInput.disabled = free;
+                    if (free) priceInput.value = '';
                 }
             },
 
-            async publish() {
-                const title = document.getElementById('sell-title').value;
-                const price = document.getElementById('sell-price').value;
-                const category = document.getElementById('sell-category').value;
-                const description = document.getElementById('sell-description').value;
+            toggleDeliveryPrice() {
+                const chk = document.getElementById('item-delivery');
+                const container = document.getElementById('delivery-price-container');
+                if (chk && container) {
+                    container.classList.toggle('hidden', !chk.checked);
+                }
+            },
 
-                if (!title || !price) return alert("Veuillez remplir les champs obligatoires (titre et prix).");
-                if (!App.state.user) return alert("Veuillez vous connecter.");
+            filterByType(type, event) {
+                if (event) {
+                    document.querySelectorAll('.market-tab').forEach(btn => btn.classList.remove('active'));
+                    event.currentTarget?.classList.add('active');
+                }
+                this.state.filters.type = type;
+                this.render();
+            },
 
-                let imageUrl = null;
-                if (this.selectedImage) {
-                    try {
-                        const cleanName = App.Utils.sanitizeFilename(this.selectedImage.name);
-                        const fileName = `${Date.now()}_${cleanName}`;
-                        const { error: uploadError } = await sb.storage.from('marketplace').upload(fileName, this.selectedImage);
-                        if (uploadError) {
-                            console.error("Marketplace Upload Error:", uploadError);
-                            return alert("Erreur image: Vérifiez le bucket 'marketplace'");
-                        }
-                        const { data: { publicUrl } } = sb.storage.from('marketplace').getPublicUrl(fileName);
-                        imageUrl = publicUrl;
-                    } catch (err) {
-                        console.error(err);
+            toggleFilters() {
+                const filters = document.getElementById('marketplace-filters');
+                if (filters) filters.classList.toggle('hidden');
+            },
+
+            applyFilters() {
+                const priceMin = document.getElementById('filter-price-min')?.value;
+                const priceMax = document.getElementById('filter-price-max')?.value;
+                this.state.filters.category = document.getElementById('filter-category')?.value || '';
+                this.state.filters.condition = document.getElementById('filter-condition')?.value || '';
+                this.state.filters.location = document.getElementById('filter-location')?.value || '';
+                this.state.filters.priceMin = priceMin ? Number(priceMin) : null;
+                this.state.filters.priceMax = priceMax ? Number(priceMax) : null;
+                this.render();
+            },
+
+            async submitItem(event) {
+                event.preventDefault();
+                const type = document.querySelector('input[name="item-type"]:checked')?.value || 'product';
+                const title = document.getElementById('item-title').value.trim();
+                const description = document.getElementById('item-description').value.trim();
+                const category = document.getElementById('item-category').value;
+                const priceInput = document.getElementById('item-price').value;
+                const free = document.getElementById('item-free').checked || type === 'donation';
+                const quantity = Number(document.getElementById('item-quantity').value || 1);
+                const condition = document.getElementById('item-condition').value;
+                const location = document.getElementById('item-location').value.trim();
+                const rating = Number(document.getElementById('item-rating').value || 4.8);
+                const delivery = document.getElementById('item-delivery').checked;
+                const deliveryPrice = delivery ? Number(document.getElementById('item-delivery-price').value || 0) : null;
+                const paymentMethods = Array.from(document.querySelectorAll('input[name="payment-method"]:checked')).map(i => i.value);
+
+                if (!title || !description || !category || !condition || !location) {
+                    return alert("Merci de remplir tous les champs obligatoires.");
+                }
+
+                const images = await this.prepareImages();
+
+                const newItem = this.normalizeItem({
+                    id: `local-${Date.now()}`,
+                    type,
+                    title,
+                    description,
+                    category,
+                    price: free ? 0 : Number(priceInput || 0),
+                    free,
+                    quantity,
+                    condition,
+                    location,
+                    paymentMethods,
+                    delivery,
+                    deliveryPrice,
+                    rating: Math.min(5, Math.max(1, rating || 4.8)),
+                    images,
+                    seller: {
+                        id: App.state.user?.id || 'anonyme',
+                        name: App.state.profile?.username || 'Membre FaithConnect',
+                        avatar: App.state.profile?.avatar_url || `https://ui-avatars.com/api/?name=${(App.state.profile?.username || 'FC').replace(/\s+/g, '+')}`
+                    }
+                });
+
+                this.state.items = [newItem, ...this.state.items];
+                this.saveLocalItems();
+                this.render();
+                this.closeForm();
+                setTimeout(() => this.openDetails(newItem.id), 150);
+            },
+
+            async prepareImages() {
+                if (!this.state.pendingImages.length) return [];
+                const uploads = [];
+
+                for (const file of this.state.pendingImages) {
+                    const uploaded = await this.uploadToSupabase(file);
+                    if (uploaded) {
+                        uploads.push(uploaded);
+                    } else {
+                        const base64 = await this.toDataURL(file);
+                        uploads.push(base64);
                     }
                 }
+                return uploads.slice(0, 5);
+            },
 
-                const { error } = await sb.from('marketplace').insert([{
-                    user_id: App.state.user.id,
-                    title: title,
-                    price: parseFloat(price),
-                    category: category,
-                    description: description,
-                    image_url: imageUrl
-                }]);
-
-                if (error) {
-                    alert("Erreur lors de la mise en vente: " + error.message);
-                } else {
-                    alert("Article mis en vente ! 🙏");
-                    App.UI.modals.closeAll();
-                    this.load();
+            async uploadToSupabase(file) {
+                try {
+                    if (typeof sb === 'undefined' || !App.state.user) return null;
+                    const cleanName = App.Utils.sanitizeFilename(file.name);
+                    const fileName = `${App.state.user.id}/${Date.now()}_${cleanName}`;
+                    const { error } = await sb.storage.from('marketplace').upload(fileName, file, { upsert: true });
+                    if (error) throw error;
+                    const { data: { publicUrl } } = sb.storage.from('marketplace').getPublicUrl(fileName);
+                    return publicUrl;
+                } catch (err) {
+                    console.warn("Upload storage ignoré:", err.message);
+                    return null;
                 }
             },
 
-            buy(sellerId, sellerName, sellerAvatar) {
-                if (!sellerId) return alert("Vendeur introuvable.");
-                App.Features.Chat.openChat(sellerId, sellerName, sellerAvatar);
-                App.UI.navigateTo('messages');
-                App.UI.modals.closeAll();
+            toDataURL(file) {
+                return new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = () => resolve(reader.result);
+                    reader.onerror = reject;
+                    reader.readAsDataURL(file);
+                });
+            },
+
+            initSearch() {
+                const input = document.getElementById('marketplace-search');
+                if (input && !input.dataset.bound) {
+                    input.addEventListener('input', (e) => {
+                        this.state.filters.search = e.target.value || '';
+                        this.render();
+                    });
+                    input.dataset.bound = 'true';
+                }
             }
         },
 
