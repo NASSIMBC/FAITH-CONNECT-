@@ -1785,7 +1785,17 @@ const App = {
 
             applyTheme(theme) {
                 const area = document.getElementById('msg-area');
-                if (area) area.className = `hidden md:flex flex-1 flex-col relative chat-theme-${theme}`;
+                if (!area) return;
+
+                // Remove existing theme classes
+                area.classList.forEach(cls => {
+                    if (cls.startsWith('chat-theme-')) area.classList.remove(cls);
+                });
+
+                // Add new theme class
+                if (theme && theme !== 'default') {
+                    area.classList.add(`chat-theme-${theme}`);
+                }
             },
 
             toggleSettings() {
