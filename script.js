@@ -259,6 +259,7 @@ const App = {
             if (viewName === 'events') App.Features.Events.load();
             if (viewName === 'marketplace') App.Features.Marketplace.load ? App.Features.Marketplace.load() : null;
             if (viewName === 'notifications') App.Features.Notifications.fetch();
+            if (viewName === 'quiz') App.Features.Quiz.load();
 
             // Special: Detailed Group/Page
             if (viewName === 'group-detail') App.Features.Groups.loadDetail(targetId);
