@@ -261,6 +261,7 @@ const App = {
             if (viewName === 'marketplace') App.Features.Marketplace.load ? App.Features.Marketplace.load() : null;
             if (viewName === 'notifications') App.Features.Notifications.fetch();
             if (viewName === 'quiz') App.Features.Quiz.load();
+            if (viewName === 'devotionals') App.Features.Devotionals.load();
 
             // Special: Detailed Group/Page
             if (viewName === 'group-detail') App.Features.Groups.loadDetail(targetId);
@@ -3332,6 +3333,8 @@ const App = {
                 }
             },
 
+
+
             async loadLeaderboard() {
                 const container = document.getElementById('quiz-leaderboard');
                 if (!container || !this.currentQuiz?.id) return;
@@ -3363,13 +3366,144 @@ const App = {
                 if (navigator.share) navigator.share({ title: 'FaithConnect', text, url: window.location.href });
                 else navigator.clipboard.writeText(text).then(() => App.UI.Modal.alert("Copié !"));
             }
+
         },
+
+// À ajouter dans App.Features
+Devotionals: {
+    activePlan: null,
+    userProgress: null,
+
+    async load() {
+        const container = document.getElementById('devotionals-container');
+        if (!container) return;
+
+        container.innerHTML = '<div class="text-center py-20 animate-pulse text-gray-500">Préparation de votre parcours...</div>';
+
+        // 1. Vérifier si l'utilisateur a un plan actif
+        const { data: progress, error } = await sb.from('user_devotionals')
+            .select('*, devotional_plans(*)')
+            .eq('user_id', App.state.user.id)
+            .eq('status', 'active')
+            .maybeSingle();
+
+        if (progress) {
+            this.userProgress = progress;
+            this.activePlan = progress.devotional_plans;
+            this.renderCurrentDay();
+        } else {
+            this.renderSelector();
+        }
+    },
+
+    renderSelector() {
+        const themes = [
+            { id: 'anxiety', label: 'Vaincre l\'anxiété', icon: 'wind' },
+            { id: 'patience', label: 'Développer la patience', icon: 'clock' },
+            { id: 'gratitude', label: 'Vivre la gratitude', icon: 'sun' },
+            { id: 'faith', label: 'Fortifier sa foi', icon: 'shield' }
+        ];
+
+        document.getElementById('devotionals-container').innerHTML = `
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                ${themes.map(t => `
+                    <div onclick="App.Features.Devotionals.startNew('${t.label}')" class="glass-panel p-6 rounded-2xl cursor-pointer hover:border-primary transition group text-center">
+                        <div class="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:bg-primary transition">
+                            <i data-lucide="${t.icon}" class="text-primary group-hover:text-white"></i>
+                        </div>
+                        <h4 class="font-bold text-white">${t.label}</h4>
+                        <p class="text-xs text-gray-500 mt-2">Plan de lecture de 7 jours généré par Faith AI</p>
+                    </div>
+                `).join('')}
+            </div>
+        `;
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+    },
+
+    async startNew(theme) {
+        App.UI.Modal.alert("Faith AI génère votre plan personnalisé de 7 jours... 🙏", "Génération en cours");
+        
+        const prompt = `Génère un plan de lecture biblique de 7 jours sur le thème "${theme}". 
+        Pour chaque jour, fournis : 1/ Un titre, 2/ Une référence de verset, 3/ Une courte méditation de 3 phrases. 
+        Réponds UNIQUEMENT en JSON pur : [{"day": 1, "title": "...", "verse": "...", "meditation": "..."}, ...]`;
+
+        try {
+            const res = await fetch('https://uduajuxobmywmkjnawjn.supabase.co/functions/v1/faith-ai', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${SUPABASE_KEY}` },
+                body: JSON.stringify({ question: prompt })
+            });
+            const data = await res.json();
+            const days = JSON.parse(data.answer.replace(/```json|```/g, '').trim());
+
+            // Sauvegarder le plan
+            const { data: newPlan } = await sb.from('devotional_plans').insert({
+                theme, title: `Parcours sur ${theme}`, days_json: days
+            }).select().single();
+
+            // Lier l'utilisateur
+            await sb.from('user_devotionals').insert({
+                user_id: App.state.user.id, plan_id: newPlan.id
+            });
+
+            this.load(); // Recharger pour afficher le plan
+        } catch (e) {
+            console.error(e);
+            alert("Erreur lors de la génération. Réessayez.");
+        }
+    },
+
+    renderCurrentDay() {
+        const dayIdx = this.userProgress.current_day - 1;
+        const dayData = this.activePlan.days_json[dayIdx];
+        const progressPercent = (this.userProgress.current_day / 7) * 100;
+
+        document.getElementById('devotionals-container').innerHTML = `
+            <div class="glass-panel p-8 rounded-[32px] border-t-4 border-primary">
+                <div class="flex justify-between items-center mb-6">
+                    <span class="text-[10px] font-bold uppercase tracking-widest text-primary">Jour ${this.userProgress.current_day} sur 7</span>
+                    <div class="w-32 h-1.5 bg-white/5 rounded-full overflow-hidden">
+                        <div class="h-full bg-primary" style="width: ${progressPercent}%"></div>
+                    </div>
+                </div>
+                
+                <h3 class="text-2xl font-black mb-4">${dayData.title}</h3>
+                
+                <div class="bg-primary/5 p-6 rounded-2xl border border-primary/10 mb-6 italic font-serif">
+                    <i data-lucide="quote" class="w-5 h-5 text-primary mb-2 opacity-50"></i>
+                    <p class="text-lg text-white mb-2">${dayData.verse}</p>
+                </div>
+
+                <div class="space-y-4 text-gray-300 leading-relaxed">
+                    <p>${dayData.meditation}</p>
+                </div>
+
+                <button onclick="App.Features.Devotionals.completeDay()" class="btn-primary w-full py-4 rounded-2xl font-bold mt-8 shadow-glow">
+                    Marquer le jour ${this.userProgress.current_day} comme terminé
+                </button>
+            </div>
+        `;
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+    },
+
+    async completeDay() {
+        const nextDay = this.userProgress.current_day + 1;
+        
+        if (nextDay > 7) {
+            await sb.from('user_devotionals').update({ status: 'completed' }).eq('id', this.userProgress.id);
+            App.UI.Modal.alert("Félicitations ! Vous avez terminé ce parcours de 7 jours. 🎉", "Gloire à Dieu");
+        } else {
+            await sb.from('user_devotionals').update({ current_day: nextDay }).eq('id', this.userProgress.id);
+        }
+        this.load();
+    }
+}
+
 
     },
 };
 
-
-        
+  
 
 // Start App when DOM Ready
 document.addEventListener('DOMContentLoaded', App.init);
