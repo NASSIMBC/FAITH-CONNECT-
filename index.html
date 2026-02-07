@@ -161,11 +161,7 @@
                         <i data-lucide="book" class="group-hover:text-blue-400 transition"></i> <span
                             class="font-semibold text-sm">Bible</span>
                     </button>
-<button onclick="App.UI.navigateTo('devotionals')" class="nav-btn-desktop w-full flex items-center gap-4 px-4 py-3 rounded-2xl text-gray-400 hover:text-white hover:bg-white/5 transition group" id="desk-nav-devotionals">
-    <i data-lucide="sparkles" class="group-hover:text-yellow-400 transition"></i> 
-    <span class="font-semibold text-sm">Dévotionnels</span>
-</button>
- <button onclick="App.UI.navigateTo('messages')"
+                    <button onclick="App.UI.navigateTo('messages')"
                         class="nav-btn-desktop w-full flex items-center gap-4 px-4 py-3 rounded-2xl text-gray-400 hover:text-white hover:bg-white/5 transition group"
                         id="desk-nav-messages">
                         <i data-lucide="message-circle" class="group-hover:text-orange-400 transition"></i> <span
@@ -237,7 +233,9 @@
                 <div id="stories-list" class="flex gap-4">
                     </div>
             </div>
-          
+
+            ...
+
                     <!-- Post Creator -->
                     <div class="glass-panel p-4 rounded-[24px] flex items-center gap-4">
                         <img id="feed-avatar" class="w-10 h-10 rounded-full object-cover bg-gray-800">
@@ -511,7 +509,6 @@
                         </div>
                     </div>
 
-                    
                     <!-- LEADERBOARD -->
                     <div class="glass-panel p-6 rounded-[24px]">
                         <h3 class="text-lg font-bold mb-4 flex items-center gap-2"><i data-lucide="bar-chart-2"
@@ -521,20 +518,6 @@
                         </div>
                     </div>
                 </section>
-
-                <!-- VIEW: DEVOTIONALS -->
-<section id="view-devotionals" class="page-view hidden space-y-6 pb-20">
-    <!-- En-tête de la page -->
-    <div class="glass-panel p-6 rounded-[32px] text-center relative overflow-hidden">
-        <div class="absolute top-0 left-1/2 -translate-x-1/2 w-full h-full bg-primary/10 blur-[80px] pointer-events-none"></div>
-        <h2 class="text-2xl font-black mb-2 relative z-10">Parcours <span class="text-primary">Spirituels</span></h2>
-        <p class="text-gray-400 text-sm relative z-10">Grandissez dans votre foi un jour après l'autre.</p>
-    </div>
-
-    <!-- Le contenu sera injecté ici par le Javascript -->
-    <div id="devotionals-container" class="min-h-[300px]"></div>
-</section>
-
 
                 <!-- VIEW: MESSAGES (Fixed Layout for Mobile) -->
                 <section id="view-messages"
