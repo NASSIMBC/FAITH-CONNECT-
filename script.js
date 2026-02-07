@@ -592,30 +592,53 @@ const App = {
                 container.innerHTML = '<div class="text-center py-20 animate-pulse text-gray-500">Chargement de la lumière...</div>';
 
                 try {
-                    // Fetch user's subscriptions
-                    let followedGroupIds = [];
-                    if (App.state.user) {
-                        const { data: subs } = await sb.from('group_members').select('group_id').eq('user_id', App.state.user.id);
-                        followedGroupIds = subs ? subs.map(s => s.group_id) : [];
+                    if (!App.state.user) {
+                        container.innerHTML = '<div class="text-center text-gray-400 py-10">Connectez-vous pour voir les publications</div>';
+                        return;
                     }
 
-                    // Query: All public posts OR posts from followed groups
-                    let query = sb.from('posts').select('*, profiles(username, avatar_url), groups(name)').order('created_at', { ascending: false }).limit(25);
+                    // Récupérer la liste des amis
+                    const { data: friendships } = await sb.from('friends')
+                        .select('user_id, friend_id')
+                        .or(`user_id.eq.${App.state.user.id},friend_id.eq.${App.state.user.id}`)
+                        .eq('status', 'accepted');
 
-                    if (followedGroupIds.length > 0) {
-                        // Complex filter: anonymous posts OR posts from known groups
-                        // Note: Supabase 'or' logic for foreign tables can be tricky, staying simple for now:
-                        // Just fetch and we'll filter or just fetch all public as usual
-                    }
+                    const friendIds = friendships ? friendships.map(f =>
+                        f.user_id === App.state.user.id ? f.friend_id : f.user_id
+                    ) : [];
 
-                    const { data: posts, error } = await query;
+                    // Ajouter l'utilisateur lui-même
+                    friendIds.push(App.state.user.id);
+
+                    // Récupérer les posts des amis uniquement
+                    const { data: posts, error } = await sb.from('posts')
+                        .select('*, profiles(username, avatar_url), groups(name)')
+                        .in('user_id', friendIds)
+                        .order('created_at', { ascending: false })
+                        .limit(50);
+
                     if (error) throw error;
 
                     if (posts && posts.length > 0) {
+                        // Compter les commentaires pour chaque post
+                        for (let post of posts) {
+                            const { count } = await sb.from('comments')
+                                .select('*', { count: 'exact', head: true })
+                                .eq('post_id', post.id);
+                            post.comment_count = count || 0;
+                        }
+
                         container.innerHTML = posts.map(post => App.Features.Feed.renderPost(post)).join('');
                         if (typeof lucide !== 'undefined') lucide.createIcons();
                     } else {
-                        container.innerHTML = `<div class="text-center text-gray-500 py-10">Soyez la première lumière ici. ✨</div>`;
+                        container.innerHTML = `
+                            <div class="text-center text-gray-500 py-10">
+                                <i data-lucide="users" class="w-12 h-12 mx-auto mb-3 text-gray-600"></i>
+                                <p class="mb-2">Aucune publication de vos amis</p>
+                                <p class="text-xs text-gray-600">Ajoutez des amis pour voir leurs publications !</p>
+                            </div>
+                        `;
+                        if (typeof lucide !== 'undefined') lucide.createIcons();
                     }
                 } catch (err) {
                     console.error("Feed Load Error:", err);
@@ -626,9 +649,22 @@ const App = {
             renderPost(post) {
                 const avatar = post.profiles?.avatar_url || `https://ui-avatars.com/api/?name=${post.profiles?.username || 'Inconnu'}`;
                 const groupInfo = post.groups ? `<span class="text-primary mx-1">➜</span> <span class="bg-primary/10 text-primary px-1.5 py-0.5 rounded text-[9px] font-bold uppercase">${post.groups.name}</span>` : '';
+                const isAuthor = App.state.user && post.user_id === App.state.user.id;
+
+                // Boutons d'action pour l'auteur
+                const authorActions = isAuthor ? `
+                    <div class="flex gap-2">
+                        <button onclick="App.Features.Feed.editPost('${post.id}')" class="p-1.5 hover:bg-white/10 rounded-lg transition" title="Modifier">
+                            <i data-lucide="edit-2" class="w-4 h-4 text-gray-400"></i>
+                        </button>
+                        <button onclick="App.Features.Feed.deletePost('${post.id}')" class="p-1.5 hover:bg-red-500/10 rounded-lg transition" title="Supprimer">
+                            <i data-lucide="trash-2" class="w-4 h-4 text-red-400"></i>
+                        </button>
+                    </div>
+                ` : '';
 
                 return `
-                <article class="glass-panel p-5 rounded-[24px] animate-slide-in-up">
+                <article class="glass-panel p-5 rounded-[24px] animate-slide-in-up" id="post-${post.id}">
                     <div class="flex items-center justify-between mb-3">
                         <div class="flex items-center gap-3 cursor-pointer group/author" onclick="App.UI.navigateTo('profile', '${post.user_id}')">
                             <img src="${avatar}" class="w-10 h-10 rounded-full object-cover group-hover/author:ring-2 ring-primary transition-all">
@@ -640,59 +676,262 @@ const App = {
                                 <p class="text-[10px] text-gray-500">${new Date(post.created_at).toLocaleDateString()}</p>
                             </div>
                         </div>
+                        ${authorActions}
                     </div>
-                    <p class="text-gray-200 text-sm leading-relaxed mb-4 font-light">${post.content}</p>
+                    <p class="text-gray-200 text-sm leading-relaxed mb-4 font-light" id="post-content-${post.id}">${post.content}</p>
                     ${post.image_url ? `<img src="${post.image_url}" class="w-full rounded-2xl mb-4 border border-white/5 bg-black/50">` : ''}
-                    <div class="flex gap-4 border-t border-white/5 pt-3">
-                        <button onclick="App.Features.Feed.likePost('${post.id}', '${post.user_id}')" class="flex items-center gap-2 text-xs text-gray-400 hover:text-pink-400 transition" id="like-btn-${post.id}">
-                            <i data-lucide="heart" class="w-4 h-4"></i> Amen <span class="like-count">${post.likes || 0}</span>
+                    
+                    <!-- Réactions -->
+                    <div class="flex items-center gap-4 border-t border-white/5 pt-3 mb-3">
+                        <button onclick="App.Features.Feed.reactToPost('${post.id}', '${post.user_id}', 'heart')" class="flex items-center gap-2 text-xs text-gray-400 hover:text-pink-400 transition group" id="react-heart-${post.id}">
+                            <i data-lucide="heart" class="w-4 h-4 group-hover:fill-pink-400"></i> 
+                            <span class="reaction-count">${post.reactions?.heart || 0}</span>
                         </button>
-                        <button onclick="App.Features.Feed.commentPost('${post.id}', '${post.user_id}')" class="flex items-center gap-2 text-xs text-gray-400 hover:text-blue-400 transition">
-                            <i data-lucide="message-circle" class="w-4 h-4"></i> Commenter
+                        <button onclick="App.Features.Feed.reactToPost('${post.id}', '${post.user_id}', 'pray')" class="flex items-center gap-2 text-xs text-gray-400 hover:text-purple-400 transition group" id="react-pray-${post.id}">
+                            <i data-lucide="heart-handshake" class="w-4 h-4"></i> 
+                            <span class="reaction-count">${post.reactions?.pray || 0}</span>
                         </button>
+                        <button onclick="App.Features.Feed.reactToPost('${post.id}', '${post.user_id}', 'amen')" class="flex items-center gap-2 text-xs text-gray-400 hover:text-yellow-400 transition group" id="react-amen-${post.id}">
+                            <i data-lucide="sparkles" class="w-4 h-4"></i> 
+                            <span class="reaction-count">${post.reactions?.amen || 0}</span>
+                        </button>
+                        <button onclick="App.Features.Feed.toggleComments('${post.id}')" class="flex items-center gap-2 text-xs text-gray-400 hover:text-blue-400 transition ml-auto">
+                            <i data-lucide="message-circle" class="w-4 h-4"></i> 
+                            <span id="comment-count-${post.id}">${post.comment_count || 0}</span>
+                        </button>
+                        <button onclick="App.Features.Feed.sharePost('${post.id}')" class="flex items-center gap-2 text-xs text-gray-400 hover:text-green-400 transition">
+                            <i data-lucide="share-2" class="w-4 h-4"></i> Partager
+                        </button>
+                    </div>
+
+                    <!-- Section Commentaires -->
+                    <div id="comments-section-${post.id}" class="hidden border-t border-white/5 pt-3 mt-3">
+                        <div id="comments-list-${post.id}" class="space-y-3 mb-3 max-h-60 overflow-y-auto custom-scrollbar">
+                            <!-- Les commentaires seront chargés ici -->
+                        </div>
+                        <div class="flex gap-2">
+                            <input type="text" id="comment-input-${post.id}" placeholder="Ajouter un commentaire..." 
+                                   class="flex-1 bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white placeholder-gray-500 focus:border-primary focus:outline-none"
+                                   onkeypress="if(event.key==='Enter') App.Features.Feed.addComment('${post.id}', '${post.user_id}')">
+                            <button onclick="App.Features.Feed.addComment('${post.id}', '${post.user_id}')" 
+                                    class="bg-primary hover:bg-primary/80 px-4 py-2 rounded-xl transition">
+                                <i data-lucide="send" class="w-4 h-4"></i>
+                            </button>
+                        </div>
                     </div>
                 </article>
                 `;
             },
 
-            async likePost(postId, recipientId) {
-                const btn = document.getElementById(`like-btn-${postId}`);
+
+            // Système de réactions
+            async reactToPost(postId, recipientId, reactionType) {
+                const btn = document.getElementById(`react-${reactionType}-${postId}`);
                 if (!btn) return;
-                const countEl = btn.querySelector('.like-count');
-                let count = parseInt(countEl.innerText);
+                const countEl = btn.querySelector('.reaction-count');
+                let count = parseInt(countEl.innerText) || 0;
 
-                // Anim visuelle immédiate
-                btn.classList.toggle('text-pink-500');
-                btn.classList.toggle('text-gray-400');
+                // Toggle visuel
+                const isActive = btn.classList.contains('text-pink-400') || btn.classList.contains('text-purple-400') || btn.classList.contains('text-yellow-400');
 
-                if (btn.classList.contains('text-pink-500')) {
-                    count++;
+                if (isActive) {
+                    btn.classList.remove('text-pink-400', 'text-purple-400', 'text-yellow-400');
+                    btn.classList.add('text-gray-400');
+                    count = Math.max(0, count - 1);
                 } else {
-                    count--;
+                    btn.classList.remove('text-gray-400');
+                    if (reactionType === 'heart') btn.classList.add('text-pink-400');
+                    else if (reactionType === 'pray') btn.classList.add('text-purple-400');
+                    else if (reactionType === 'amen') btn.classList.add('text-yellow-400');
+                    count++;
+
+                    // Notification
+                    if (App.state.user.id !== recipientId) {
+                        App.Features.Notifications.create('like', recipientId, postId);
+                    }
                 }
+
                 countEl.innerText = count;
 
-                // Trigger Notification
-                if (btn.classList.contains('text-pink-500')) {
-                    App.Features.Notifications.create('like', recipientId, postId);
-                }
-
-                // Mise à jour Supabase (si colonne existe)
+                // Mise à jour DB
                 try {
-                    const { error } = await sb.from('posts').update({ likes: count }).eq('id', postId);
-                    if (error) console.warn("Supabase update error (maybe 'likes' column is missing?):", error.message);
+                    const { data: post } = await sb.from('posts').select('reactions').eq('id', postId).single();
+                    const reactions = post?.reactions || {};
+                    reactions[reactionType] = count;
+                    await sb.from('posts').update({ reactions }).eq('id', postId);
                 } catch (err) {
-                    console.warn("Update error:", err);
+                    console.warn("Reaction update error:", err);
                 }
             },
 
-            async commentPost(postId, recipientId) {
-                const comment = prompt("Votre commentaire :");
-                if (comment) {
-                    App.Features.Notifications.create('comment', recipientId, postId, comment);
-                    alert("Amen ! Votre commentaire a été envoyé.");
+            // Toggle section commentaires
+            async toggleComments(postId) {
+                const section = document.getElementById(`comments-section-${postId}`);
+                if (!section) return;
+
+                if (section.classList.contains('hidden')) {
+                    section.classList.remove('hidden');
+                    await this.loadComments(postId);
+                } else {
+                    section.classList.add('hidden');
                 }
             },
+
+            // Charger les commentaires
+            async loadComments(postId) {
+                const container = document.getElementById(`comments-list-${postId}`);
+                if (!container) return;
+
+                container.innerHTML = '<p class="text-xs text-gray-500 text-center py-2 animate-pulse">Chargement...</p>';
+
+                try {
+                    const { data: comments } = await sb.from('comments')
+                        .select('*, profiles(username, avatar_url)')
+                        .eq('post_id', postId)
+                        .order('created_at', { ascending: true });
+
+                    if (comments && comments.length > 0) {
+                        container.innerHTML = comments.map(c => `
+                            <div class="flex gap-2 bg-white/5 p-3 rounded-xl">
+                                <img src="${c.profiles?.avatar_url || 'https://ui-avatars.com/api/?name=' + c.profiles?.username}" 
+                                     class="w-8 h-8 rounded-full object-cover">
+                                <div class="flex-1">
+                                    <p class="text-xs font-bold text-white">${c.profiles?.username || 'Anonyme'}</p>
+                                    <p class="text-xs text-gray-300 mt-1">${c.content}</p>
+                                    <p class="text-[10px] text-gray-500 mt-1">${new Date(c.created_at).toLocaleDateString()}</p>
+                                </div>
+                                ${c.user_id === App.state.user.id ? `
+                                    <button onclick="App.Features.Feed.deleteComment('${c.id}', '${postId}')" 
+                                            class="text-red-400 hover:text-red-300 text-xs">
+                                        <i data-lucide="x" class="w-3 h-3"></i>
+                                    </button>
+                                ` : ''}
+                            </div>
+                        `).join('');
+                        if (typeof lucide !== 'undefined') lucide.createIcons();
+                    } else {
+                        container.innerHTML = '<p class="text-xs text-gray-500 text-center py-2">Aucun commentaire</p>';
+                    }
+                } catch (err) {
+                    console.error("Load comments error:", err);
+                    container.innerHTML = '<p class="text-xs text-red-400 text-center py-2">Erreur de chargement</p>';
+                }
+            },
+
+            // Ajouter un commentaire
+            async addComment(postId, recipientId) {
+                const input = document.getElementById(`comment-input-${postId}`);
+                if (!input || !input.value.trim()) return;
+
+                const content = input.value.trim();
+                input.value = '';
+
+                try {
+                    const { error } = await sb.from('comments').insert({
+                        post_id: postId,
+                        user_id: App.state.user.id,
+                        content: content
+                    });
+
+                    if (error) throw error;
+
+                    // Mise à jour du compteur
+                    const countEl = document.getElementById(`comment-count-${postId}`);
+                    if (countEl) {
+                        countEl.innerText = parseInt(countEl.innerText || 0) + 1;
+                    }
+
+                    // Notification
+                    if (App.state.user.id !== recipientId) {
+                        App.Features.Notifications.create('comment', recipientId, postId, content);
+                    }
+
+                    // Recharger les commentaires
+                    await this.loadComments(postId);
+                } catch (err) {
+                    console.error("Add comment error:", err);
+                    alert("Erreur lors de l'ajout du commentaire");
+                }
+            },
+
+            // Supprimer un commentaire
+            async deleteComment(commentId, postId) {
+                if (!confirm("Supprimer ce commentaire ?")) return;
+
+                try {
+                    await sb.from('comments').delete().eq('id', commentId);
+
+                    // Mise à jour du compteur
+                    const countEl = document.getElementById(`comment-count-${postId}`);
+                    if (countEl) {
+                        countEl.innerText = Math.max(0, parseInt(countEl.innerText || 0) - 1);
+                    }
+
+                    await this.loadComments(postId);
+                } catch (err) {
+                    console.error("Delete comment error:", err);
+                }
+            },
+
+            // Partager un post
+            sharePost(postId) {
+                const post = document.getElementById(`post-${postId}`);
+                const content = document.getElementById(`post-content-${postId}`)?.innerText || '';
+                const text = `Découvrez cette publication sur FaithConnect : "${content.substring(0, 100)}..."`;
+
+                if (navigator.share) {
+                    navigator.share({
+                        title: 'FaithConnect',
+                        text: text,
+                        url: `${window.location.origin}${window.location.pathname}?post=${postId}`
+                    }).catch(console.error);
+                } else {
+                    navigator.clipboard.writeText(`${text}\n${window.location.origin}${window.location.pathname}?post=${postId}`)
+                        .then(() => alert("Lien copié dans le presse-papier !"));
+                }
+            },
+
+            // Modifier un post
+            async editPost(postId) {
+                const contentEl = document.getElementById(`post-content-${postId}`);
+                if (!contentEl) return;
+
+                const currentContent = contentEl.innerText;
+                const newContent = prompt("Modifier votre publication :", currentContent);
+
+                if (newContent && newContent.trim() && newContent !== currentContent) {
+                    try {
+                        await sb.from('posts').update({ content: newContent.trim() }).eq('id', postId);
+                        contentEl.innerText = newContent.trim();
+                        alert("Publication modifiée !");
+                    } catch (err) {
+                        console.error("Edit post error:", err);
+                        alert("Erreur lors de la modification");
+                    }
+                }
+            },
+
+            // Supprimer un post
+            async deletePost(postId) {
+                if (!confirm("Supprimer définitivement cette publication ?")) return;
+
+                try {
+                    // Supprimer les commentaires associés
+                    await sb.from('comments').delete().eq('post_id', postId);
+                    // Supprimer le post
+                    await sb.from('posts').delete().eq('id', postId);
+
+                    // Retirer du DOM
+                    const postEl = document.getElementById(`post-${postId}`);
+                    if (postEl) postEl.remove();
+
+                    alert("Publication supprimée");
+                } catch (err) {
+                    console.error("Delete post error:", err);
+                    alert("Erreur lors de la suppression");
+                }
+            },
+
 
             openCreator() { App.UI.modals.creator.open(); },
 
