@@ -3386,6 +3386,25 @@ navigateTo(viewName) {
             }
         }, // <--- VIRGULE IMPORTANTE ICI (Fin du Quiz)
 
+Posts: {
+    async load() {
+        const container = document.getElementById('posts-feed');
+        if (!container) return;
+        
+        const { data, error } = await sb.from('posts')
+            .select('*, profiles(username, avatar_url)')
+            .order('created_at', { ascending: false });
+
+        if (data) {
+            container.innerHTML = data.map(p => `
+                <div class="glass-panel p-4 mb-4 rounded-xl">
+                    <p class="text-white">${p.content}</p>
+                </div>
+            `).join('');
+        }
+    }
+}
+
        // === MODULE DÉVOTIONNELS RE-CORRIGÉ ===
         Devotionals: {
             activePlan: null,
