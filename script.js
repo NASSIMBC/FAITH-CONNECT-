@@ -3368,7 +3368,7 @@ const App = {
             }
         }, // <--- VIRGULE IMPORTANTE ICI (Fin du Quiz)
 
-        // === MODULE DÉVOTIONNELS RE-CORRIGÉ ===
+       // === MODULE DÉVOTIONNELS RE-CORRIGÉ ===
         Devotionals: {
             activePlan: null,
             userProgress: null,
@@ -3423,9 +3423,9 @@ const App = {
 
             async startNew(theme) {
                 alert("Faith AI génère votre parcours... 🙏");
-                const prompt = `Plan 7 jours thème "${theme}". JSON: [{"day":1,"title":"..","verse":"..","meditation":".."}]`;
+                const prompt = `Génère un plan de dévotion chrétien de 7 jours sur le thème "${theme}". Format JSON strict : [{"day":1,"title":"..","verse":"..","meditation":".."}]`;
                 try {
-                    const res = await fetch('https://uduajuxobmywmkjnawjn.supabase.co/functions/v1/faith-ai', {
+                    const res = await fetch(`${SUPABASE_URL}/functions/v1/faith-ai`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${SUPABASE_KEY}` },
                         body: JSON.stringify({ question: prompt })
@@ -3434,10 +3434,26 @@ const App = {
                     let jsonStr = data.answer.substring(data.answer.indexOf('['), data.answer.lastIndexOf(']') + 1);
                     const days = JSON.parse(jsonStr);
 
-                    const { data: plan } = await sb.from('devotional_plans').insert({ theme, title: theme, days_json: days }).select().single();
-                    await sb.from('user_devotionals').insert({ user_id: App.state.user.id, plan_id: plan.id });
+                    const { data: plan, error: pError } = await sb.from('devotional_plans').insert({ 
+                        theme, 
+                        title: theme, 
+                        days_json: days 
+                    }).select().single();
+                    
+                    if (pError) throw pError;
+
+                    await sb.from('user_devotionals').insert({ 
+                        user_id: App.state.user.id, 
+                        plan_id: plan.id,
+                        status: 'active',
+                        current_day: 1
+                    });
+                    
                     this.load();
-                } catch (e) { alert("Erreur IA : " + e.message); }
+                } catch (e) { 
+                    console.error(e);
+                    alert("Erreur IA : " + e.message); 
+                }
             },
 
             renderCurrentDay() {
@@ -3462,16 +3478,32 @@ const App = {
 
             async completeDay() {
                 const next = this.userProgress.current_day + 1;
-                if (next > 7) {
-                    await sb.from('user_devotionals').update({ status: 'completed' }).eq('id', this.userProgress.id);
-                    alert("Félicitations ! Parcours terminé. 🎉");
-                } else {
-                    await sb.from('user_devotionals').update({ current_day: next }).eq('id', this.userProgress.id);
+                try {
+                    if (next > 7) {
+                        await sb.from('user_devotionals').update({ status: 'completed' }).eq('id', this.userProgress.id);
+                        alert("Félicitations ! Parcours terminé. 🎉");
+                    } else {
+                        await sb.from('user_devotionals').update({ current_day: next }).eq('id', this.userProgress.id);
+                    }
+                    this.load();
+                } catch (e) {
+                    alert("Erreur lors de la mise à jour : " + e.message);
                 }
-                this.load();
             }
+        },
+
+        // --- AJOUT DE L'INITIALISATION GLOBALE ---
+        initAll() {
+            App.Features.Bible.init();
+            App.Features.Prayers.load();
+            App.Features.Stories.load();
+            // On charge les dévotionnels si on est sur la bonne vue
+            if (App.state.view === 'devotionals') App.Features.Devotionals.load();
         }
     }
 };
 
-document.addEventListener('DOMContentLoaded', App.init);
+// Initialisation au chargement du DOM
+document.addEventListener('DOMContentLoaded', () => {
+    App.init();
+});
