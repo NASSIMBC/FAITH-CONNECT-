@@ -346,6 +346,79 @@ const App = {
             if (typeof lucide !== 'undefined') lucide.createIcons();
         },
 
+        // === CUSTOM MODAL SYSTEM ===
+        Modal: {
+            show(title, message, type = 'alert', placeholder = '') {
+                return new Promise((resolve) => {
+                    const modal = document.getElementById('custom-modal');
+                    const titleEl = document.getElementById('custom-modal-title');
+                    const msgEl = document.getElementById('custom-modal-message');
+                    const inputContainer = document.getElementById('custom-modal-input-container');
+                    const input = document.getElementById('custom-modal-input');
+                    const btnCancel = document.getElementById('custom-modal-cancel');
+                    const btnConfirm = document.getElementById('custom-modal-confirm');
+
+                    if (!modal) {
+                        console.error('Modal element not found');
+                        return resolve(null);
+                    }
+
+                    // Set Content
+                    titleEl.innerText = title;
+                    msgEl.innerText = message;
+                    input.value = '';
+                    input.placeholder = placeholder;
+
+                    // Reset View
+                    inputContainer.classList.add('hidden');
+                    btnCancel.classList.add('hidden');
+
+                    // Configure Type
+                    if (type === 'confirm') {
+                        btnCancel.classList.remove('hidden');
+                    } else if (type === 'prompt') {
+                        inputContainer.classList.remove('hidden');
+                        btnCancel.classList.remove('hidden');
+                    }
+
+                    // Remove old listeners to prevent stacking
+                    const newConfirm = btnConfirm.cloneNode(true);
+                    const newCancel = btnCancel.cloneNode(true);
+                    btnConfirm.parentNode.replaceChild(newConfirm, btnConfirm);
+                    btnCancel.parentNode.replaceChild(newCancel, btnCancel);
+
+                    // Event Handlers
+                    const close = (val) => {
+                        modal.classList.add('hidden');
+                        resolve(val);
+                    };
+
+                    newConfirm.onclick = () => {
+                        if (type === 'prompt') close(input.value);
+                        else close(true);
+                    };
+
+                    newCancel.onclick = () => close(type === 'confirm' ? false : null);
+
+                    // Show Modal
+                    modal.classList.remove('hidden');
+                    if (type === 'prompt') input.focus();
+                });
+            },
+
+            async alert(message, title = 'Info') {
+                return this.show(title, message, 'alert');
+            },
+
+            async confirm(message, title = 'Confirmation') {
+                return this.show(title, message, 'confirm');
+            },
+
+            async prompt(message, placeholder = '', title = 'Saisie') {
+                return this.show(title, message, 'prompt', placeholder);
+            }
+        },
+
         initTheme() {
             const savedTheme = localStorage.getItem('theme');
             if (savedTheme === 'light') {
@@ -2564,7 +2637,7 @@ const App = {
             }
         },
 
-    }
+    },
 };
 
 // Start App when DOM Ready
