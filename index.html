@@ -220,28 +220,21 @@
             <main class="flex-1 w-full min-w-0 md:h-full md:overflow-y-auto custom-scrollbar md:pr-2">
 
                 <!-- VIEW: HOME (Feed) -->
-                <section id="view-home" class="page-view space-y-6 p-4 md:p-0">
-
-                    <!-- Daily Verse Widget (Re-designed) -->
-                    <div id="daily-verse-container"
-                        class="glass-panel p-6 rounded-[24px] relative overflow-hidden group hover:shadow-glow transition-all duration-500">
-                        <div
-                            class="absolute -right-10 -top-10 w-40 h-40 bg-purple-500/20 blur-[60px] rounded-full group-hover:bg-purple-500/30 transition-all">
-                        </div>
-
-
-                        <div class="relative z-10 flex flex-col items-center text-center">
-                            <span
-                                class="text-[10px] uppercase tracking-widest text-purple-400 font-bold mb-3 flex items-center gap-2">
-                                <i data-lucide="sun" class="w-3 h-3"></i> Verset du Jour
-                            </span>
-                            <p class="font-serif text-lg md:text-2xl text-white leading-relaxed italic mb-4"
-                                id="daily-verse-text">
-                                "Chargement de la parole..."
-                            </p>
-                            <p class="text-xs font-bold text-gray-400" id="daily-verse-ref"></p>
-                        </div>
+               <section id="view-home" class="page-view flex flex-col gap-6 md:h-full md:overflow-y-auto custom-scrollbar">
+            
+            <div id="stories-container" class="flex gap-4 overflow-x-auto pb-4 no-scrollbar items-center px-1 flex-none border-b border-white/5">
+                <div onclick="document.getElementById('story-upload-input').click()" class="flex flex-col items-center gap-2 cursor-pointer group flex-none">
+                    <div class="w-16 h-16 rounded-full border-2 border-dashed border-gray-600 flex items-center justify-center group-hover:border-primary transition-all bg-white/5">
+                        <i data-lucide="plus" class="text-gray-400 group-hover:text-primary"></i>
                     </div>
+                    <span class="text-[10px] font-bold text-gray-500">Ma Story</span>
+                    <input type="file" id="story-upload-input" class="hidden" accept="image/*" onchange="App.Features.Stories.handleUpload(this)">
+                </div>
+                <div id="stories-list" class="flex gap-4">
+                    </div>
+            </div>
+
+            ...
 
                     <!-- Post Creator -->
                     <div class="glass-panel p-4 rounded-[24px] flex items-center gap-4">
@@ -1265,6 +1258,25 @@
                     class="btn-primary px-6 py-2 rounded-xl text-sm font-bold shadow-lg">OK</button>
             </div>
         </div>
+    </div>
+
+    <div id="modal-story-viewer" class="fixed inset-0 z-[150] bg-black hidden flex items-center justify-center">
+        <div class="absolute top-0 left-0 right-0 p-4 flex gap-1.5 z-20" id="story-progress-container"></div>
+        
+        <div class="absolute top-6 left-4 right-4 flex justify-between items-center z-20">
+            <div class="flex items-center gap-3">
+                <img id="story-viewer-avatar" class="w-9 h-9 rounded-full border border-white/20 object-cover" src="">
+                <span id="story-viewer-name" class="font-bold text-sm text-white drop-shadow-lg">Username</span>
+            </div>
+            <button onclick="App.Features.Stories.close()" class="p-2 text-white/80 hover:text-white drop-shadow-lg">
+                <i data-lucide="x"></i>
+            </button>
+        </div>
+        
+        <img id="story-viewer-content" class="max-h-screen max-w-full object-contain" src="">
+        
+        <div class="absolute inset-y-0 left-0 w-1/3 z-10" onclick="App.Features.Stories.prev()"></div>
+        <div class="absolute inset-y-0 right-0 w-2/3 z-10" onclick="App.Features.Stories.next()"></div>
     </div>
 
     <!-- SCRIPT APPLICATION -->
