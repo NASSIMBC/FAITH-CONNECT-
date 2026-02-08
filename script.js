@@ -1734,6 +1734,10 @@ const App = {
             blockedCache: {},
             typingTimeout: null,
             typingIndicatorTimer: null,
+            mediaRecorder: null,
+            recordingChunks: [],
+            recordingInterval: null,
+            recordingStartTime: 0,
 
             insertEmoji(emoji) {
                 const input = document.getElementById('chat-input');
@@ -1741,6 +1745,10 @@ const App = {
                     input.value += emoji;
                     input.focus();
                 }
+            },
+            toggleQuickBar() {
+                const bar = document.getElementById('chat-quick-bar');
+                if (bar) bar.classList.toggle('hidden');
             },
             getBlockKey(contactId) {
                 return `fc_block_${App.state.user?.id || 'anon'}_${contactId}`;
@@ -2154,9 +2162,17 @@ const App = {
                             ${custom?.nickname ? `<span class="text-[9px] text-gray-500 italic">@${username}</span>` : '<span class="text-[9px] text-green-500">En ligne</span>'}
                         </div>
                     </div>
-                    <button onclick="App.Features.Chat.toggleSettings()" class="p-2 hover:bg-white/5 rounded-full transition text-gray-400 hover:text-white">
-                        <i data-lucide="settings" class="w-5 h-5"></i>
-                    </button>
+                    <div class="flex items-center gap-1">
+                        <button onclick="App.Features.Chat.startCall()" class="p-2 hover:bg-white/5 rounded-full transition text-gray-400 hover:text-white" title="Appel vocal">
+                            <i data-lucide="phone" class="w-5 h-5"></i>
+                        </button>
+                        <button onclick="App.Features.Chat.startVideoCall()" class="p-2 hover:bg-white/5 rounded-full transition text-gray-400 hover:text-white" title="Appel vidéo">
+                            <i data-lucide="video" class="w-5 h-5"></i>
+                        </button>
+                        <button onclick="App.Features.Chat.toggleSettings()" class="p-2 hover:bg-white/5 rounded-full transition text-gray-400 hover:text-white" title="Options">
+                            <i data-lucide="settings" class="w-5 h-5"></i>
+                        </button>
+                    </div>
                 `;
                     if (typeof lucide !== 'undefined') lucide.createIcons();
                 }
@@ -2230,6 +2246,8 @@ const App = {
                         <i data-lucide="paperclip" class="w-4 h-4"></i>
                         <span class="text-sm break-all">${fileName}</span>
                     </a>`;
+                } else if (msg.type === 'audio') {
+                    contentHtml = `<audio controls src="${msg.content}" class="w-64 max-w-full"></audio>`;
                 } else {
                     contentHtml = `<p class="text-sm break-words">${msg.content}</p>`;
                 }
@@ -2329,6 +2347,78 @@ const App = {
                     // Créer une notification pour le destinataire
                     App.Features.Notifications.create('message', this.activeContactId, App.state.user.id, content.substring(0, 50));
                 }
+            },
+            async startCall() {
+                await App.UI.Modal.alert("Appel vocal à venir.");
+            },
+            async startVideoCall() {
+                await App.UI.Modal.alert("Appel vidéo à venir.");
+            },
+            async startVoiceRecording() {
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    this.recordingChunks = [];
+                    this.mediaRecorder = new MediaRecorder(stream);
+                    this.mediaRecorder.ondataavailable = (e) => {
+                        if (e.data && e.data.size > 0) this.recordingChunks.push(e.data);
+                    };
+                    this.mediaRecorder.onstop = async () => {
+                        try {
+                            const blob = new Blob(this.recordingChunks, { type: 'audio/webm' });
+                            const fileName = `${App.state.user.id}/${Date.now()}_voice.webm`;
+                            const { error } = await sb.storage.from('chat-media').upload(fileName, blob);
+                            if (error) {
+                                await App.UI.Modal.alert("Erreur upload audio: " + error.message);
+                            } else {
+                                const { data: { publicUrl } } = sb.storage.from('chat-media').getPublicUrl(fileName);
+                                await this.send(publicUrl, 'audio');
+                            }
+                        } catch (err) {
+                            await App.UI.Modal.alert("Erreur enregistrement: " + err.message);
+                        }
+                        this._hideRecordingBar();
+                    };
+                    this.mediaRecorder.start();
+                    this._showRecordingBar();
+                } catch (err) {
+                    await App.UI.Modal.alert("Micro non disponible: " + err.message);
+                }
+            },
+            stopVoiceRecording() {
+                if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
+                    this.mediaRecorder.stop();
+                }
+            },
+            cancelVoiceRecording() {
+                if (this.mediaRecorder) {
+                    try { this.mediaRecorder.stop(); } catch {}
+                }
+                this.recordingChunks = [];
+                this._hideRecordingBar();
+            },
+            _showRecordingBar() {
+                const bar = document.getElementById('chat-recording-bar');
+                const timerEl = document.getElementById('chat-recording-timer');
+                const input = document.getElementById('chat-input');
+                if (bar) bar.classList.remove('hidden');
+                if (input) input.disabled = true;
+                this.recordingStartTime = Date.now();
+                if (timerEl) timerEl.innerText = '00:00';
+                if (this.recordingInterval) clearInterval(this.recordingInterval);
+                this.recordingInterval = setInterval(() => {
+                    const elapsed = Math.floor((Date.now() - this.recordingStartTime) / 1000);
+                    const mm = String(Math.floor(elapsed / 60)).padStart(2, '0');
+                    const ss = String(elapsed % 60).padStart(2, '0');
+                    if (timerEl) timerEl.innerText = `${mm}:${ss}`;
+                }, 500);
+            },
+            _hideRecordingBar() {
+                const bar = document.getElementById('chat-recording-bar');
+                const input = document.getElementById('chat-input');
+                if (bar) bar.classList.add('hidden');
+                if (input) input.disabled = false;
+                if (this.recordingInterval) clearInterval(this.recordingInterval);
+                this.recordingInterval = null;
             },
 
             async deleteMessage(msgId) {
