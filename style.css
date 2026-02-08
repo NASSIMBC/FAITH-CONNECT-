@@ -590,10 +590,25 @@ body {
 }
 .message-bubble {
     border-radius: 22px;
+    transition: box-shadow 0.2s ease, transform 0.2s ease;
 }
 /* Smooth touch scroll for scrollable areas */
 .custom-scrollbar {
     -webkit-overflow-scrolling: touch;
+}
+/* Recording UI */
+.recording-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 999px;
+    background: #ef4444;
+    box-shadow: 0 0 0 6px rgba(239, 68, 68, 0.15);
+    animation: pulse-rec 1.2s infinite;
+}
+@keyframes pulse-rec {
+    0% { transform: scale(1); box-shadow: 0 0 0 6px rgba(239,68,68,0.15); }
+    50% { transform: scale(1.15); box-shadow: 0 0 0 10px rgba(239,68,68,0.05); }
+    100% { transform: scale(1); box-shadow: 0 0 0 6px rgba(239,68,68,0.15); }
 }
 /* === STORIES SYSTEM STYLES === */
 .no-scrollbar::-webkit-scrollbar { display: none; }
