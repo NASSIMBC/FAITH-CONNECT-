@@ -498,3 +498,72 @@ body {
     from { width: 0%; }
     to { width: 100%; }
 }
+
+/* === TESTIMONIALS SIDEBAR === */
+.sidebar-testimonial-item {
+    background: rgba(139, 92, 246, 0.05);
+    border: 1px solid rgba(139, 92, 246, 0.1);
+    border-radius: 16px;
+    padding: 12px;
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.sidebar-testimonial-item:hover {
+    background: rgba(139, 92, 246, 0.1);
+    border-color: rgba(139, 92, 246, 0.3);
+    transform: translateX(4px);
+}
+
+.sidebar-testimonial-category {
+    font-size: 9px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 2px 8px;
+    border-radius: 20px;
+    display: inline-block;
+    margin-bottom: 6px;
+}
+
+.category-conversion { background: rgba(34, 197, 94, 0.2); color: #22c55e; }
+.category-guérison { background: rgba(59, 130, 246, 0.2); color: #3b82f6; }
+.category-provision { background: rgba(234, 179, 8, 0.2); color: #eab308; }
+.category-miracle { background: rgba(168, 85, 247, 0.2); color: #a855f7; }
+.category-foi { background: rgba(239, 68, 68, 0.2); color: #ef4444; }
+.category-autre { background: rgba(156, 163, 175, 0.2); color: #9ca3af; }
+
+.sidebar-testimonial-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: #f3f4f6;
+    line-height: 1.3;
+    margin-bottom: 4px;
+}
+
+.sidebar-testimonial-author {
+    font-size: 10px;
+    color: #64748b;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.sidebar-testimonial-avatar {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.testimonials-empty-state {
+    text-align: center;
+    padding: 16px 8px;
+    color: #64748b;
+    font-size: 11px;
+}
+
+.testimonials-empty-state i {
+    margin-bottom: 8px;
+    opacity: 0.5;
+}
