@@ -499,6 +499,14 @@ body {
 .chat-theme-custom .message-bubble {
     box-shadow: 0 0 0 2px color-mix(in oklab, var(--chat-custom-color) 20%, white 80%);
 }
+#chat-settings-menu {
+    max-height: 70vh;
+    overflow-y: auto;
+}
+/* Smooth touch scroll for scrollable areas */
+.custom-scrollbar {
+    -webkit-overflow-scrolling: touch;
+}
 /* === STORIES SYSTEM STYLES === */
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
@@ -588,6 +596,21 @@ body {
 .right-sidebar-testimonial-date {
     font-size: 9px;
     color: #4b5563;
+}
+.testimonial-tag {
+    font-size: 10px;
+    font-weight: 700;
+    color: #e9d5ff;
+    background: rgba(139, 92, 246, 0.15);
+    border: 1px solid rgba(139, 92, 246, 0.3);
+    padding: 4px 10px;
+    border-radius: 999px;
+}
+#testimonial-view-suggested .right-sidebar-testimonial-item {
+    padding: 12px;
+}
+#testimonial-view-suggested .right-sidebar-testimonial-excerpt {
+    -webkit-line-clamp: 3;
 }
 
 .testimonials-empty-state {
