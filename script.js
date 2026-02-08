@@ -3534,6 +3534,8 @@ const App = {
                 const category = document.getElementById('testimonial-category').value;
                 const imageUrl = document.getElementById('testimonial-image-url').value.trim();
                 
+                console.log('Publishing testimonial:', { title, content, category, imageUrl });
+                
                 if (!title || !content) {
                     return alert('Veuillez remplir le titre et le contenu de votre témoignage.');
                 }
@@ -3543,13 +3545,18 @@ const App = {
                 }
                 
                 try {
-                    const { error } = await sb.from(this.table).insert({
+                    const testimonialData = {
                         user_id: App.state.user.id,
                         title,
                         content,
                         category,
                         image_url: imageUrl || null
-                    });
+                    };
+                    console.log('Inserting testimonial data:', testimonialData);
+                    
+                    const { data, error } = await sb.from(this.table).insert(testimonialData).select();
+                    
+                    console.log('Supabase response:', { data, error });
                     
                     if (error) throw error;
                     
@@ -3565,6 +3572,11 @@ const App = {
                     // Refresh both sidebar and full view
                     this.loadSidebar();
                     this.loadFullView();
+                    
+                    // Navigate to testimonials view to see the new testimonial
+                    App.UI.navigateTo('testimonials');
+                    
+                    console.log('Testimonial published successfully');
                     
                 } catch (err) {
                     console.error('Error publishing testimonial:', err);
