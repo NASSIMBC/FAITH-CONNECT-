@@ -3987,7 +3987,25 @@ const App = {
                 await this.loadSuggested(testimonial);
                 
                 // Show modal
-                document.getElementById('modal-testimonial-view').classList.remove('hidden');
+                const modal = document.getElementById('modal-testimonial-view');
+                modal.classList.remove('hidden');
+                const scrollEl = modal.querySelector('.testimonial-view-scroll');
+                if (scrollEl) {
+                    scrollEl.scrollTop = 0;
+                    if (this.viewScrollEl && this.viewScrollHandler) {
+                        this.viewScrollEl.removeEventListener('scroll', this.viewScrollHandler);
+                    }
+                    this.viewScrollHandler = () => {
+                        if (scrollEl.scrollTop > 60) {
+                            modal.classList.add('testimonial-view-scrolled');
+                        } else {
+                            modal.classList.remove('testimonial-view-scrolled');
+                        }
+                    };
+                    this.viewScrollEl = scrollEl;
+                    scrollEl.addEventListener('scroll', this.viewScrollHandler);
+                    this.viewScrollHandler();
+                }
                 if (typeof lucide !== 'undefined') lucide.createIcons();
             },
             
