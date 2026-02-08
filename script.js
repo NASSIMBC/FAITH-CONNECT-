@@ -289,6 +289,9 @@ const App = {
             },
             sell: {
                 open() { App.Features.Marketplace.openSellModal(); }
+            },
+            testimonial: {
+                open() { document.getElementById('modal-testimonial').classList.remove('hidden'); }
             }
         },
 
@@ -463,6 +466,7 @@ const App = {
             App.Features.Bible.init();
             App.Features.Prayers.load();
             App.Features.Events.loadWidget();
+            App.Features.Testimonials.loadSidebar();
             if (App.Features.Marketplace && App.Features.Marketplace.initSearch) App.Features.Marketplace.initSearch();
             if (App.state.user && window.innerWidth > 768) App.Features.Chat.loadList(); // Charger les contacts
 
@@ -3362,6 +3366,106 @@ const App = {
                 const text = `J'ai fait ${this.userScore}/100 au quiz FaithConnect ! 🏆`;
                 if (navigator.share) navigator.share({ title: 'FaithConnect', text, url: window.location.href });
                 else navigator.clipboard.writeText(text).then(() => App.UI.Modal.alert("Copié !"));
+            }
+        },
+
+        // === TESTIMONIALS ===
+        Testimonials: {
+            table: 'testimonials',
+            
+            async loadSidebar() {
+                const container = document.getElementById('sidebar-testimonials-list');
+                if (!container) return;
+                
+                const { data, error } = await sb
+                    .from(this.table)
+                    .select('*, profiles(username, avatar_url)')
+                    .order('created_at', { ascending: false })
+                    .limit(5);
+                
+                if (error || !data || data.length === 0) {
+                    container.innerHTML = `
+                        <div class="testimonials-empty-state">
+                            <i data-lucide="mic-2" class="w-8 h-8 mx-auto"></i>
+                            <p>Aucun témoignage pour le moment</p>
+                        </div>
+                    `;
+                    if (typeof lucide !== 'undefined') lucide.createIcons();
+                    return;
+                }
+                
+                container.innerHTML = data.map(t => `
+                    <div class="sidebar-testimonial-item" onclick="App.Features.Testimonials.viewDetail('${t.id}')">
+                        <span class="sidebar-testimonial-category category-${t.category}">${t.category}</span>
+                        <p class="sidebar-testimonial-title truncate">${this.escapeHtml(t.title)}</p>
+                        <div class="sidebar-testimonial-author">
+                            <img src="${t.profiles?.avatar_url || `https://ui-avatars.com/api/?name=${t.profiles?.username || 'U'}&background=random`}" 
+                                 class="sidebar-testimonial-avatar">
+                            <span>${t.profiles?.username || 'Membre'}</span>
+                        </div>
+                    </div>
+                `).join('');
+                
+                if (typeof lucide !== 'undefined') lucide.createIcons();
+            },
+            
+            openModal() {
+                document.getElementById('modal-testimonial').classList.remove('hidden');
+                if (typeof lucide !== 'undefined') lucide.createIcons();
+            },
+            
+            async publish() {
+                const title = document.getElementById('testimonial-title').value.trim();
+                const content = document.getElementById('testimonial-content').value.trim();
+                const category = document.getElementById('testimonial-category').value;
+                const imageUrl = document.getElementById('testimonial-image-url').value.trim();
+                
+                if (!title || !content) {
+                    return alert('Veuillez remplir le titre et le contenu de votre témoignage.');
+                }
+                
+                if (!App.state.user) {
+                    return alert('Vous devez être connecté pour partager un témoignage.');
+                }
+                
+                try {
+                    const { error } = await sb.from(this.table).insert({
+                        user_id: App.state.user.id,
+                        title,
+                        content,
+                        category,
+                        image_url: imageUrl || null
+                    });
+                    
+                    if (error) throw error;
+                    
+                    App.UI.modals.closeAll();
+                    
+                    // Clear form
+                    document.getElementById('testimonial-title').value = '';
+                    document.getElementById('testimonial-content').value = '';
+                    document.getElementById('testimonial-image-url').value = '';
+                    
+                    alert('Merci ! Votre témoignage a été partagé avec la communauté. 🙏');
+                    
+                    // Refresh sidebar
+                    this.loadSidebar();
+                    
+                } catch (err) {
+                    console.error('Error publishing testimonial:', err);
+                    alert('Erreur lors de la publication: ' + err.message);
+                }
+            },
+            
+            async viewDetail(id) {
+                // Navigate to a testimonial detail view or show modal
+                alert('Fonctionnalité à venir: Lecture complète du témoignage');
+            },
+            
+            escapeHtml(text) {
+                const div = document.createElement('div');
+                div.textContent = text;
+                return div.innerHTML;
             }
         },
 
