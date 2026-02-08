@@ -300,6 +300,12 @@ const App = {
             },
             testimonial: {
                 open() { document.getElementById('modal-testimonial').classList.remove('hidden'); }
+            },
+            settings: {
+                open() { document.getElementById('modal-settings').classList.remove('hidden'); }
+            },
+            privacy: {
+                open() { document.getElementById('modal-privacy').classList.remove('hidden'); }
             }
         },
 
@@ -365,6 +371,14 @@ const App = {
             const isLight = document.documentElement.classList.toggle('light-mode');
             localStorage.setItem('theme', isLight ? 'light' : 'dark');
             this.updateThemeUI();
+        },
+
+        openSettings() {
+            this.modals.settings.open();
+        },
+
+        openPrivacy() {
+            this.modals.privacy.open();
         },
 
         updateThemeUI() {
