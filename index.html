@@ -604,7 +604,7 @@
                                     onkeyup="App.Features.Chat.handleSearch(this.value)"
                                     class="input-field w-full px-4 py-2 rounded-xl text-xs">
                             </div>
-                            <div id="conversations-list" class="flex-1 overflow-y-auto relative"></div>
+                            <div id="conversations-list" class="flex-1 overflow-y-auto relative scrollbar-hide"></div>
                             <button class="chat-fab md:hidden" onclick="document.getElementById('chat-search-input').focus()">
                                 <i data-lucide="plus" class="w-5 h-5"></i>
                             </button>
@@ -680,7 +680,7 @@
                             </div>
 
                             <div id="chat-messages"
-                                class="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar bg-black/20"></div>
+                                class="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar scrollbar-hide bg-black/20"></div>
 
                             <div id="chat-typing-indicator" class="hidden px-4 py-1 text-[11px] text-gray-400">En train d’écrire…</div>
 
@@ -753,7 +753,7 @@
                                 <input type="file" id="chat-file-input" class="hidden" accept="*/*"
                                     onchange="App.Features.Chat.handleMediaSelect(this)">
 
-                                <input id="chat-input" type="text" class="input-field flex-1 rounded-2xl px-4 py-2"
+                                <input id="chat-input" type="text" class="input-field flex-1 rounded-2xl px-3 py-1.5"
                                     placeholder="Message..." disabled>
 
                                 <button onclick="App.Features.Chat.send()" class="btn-primary p-2 rounded-2xl" title="Envoyer">
