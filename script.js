@@ -3491,8 +3491,8 @@ const App = {
                 container.innerHTML = testimonials.map(t => {
                     const profile = profileMap[t.user_id] || {};
                     return `
-                    <div class="testimonial-card-full">
-                        ${t.image_url ? `<img src="${t.image_url}" class="testimonial-card-image" alt="Image du témoignage">` : ''}
+                    <div class="testimonial-card-full cursor-pointer" onclick="App.Features.Testimonials.viewDetail('${t.id}')">
+                        ${t.image_url ? `<img src="${t.image_url}" class="testimonial-card-image" alt="Image du témoignage" onclick="event.stopPropagation(); App.Features.Testimonials.viewDetail('${t.id}')">` : ''}
                         <div class="testimonial-card-header">
                             <img src="${profile.avatar_url || `https://ui-avatars.com/api/?name=${profile.username || 'U'}&background=random`}" 
                                  class="testimonial-card-avatar">
@@ -3504,16 +3504,16 @@ const App = {
                         </div>
                         <h3 class="testimonial-card-title">${this.escapeHtml(t.title)}</h3>
                         <p class="testimonial-card-content">${this.escapeHtml(t.content)}</p>
-                        <div class="testimonial-card-footer">
+                        <div class="testimonial-card-footer" onclick="event.stopPropagation();">
                             <button class="testimonial-action-btn" onclick="App.Features.Testimonials.like('${t.id}')">
                                 <i data-lucide="heart" class="w-4 h-4"></i>
                                 <span>Encourager</span>
                             </button>
-                            <button class="testimonial-action-btn">
+                            <button class="testimonial-action-btn" onclick="event.stopPropagation(); App.Features.Testimonials.viewDetail('${t.id}'); App.Features.Testimonials.openComments();">
                                 <i data-lucide="message-circle" class="w-4 h-4"></i>
                                 <span>Commenter</span>
                             </button>
-                            <button class="testimonial-action-btn ml-auto" onclick="navigator.share?.({ title: 'Témoignage FaithConnect', text: '${this.escapeHtml(t.title)}', url: window.location.href })">
+                            <button class="testimonial-action-btn ml-auto" onclick="event.stopPropagation(); App.Features.Testimonials.viewDetail('${t.id}'); App.Features.Testimonials.shareCurrent();">
                                 <i data-lucide="share-2" class="w-4 h-4"></i>
                                 <span>Partager</span>
                             </button>
@@ -3615,8 +3615,221 @@ const App = {
             },
             
             async viewDetail(id) {
-                // Navigate to a testimonial detail view or show modal
-                alert('Fonctionnalité à venir: Lecture complète du témoignage');
+                // Fetch full testimonial data
+                const { data: testimonial, error } = await sb.from(this.table).select('*').eq('id', id).single();
+                
+                if (error || !testimonial) {
+                    console.error('Error loading testimonial:', error);
+                    return alert('Erreur lors du chargement du témoignage.');
+                }
+                
+                // Fetch author profile
+                const { data: profile } = await sb.from('profiles').select('*').eq('id', testimonial.user_id).single();
+                
+                // Get author info
+                const authorName = profile?.username || 'Membre anonyme';
+                const authorAvatar = profile?.avatar_url || `https://ui-avatars.com/api/?name=${authorName}&background=random`;
+                const date = this.formatFullDate(testimonial.created_at);
+                const category = testimonial.category;
+                
+                // Set image (if exists)
+                const imageContainer = document.getElementById('testimonial-view-image-container');
+                const imageEl = document.getElementById('testimonial-view-image');
+                if (testimonial.image_url) {
+                    imageContainer.classList.remove('hidden');
+                    imageEl.src = testimonial.image_url;
+                    imageEl.alt = this.escapeHtml(testimonial.title);
+                } else {
+                    imageContainer.classList.add('hidden');
+                }
+                
+                // Set content
+                document.getElementById('testimonial-view-avatar').src = authorAvatar;
+                document.getElementById('testimonial-view-author').textContent = authorName;
+                document.getElementById('testimonial-view-date').textContent = date;
+                document.getElementById('testimonial-view-category').textContent = category;
+                document.getElementById('testimonial-view-category').className = `px-3 py-1 rounded-full text-xs font-bold category-${category}`;
+                document.getElementById('testimonial-view-title').textContent = this.escapeHtml(testimonial.title);
+                document.getElementById('testimonial-view-content').textContent = this.escapeHtml(testimonial.content);
+                
+                // Reset likes and comments
+                document.getElementById('testimonial-view-likes').textContent = '0';
+                document.getElementById('testimonial-view-comments-count').textContent = '0';
+                document.getElementById('testimonial-view-comments').classList.add('hidden');
+                document.getElementById('testimonial-comments-list').innerHTML = '';
+                
+                // Store current testimonial ID
+                this.currentTestimonialId = id;
+                
+                // Show modal
+                document.getElementById('modal-testimonial-view').classList.remove('hidden');
+                if (typeof lucide !== 'undefined') lucide.createIcons();
+            },
+            
+            closeViewModal() {
+                document.getElementById('modal-testimonial-view').classList.add('hidden');
+            },
+            
+            openImageZoom() {
+                const imageSrc = document.getElementById('testimonial-view-image').src;
+                if (imageSrc) {
+                    document.getElementById('image-zoom-content').src = imageSrc;
+                    document.getElementById('modal-image-zoom').classList.remove('hidden');
+                }
+            },
+            
+            closeImageZoom() {
+                document.getElementById('modal-image-zoom').classList.add('hidden');
+            },
+            
+            openComments() {
+                const commentsSection = document.getElementById('testimonial-view-comments');
+                if (commentsSection.classList.contains('hidden')) {
+                    commentsSection.classList.remove('hidden');
+                    this.loadComments();
+                } else {
+                    commentsSection.classList.add('hidden');
+                }
+            },
+            
+            async loadComments() {
+                if (!this.currentTestimonialId) return;
+                
+                const { data: comments, error } = await sb.from('testimonials_comments')
+                    .select('*, profiles(username, avatar_url)')
+                    .eq('testimonial_id', this.currentTestimonialId)
+                    .order('created_at', { ascending: true });
+                
+                if (error) {
+                    console.error('Error loading comments:', error);
+                    return;
+                }
+                
+                const list = document.getElementById('testimonial-comments-list');
+                if (!comments || comments.length === 0) {
+                    list.innerHTML = '<p class="text-gray-500 text-sm text-center py-4">Aucun commentaire encore.Soyez le premier !</p>';
+                } else {
+                    list.innerHTML = comments.map(c => `
+                        <div class="flex gap-3">
+                            <img src="${c.profiles?.avatar_url || `https://ui-avatars.com/api/?name=${c.profiles?.username || 'U'}&background=random`}" 
+                                class="w-8 h-8 rounded-full object-cover">
+                            <div class="flex-1">
+                                <p class="text-xs font-bold text-white">${c.profiles?.username || 'Membre'} <span class="text-gray-500 font-normal">${this.formatDate(c.created_at)}</span></p>
+                                <p class="text-sm text-gray-300">${this.escapeHtml(c.content)}</p>
+                            </div>
+                        </div>
+                    `).join('');
+                }
+                
+                document.getElementById('testimonial-view-comments-count').textContent = comments?.length || 0;
+                if (typeof lucide !== 'undefined') lucide.createIcons();
+            },
+            
+            async addComment() {
+                const input = document.getElementById('testimonial-comment-input');
+                const content = input.value.trim();
+                
+                if (!content) return alert('Veuillez écrire un commentaire.');
+                if (!App.state.user) return alert('Vous devez être connecté.');
+                
+                const { error } = await sb.from('testimonials_comments').insert({
+                    testimonial_id: this.currentTestimonialId,
+                    user_id: App.state.user.id,
+                    content
+                });
+                
+                if (error) {
+                    console.error('Error adding comment:', error);
+                    return alert('Erreur lors de l\'ajout du commentaire: ' + error.message);
+                }
+                
+                input.value = '';
+                this.loadComments();
+            },
+            
+            likeCurrent() {
+                if (!this.currentTestimonialId) return;
+                const btn = document.querySelector('#modal-testimonial-view .testimonial-action-btn');
+                const span = document.getElementById('testimonial-view-likes');
+                const currentLikes = parseInt(span.textContent) || 0;
+                
+                if (btn.classList.contains('liked')) {
+                    btn.classList.remove('liked');
+                    btn.querySelector('i').setAttribute('data-lucide', 'heart');
+                    span.textContent = Math.max(0, currentLikes - 1);
+                } else {
+                    btn.classList.add('liked');
+                    btn.querySelector('i').setAttribute('data-lucide', 'heart-fill');
+                    span.textContent = currentLikes + 1;
+                }
+                if (typeof lucide !== 'undefined') lucide.createIcons();
+            },
+            
+            shareCurrent() {
+                if (!this.currentTestimonialId) return;
+                
+                // Show share to chat modal
+                this.loadChatListForShare();
+                document.getElementById('modal-share-chat').classList.remove('hidden');
+                if (typeof lucide !== 'undefined') lucide.createIcons();
+            },
+            
+            async loadChatListForShare() {
+                if (!App.state.user) return;
+                
+                // Get user's chats
+                const { data: chats, error } = await sb.from('chat_participants')
+                    .select('chat_id, chats(id, name, last_message)')
+                    .eq('user_id', App.state.user.id);
+                
+                const list = document.getElementById('share-chat-list');
+                
+                if (error || !chats || chats.length === 0) {
+                    list.innerHTML = '<p class="text-gray-500 text-sm text-center py-4">Aucune discussion trouvée.</p>';
+                    return;
+                }
+                
+                list.innerHTML = chats.map(c => `
+                    <button onclick="App.Features.Testimonials.shareToChat('${c.chat_id}')" 
+                        class="w-full flex items-center gap-3 p-3 hover:bg-white/5 rounded-xl transition text-left">
+                        <div class="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
+                            <i data-lucide="message-circle" class="w-5 h-5 text-primary"></i>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <p class="font-bold text-white truncate">${c.chats?.name || 'Discussion'}</p>
+                            <p class="text-xs text-gray-400 truncate">${c.chats?.last_message || 'Cliquez pour partager'}</p>
+                        </div>
+                    </button>
+                `).join('');
+                
+                if (typeof lucide !== 'undefined') lucide.createIcons();
+            },
+            
+            async shareToChat(chatId) {
+                if (!this.currentTestimonialId || !App.state.user) return;
+                
+                // Get testimonial info
+                const { data: testimonial } = await sb.from(this.table).select('title, content').eq('id', this.currentTestimonialId).single();
+                
+                if (!testimonial) return;
+                
+                const shareText = `📖 Témoignage FaithConnect\n\n${testimonial.title}\n\n${testimonial.content.substring(0, 100)}${testimonial.content.length > 100 ? '...' : ''}`;
+                
+                const { error } = await sb.from('chat_messages').insert({
+                    chat_id: chatId,
+                    user_id: App.state.user.id,
+                    content: shareText,
+                    type: 'testimonial_share',
+                    metadata: { testimonial_id: this.currentTestimonialId }
+                });
+                
+                if (error) {
+                    console.error('Error sharing to chat:', error);
+                    return alert('Erreur lors du partage: ' + error.message);
+                }
+                
+                App.UI.modals.closeAll();
+                alert('Témoignage partagé dans la discussion ! 🙏');
             },
             
             escapeHtml(text) {
