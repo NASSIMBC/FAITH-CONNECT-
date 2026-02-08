@@ -722,18 +722,41 @@
                                     class="px-2 py-1 hover:bg-white/5 rounded-lg text-lg">😡</button>
                             </div>
 
+                            <!-- Barre d’enregistrement vocal -->
+                            <div id="chat-recording-bar" class="hidden px-4 py-2 border-t border-white/5 bg-black/20 flex items-center gap-3">
+                                <span class="recording-dot"></span>
+                                <span id="chat-recording-timer" class="text-xs text-gray-400">00:00</span>
+                                <div class="flex-1"></div>
+                                <button onclick="App.Features.Chat.stopVoiceRecording()" class="px-3 py-2 bg-red-500/20 hover:bg-red-500/30 rounded-xl text-red-300 text-xs">Arrêter</button>
+                                <button onclick="App.Features.Chat.cancelVoiceRecording()" class="px-3 py-2 bg-white/10 hover:bg-white/20 rounded-xl text-xs">Annuler</button>
+                            </div>
+
                             <div class="p-4 border-t border-white/5 flex gap-2 items-center">
+                                <button onclick="App.Features.Chat.toggleQuickBar()"
+                                    class="p-2 text-gray-400 hover:text-white transition-colors" title="Émojis">
+                                    <i data-lucide="smile" class="w-5 h-5"></i>
+                                </button>
+                                <button onclick="document.getElementById('chat-camera-input').click()"
+                                    class="p-2 text-gray-400 hover:text-white transition-colors" title="Caméra">
+                                    <i data-lucide="camera" class="w-5 h-5"></i>
+                                </button>
+                                <input type="file" id="chat-camera-input" class="hidden" accept="image/*" capture="environment"
+                                    onchange="App.Features.Chat.handleMediaSelect(this)">
+                                <button onclick="App.Features.Chat.startVoiceRecording()"
+                                    class="p-2 text-gray-400 hover:text-white transition-colors" title="Message vocal">
+                                    <i data-lucide="mic" class="w-5 h-5"></i>
+                                </button>
                                 <button onclick="document.getElementById('chat-file-input').click()"
-                                    class="p-2 text-gray-400 hover:text-white transition-colors">
-                                    <i data-lucide="image" class="w-5 h-5"></i>
+                                    class="p-2 text-gray-400 hover:text-white transition-colors" title="Pièce jointe">
+                                    <i data-lucide="paperclip" class="w-5 h-5"></i>
                                 </button>
                                 <input type="file" id="chat-file-input" class="hidden" accept="*/*"
                                     onchange="App.Features.Chat.handleMediaSelect(this)">
 
-                                <input id="chat-input" type="text" class="input-field flex-1 rounded-xl px-4 py-2"
+                                <input id="chat-input" type="text" class="input-field flex-1 rounded-2xl px-4 py-2"
                                     placeholder="Message..." disabled>
 
-                                <button onclick="App.Features.Chat.send()" class="btn-primary p-2 rounded-xl">
+                                <button onclick="App.Features.Chat.send()" class="btn-primary p-2 rounded-2xl" title="Envoyer">
                                     <i data-lucide="send" class="w-5 h-5"></i>
                                 </button>
                             </div>
