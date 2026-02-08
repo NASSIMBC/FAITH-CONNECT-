@@ -1731,6 +1731,9 @@ const App = {
             activeContactInfo: null,
             replyToId: null,
             searchTimeout: null,
+            blockedCache: {},
+            typingTimeout: null,
+            typingIndicatorTimer: null,
 
             insertEmoji(emoji) {
                 const input = document.getElementById('chat-input');
@@ -1738,6 +1741,161 @@ const App = {
                     input.value += emoji;
                     input.focus();
                 }
+            },
+            getBlockKey(contactId) {
+                return `fc_block_${App.state.user?.id || 'anon'}_${contactId}`;
+            },
+            isBlocked(contactId) {
+                if (!contactId) return false;
+                const local = localStorage.getItem(this.getBlockKey(contactId)) === 'true';
+                return local || !!this.blockedCache[contactId];
+            },
+            async setBlocked(contactId, blocked) {
+                this.blockedCache[contactId] = blocked;
+                try {
+                    await sb.from('chat_customization').upsert({
+                        user_id: App.state.user.id,
+                        contact_id: contactId,
+                        blocked: blocked
+                    }, { onConflict: 'user_id,contact_id' });
+                } catch (e) {
+                    localStorage.setItem(this.getBlockKey(contactId), String(blocked));
+                }
+                this.updateBlockedUI();
+            },
+            async toggleBlock() {
+                if (!this.activeContactId) return;
+                const currentlyBlocked = this.isBlocked(this.activeContactId);
+                await this.setBlocked(this.activeContactId, !currentlyBlocked);
+                await App.UI.Modal.alert(!currentlyBlocked ? "Discussion bloquée. Vous ne pourrez plus envoyer de messages." : "Discussion débloquée.");
+            },
+            updateBlockedUI() {
+                const banner = document.getElementById('chat-blocked-banner');
+                const input = document.getElementById('chat-input');
+                const sendBtn = document.querySelector('#msg-area button.btn-primary');
+                const isB = this.activeContactId ? this.isBlocked(this.activeContactId) : false;
+                if (banner) banner.classList.toggle('hidden', !isB);
+                if (input) input.disabled = isB;
+                if (sendBtn) sendBtn.disabled = isB;
+            },
+            async reportUser() {
+                if (!this.activeContactId) return;
+                const reason = await App.UI.Modal.prompt("Pourquoi souhaitez-vous signaler cet utilisateur ? (ex: spam, abus, etc.)", "");
+                if (!reason) return;
+                try {
+                    const { error } = await sb.from('reports').insert([{
+                        reporter_id: App.state.user.id,
+                        reported_id: this.activeContactId,
+                        reason
+                    }]);
+                    if (error) throw error;
+                    await App.UI.Modal.alert("Merci. Votre signalement a été envoyé.", "Signalement");
+                } catch (e) {
+                    await App.UI.Modal.alert("Impossible d'enregistrer le signalement pour le moment. Merci de réessayer plus tard.");
+                }
+            },
+            getCustomColorKey(contactId) {
+                return `fc_chat_color_${App.state.user?.id || 'anon'}_${contactId}`;
+            },
+            getCustomColor(contactId) {
+                return localStorage.getItem(this.getCustomColorKey(contactId));
+            },
+            async setCustomTheme(color) {
+                if (!this.activeContactId) return;
+                let stored = false;
+                try {
+                    const { error } = await sb.from('chat_customization').upsert({
+                        user_id: App.state.user.id,
+                        contact_id: this.activeContactId,
+                        custom_color: color
+                    }, { onConflict: 'user_id,contact_id' });
+                    if (!error) stored = true;
+                } catch {}
+                if (!stored) localStorage.setItem(this.getCustomColorKey(this.activeContactId), color);
+                this.applyCustomTheme(color);
+            },
+            resetCustomTheme() {
+                if (!this.activeContactId) return;
+                localStorage.removeItem(this.getCustomColorKey(this.activeContactId));
+                const area = document.getElementById('msg-area');
+                if (area) {
+                    area.classList.remove('chat-theme-custom');
+                    area.style.removeProperty('--chat-custom-color');
+                }
+            },
+            applyCustomTheme(color) {
+                const area = document.getElementById('msg-area');
+                if (!area || !color) return;
+                area.classList.forEach(cls => {
+                    if (cls.startsWith('chat-theme-')) area.classList.remove(cls);
+                });
+                area.classList.add('chat-theme-custom');
+                area.style.setProperty('--chat-custom-color', color);
+            },
+            updateTypingIndicator(isTyping) {
+                const indicator = document.getElementById('chat-typing-indicator');
+                if (!indicator) return;
+                indicator.classList.toggle('hidden', !isTyping);
+                if (this.typingIndicatorTimer) clearTimeout(this.typingIndicatorTimer);
+                if (isTyping) {
+                    this.typingIndicatorTimer = setTimeout(() => indicator.classList.add('hidden'), 3500);
+                }
+            },
+            bindTypingInput(input) {
+                if (!input) return;
+                input.oninput = () => {
+                    this.startTyping();
+                    if (this.typingTimeout) clearTimeout(this.typingTimeout);
+                    this.typingTimeout = setTimeout(() => this.stopTyping(), 2500);
+                };
+                input.onblur = () => this.stopTyping();
+            },
+            async startTyping() {
+                if (!this.activeContactId) return;
+                try {
+                    await sb.from('chat_typing').upsert({
+                        user_id: App.state.user.id,
+                        contact_id: this.activeContactId,
+                        is_typing: true,
+                        updated_at: new Date().toISOString()
+                    }, { onConflict: 'user_id,contact_id' });
+                } catch {}
+            },
+            async stopTyping() {
+                if (!this.activeContactId) return;
+                try {
+                    await sb.from('chat_typing').upsert({
+                        user_id: App.state.user.id,
+                        contact_id: this.activeContactId,
+                        is_typing: false,
+                        updated_at: new Date().toISOString()
+                    }, { onConflict: 'user_id,contact_id' });
+                } catch {}
+            },
+            async markRead() {
+                if (!this.activeContactId) return;
+                try {
+                    await sb.from('messages').update({
+                        is_read: true,
+                        read_at: new Date().toISOString()
+                    }).eq('receiver_id', App.state.user.id).eq('sender_id', this.activeContactId);
+                } catch {}
+                try {
+                    const { data: unread } = await sb.from('messages')
+                        .select('id, read_by')
+                        .eq('receiver_id', App.state.user.id)
+                        .eq('sender_id', this.activeContactId)
+                        .limit(200);
+                    if (unread && unread.length > 0) {
+                        for (const m of unread) {
+                            const current = Array.isArray(m.read_by) ? m.read_by : [];
+                            if (!current.includes(App.state.user.id)) {
+                                const updated = [...current, App.state.user.id];
+                                await sb.from('messages').update({ read_by: updated }).eq('id', m.id);
+                            }
+                        }
+                    }
+                } catch {}
             },
 
             setReply(msgId, text) {
@@ -1767,7 +1925,8 @@ const App = {
                     if (error) alert("Erreur upload: " + error.message);
                     else {
                         const { data: { publicUrl } } = sb.storage.from('chat-media').getPublicUrl(fileName);
-                        this.send(publicUrl, 'image');
+                        const isImage = (file.type || '').startsWith('image/');
+                        this.send(publicUrl, isImage ? 'image' : 'file');
                     }
                 }
             },
@@ -1871,6 +2030,9 @@ const App = {
                             if (newRecord.receiver_id === App.state.user.id || newRecord.sender_id === App.state.user.id) {
                                 if (this.activeContactId === newRecord.sender_id || this.activeContactId === newRecord.receiver_id) {
                                     if (!document.getElementById(`msg-${newRecord.id}`)) this.renderMessage(newRecord);
+                                    if (newRecord.receiver_id === App.state.user.id && this.activeContactId === newRecord.sender_id) {
+                                        this.markRead();
+                                    }
                                 }
                                 this.loadConversations();
                             }
@@ -1885,6 +2047,21 @@ const App = {
                         } else if (eventType === 'DELETE') {
                             document.getElementById(`msg-${oldRecord.id}`)?.remove();
                             this.loadConversations();
+                        }
+                    })
+                    .subscribe();
+
+                sb.channel('realtime_typing')
+                    .on('postgres_changes', {
+                        event: '*',
+                        schema: 'public',
+                        table: 'chat_typing',
+                        filter: `contact_id=eq.${App.state.user.id}`
+                    }, payload => {
+                        const record = payload.new;
+                        if (!record) return;
+                        if (this.activeContactId === record.user_id) {
+                            this.updateTypingIndicator(!!record.is_typing);
                         }
                     })
                     .subscribe();
@@ -1934,6 +2111,21 @@ const App = {
 
                 const displayName = custom?.nickname || username;
                 if (custom?.theme) this.applyTheme(custom.theme);
+                if (typeof custom?.blocked !== 'undefined') {
+                    this.blockedCache[userId] = !!custom.blocked;
+                }
+                const customColor = custom?.custom_color || this.getCustomColor(userId);
+                if (customColor) {
+                    this.applyCustomTheme(customColor);
+                } else {
+                    const area = document.getElementById('msg-area');
+                    if (area) {
+                        area.classList.remove('chat-theme-custom');
+                        area.style.removeProperty('--chat-custom-color');
+                    }
+                }
+                const colorInput = document.getElementById('chat-custom-color-input');
+                if (colorInput) colorInput.value = customColor || '#8b5cf6';
 
                 if (headerContent) {
                     headerContent.innerHTML = `
@@ -1957,7 +2149,11 @@ const App = {
                     input.focus();
                 }
 
+                this.bindTypingInput(input);
+                this.updateTypingIndicator(false);
+                this.updateBlockedUI();
                 await this.loadMessages(userId);
+                this.markRead();
             },
 
             async loadMessages(userId) {
@@ -1976,6 +2172,9 @@ const App = {
                     msgsContainer.innerHTML = '<div class="text-center text-xs text-gray-500 py-10">Aucun message. Dites bonjour ! 👋</div>';
                 }
                 msgsContainer.scrollTop = msgsContainer.scrollHeight;
+                if (messages && messages.length > 0) {
+                    this.markRead();
+                }
             },
 
             closeMobileChat() {
@@ -1983,6 +2182,7 @@ const App = {
                 msgArea.classList.add('hidden');
                 msgArea.classList.remove('flex'); // Cleanup
                 document.getElementById('msg-sidebar').classList.remove('hidden');
+                this.stopTyping();
                 this.activeContactId = null;
 
                 // Restore Mobile Nav & View Height
@@ -2011,6 +2211,14 @@ const App = {
                 let contentHtml = '';
                 if (msg.type === 'image') {
                     contentHtml = `<img src="${msg.content}" class="rounded-xl max-w-full h-48 object-cover cursor-pointer border border-white/10 hover:opacity-90 transition" onclick="window.open('${msg.content}')">`;
+                } else if (msg.type === 'file') {
+                    const fileName = (() => {
+                        try { return decodeURIComponent(msg.content.split('/').pop() || 'Fichier'); } catch { return 'Fichier'; }
+                    })();
+                    contentHtml = `<a href="${msg.content}" target="_blank" rel="noopener" class="flex items-center gap-2 px-3 py-2 bg-white/5 hover:bg-white/10 rounded-xl">
+                        <i data-lucide="paperclip" class="w-4 h-4"></i>
+                        <span class="text-sm break-all">${fileName}</span>
+                    </a>`;
                 } else {
                     contentHtml = `<p class="text-sm break-words">${msg.content}</p>`;
                 }
@@ -2041,14 +2249,17 @@ const App = {
                 `;
                 }
 
+                const hasBeenRead = Array.isArray(msg.read_by) ? msg.read_by.includes(this.activeContactId) : !!msg.is_read;
+                const readIcon = isMe ? (hasBeenRead ? '<i data-lucide="check-check" class="w-3 h-3"></i>' : '<i data-lucide="check" class="w-3 h-3"></i>') : '';
+
                 div.innerHTML = `
                 <div class="max-w-[85%] relative">
-                    <div class="px-4 py-2 rounded-2xl ${isMe ? 'bg-primary text-white rounded-br-none' : 'bg-gray-800 text-gray-200 rounded-bl-none'} shadow-sm relative group/bubble">
+                    <div class="message-bubble px-4 py-2 rounded-2xl ${isMe ? 'bg-primary text-white rounded-br-none' : 'bg-gray-800 text-gray-200 rounded-bl-none'} shadow-sm relative group/bubble">
                         ${replyHtml}
                         ${contentHtml}
                         <div class="flex items-center justify-between gap-4 mt-1">
                             <span class="text-[8px] opacity-40">${msg.is_edited ? 'Modifié' : ''}</span>
-                            <span class="text-[9px] opacity-50 ms-auto text-right">${new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                            <span class="flex items-center gap-1 text-[9px] opacity-50 ms-auto text-right">${new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} ${readIcon}</span>
                         </div>
 
                         ${reactionsHtml}
@@ -2061,8 +2272,13 @@ const App = {
                                 <button onclick="App.Features.Chat.deleteMessage('${msg.id}')" class="p-1.5 bg-gray-900 border border-white/10 rounded-full hover:text-red-400 transition" title="Supprimer"><i data-lucide="trash-2" class="w-3 h-3"></i></button>
                             ` : ''}
                             <div class="flex gap-1 bg-gray-900 border border-white/10 rounded-full p-1 mt-1 shadow-lg">
-                                <button onclick="App.Features.Chat.toggleReaction('${msg.id}', '🙏')" class="hover:scale-125 transition">🙏</button>
+                                <button onclick="App.Features.Chat.toggleReaction('${msg.id}', '👍')" class="hover:scale-125 transition">👍</button>
                                 <button onclick="App.Features.Chat.toggleReaction('${msg.id}', '❤️')" class="hover:scale-125 transition">❤️</button>
+                                <button onclick="App.Features.Chat.toggleReaction('${msg.id}', '😂')" class="hover:scale-125 transition">😂</button>
+                                <button onclick="App.Features.Chat.toggleReaction('${msg.id}', '😮')" class="hover:scale-125 transition">😮</button>
+                                <button onclick="App.Features.Chat.toggleReaction('${msg.id}', '😢')" class="hover:scale-125 transition">😢</button>
+                                <button onclick="App.Features.Chat.toggleReaction('${msg.id}', '😡')" class="hover:scale-125 transition">😡</button>
+                                <button onclick="App.Features.Chat.toggleReaction('${msg.id}', '🙏')" class="hover:scale-125 transition">🙏</button>
                             </div>
                         </div>
                     </div>
@@ -2078,7 +2294,12 @@ const App = {
                 const input = document.getElementById('chat-input');
                 const content = contentOverride || input.value;
                 if (!content || !this.activeContactId) return;
+                if (this.isBlocked(this.activeContactId)) {
+                    await App.UI.Modal.alert("Cette discussion est bloquée. Débloquez-la pour envoyer des messages.");
+                    return;
+                }
 
+                this.stopTyping();
                 const { error } = await sb.from('messages').insert([{
                     sender_id: App.state.user.id,
                     receiver_id: this.activeContactId,
@@ -2146,6 +2367,7 @@ const App = {
 
                 if (error) await App.UI.Modal.alert("Erreur: " + error.message);
                 else {
+                    localStorage.removeItem(this.getCustomColorKey(this.activeContactId));
                     this.applyTheme(theme);
                 }
             },
@@ -2154,12 +2376,12 @@ const App = {
                 const area = document.getElementById('msg-area');
                 if (!area) return;
 
-                // Remove existing theme classes
                 area.classList.forEach(cls => {
                     if (cls.startsWith('chat-theme-')) area.classList.remove(cls);
                 });
+                area.classList.remove('chat-theme-custom');
+                area.style.removeProperty('--chat-custom-color');
 
-                // Add new theme class
                 if (theme && theme !== 'default') {
                     area.classList.add(`chat-theme-${theme}`);
                 }
@@ -3938,9 +4160,6 @@ const App = {
 
     },
 };
-
-
-        
 
 // Start App when DOM Ready
 document.addEventListener('DOMContentLoaded', App.init);
