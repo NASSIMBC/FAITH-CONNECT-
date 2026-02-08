@@ -1957,17 +1957,20 @@ const App = {
 
                 if (users && users.length > 0) {
                     container.innerHTML = `
-                        <div class="p-2 text-[10px] text-gray-500 uppercase tracking-widest font-bold bg-white/5 mb-1">Résultats pour "${q}"</div>
+                        <div class="chat-list-header px-4 py-3">
+                            <p class="text-[10px] text-gray-400 uppercase tracking-widest font-bold">Résultats pour "${q}"</p>
+                        </div>
                         ${users.map(u => `
                             <div onclick="App.Features.Chat.openChat('${u.id}', '${u.username}', '${u.avatar_url || ''}')" 
-                                 class="p-4 flex items-center gap-3 hover:bg-white/5 cursor-pointer border-b border-white/5 transition-colors group/u">
+                                 class="chat-list-item">
                                 <div class="relative">
-                                    <img src="${u.avatar_url || 'https://ui-avatars.com/api/?name=' + u.username}" class="w-10 h-10 rounded-full object-cover bg-gray-800 group-hover/u:ring-2 ring-primary transition-all">
+                                    <img src="${u.avatar_url || 'https://ui-avatars.com/api/?name=' + u.username}" class="chat-avatar">
                                 </div>
                                 <div class="flex-1 min-w-0">
-                                    <h4 class="font-bold text-sm text-white truncate font-outfit">${u.username}</h4>
-                                    <p class="text-[10px] text-primary truncate">Démarrer une discussion</p>
+                                    <h4 class="chat-name">${u.username}</h4>
+                                    <p class="chat-preview">Démarrer une discussion</p>
                                 </div>
+                                <span class="chat-time">•</span>
                             </div>
                         `).join('')}
                     `;
@@ -1997,19 +2000,34 @@ const App = {
                 if (partnerIds.size > 0) {
                     const { data: profiles } = await sb.from('profiles').select('*').in('id', Array.from(partnerIds));
                     if (profiles) {
-                        container.innerHTML = profiles.map(p => `
-                            <div onclick="App.Features.Chat.openChat('${p.id}', '${p.username}', '${p.avatar_url || ''}')" 
-                                 class="p-4 flex items-center gap-3 hover:bg-white/5 cursor-pointer border-b border-white/5 transition-colors contact-item" id="contact-${p.id}">
-                                <div class="relative">
-                                    <img src="${p.avatar_url || 'https://ui-avatars.com/api/?name=' + p.username}" class="w-10 h-10 rounded-full object-cover bg-gray-800">
-                                    <span class="absolute bottom-0 right-0 w-3 h-3 bg-gray-500 rounded-full border-2 border-[#050510]" id="status-${p.id}"></span>
-                                </div>
-                                <div class="flex-1 min-w-0">
-                                    <h4 class="font-bold text-sm text-white truncate">${p.username}</h4>
-                                    <p class="text-[10px] text-gray-400 truncate">Messagerie</p>
+                        container.innerHTML = `
+                            <div class="chat-list-header px-4 py-3">
+                                <div class="flex items-center justify-between">
+                                    <p class="font-semibold text-white text-sm">Messages</p>
+                                    <div class="flex items-center gap-2 text-gray-400">
+                                        <button class="p-2 rounded-lg hover:bg-white/5"><i data-lucide="search" class="w-4 h-4"></i></button>
+                                        <button class="p-2 rounded-lg hover:bg-white/5"><i data-lucide="more-horizontal" class="w-4 h-4"></i></button>
+                                    </div>
                                 </div>
                             </div>
-                        `).join('');
+                            ${profiles.map(p => `
+                                <div onclick="App.Features.Chat.openChat('${p.id}', '${p.username}', '${p.avatar_url || ''}')" 
+                                     class="chat-list-item contact-item" id="contact-${p.id}">
+                                    <div class="relative">
+                                        <img src="${p.avatar_url || 'https://ui-avatars.com/api/?name=' + p.username}" class="chat-avatar">
+                                        <span class="chat-status" id="status-${p.id}"></span>
+                                    </div>
+                                    <div class="flex-1 min-w-0">
+                                        <div class="flex items-center justify-between gap-3">
+                                            <h4 class="chat-name">${p.username}</h4>
+                                            <span class="chat-time">12:45</span>
+                                        </div>
+                                        <p class="chat-preview">Dernier message…</p>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        `;
+                        if (typeof lucide !== 'undefined') lucide.createIcons();
                     }
                 } else {
                     container.innerHTML = `<div class="p-10 text-center text-xs text-gray-500 italic">Aucune discussion. ✨</div>`;
@@ -2087,19 +2105,18 @@ const App = {
                 const currentName = this.activeContactInfo?.username || username || "Chargement...";
                 const currentAvatar = this.activeContactInfo?.avatar || avatar;
 
-                if (window.innerWidth < 768) {
-                    const msgArea = document.getElementById('msg-area');
+                const msgArea = document.getElementById('msg-area');
+                const sidebar = document.getElementById('msg-sidebar');
+                const view = document.getElementById('view-messages');
+                if (msgArea) {
                     msgArea.classList.remove('hidden');
                     msgArea.classList.add('flex');
-                    document.getElementById('msg-sidebar').classList.add('hidden');
-
-                    const nav = document.querySelector('.glass-nav.fixed.bottom-0');
-                    const view = document.getElementById('view-messages');
-                    if (nav) nav.classList.add('hidden');
-                    if (view) {
-                        view.classList.remove('bottom-[85px]', 'z-40');
-                        view.classList.add('bottom-0', 'z-50');
-                    }
+                }
+                if (sidebar) {
+                    sidebar.classList.add('hidden');
+                }
+                if (view) {
+                    view.classList.remove('chat-list-only');
                 }
 
                 // Load Customizations
@@ -2130,7 +2147,7 @@ const App = {
                 if (headerContent) {
                     headerContent.innerHTML = `
                     <div class="flex items-center gap-3">
-                        <button class="md:hidden p-1 mr-2" onclick="App.Features.Chat.closeMobileChat()"><i data-lucide="arrow-left"></i></button>
+                        <button class="p-1 mr-2" onclick="App.Features.Chat.closeMobileChat()"><i data-lucide="arrow-left"></i></button>
                         <img src="${(avatar && avatar !== 'null') ? avatar : 'https://ui-avatars.com/api/?name=' + username}" class="w-8 h-8 rounded-full">
                         <div class="flex flex-col">
                             <span class="font-bold text-white text-sm">${displayName}</span>
@@ -2182,19 +2199,13 @@ const App = {
                 msgArea.classList.add('hidden');
                 msgArea.classList.remove('flex'); // Cleanup
                 document.getElementById('msg-sidebar').classList.remove('hidden');
+                const view = document.getElementById('view-messages');
+                if (view) {
+                    view.classList.add('chat-list-only');
+                }
                 this.stopTyping();
                 this.activeContactId = null;
 
-                // Restore Mobile Nav & View Height
-                if (window.innerWidth < 768) {
-                    const nav = document.querySelector('.glass-nav.fixed.bottom-0'); // Mobile nav
-                    const view = document.getElementById('view-messages');
-                    if (nav) nav.classList.remove('hidden');
-                    if (view) {
-                        view.classList.remove('bottom-0', 'z-50');
-                        view.classList.add('bottom-[85px]', 'z-40');
-                    }
-                }
             },
 
             renderMessage(msg) {
