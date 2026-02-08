@@ -1002,13 +1002,10 @@
                 <span id="badge-msg-mobile"
                     class="hidden absolute top-0 right-0 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-[#030014]"></span>
             </button>
-            <!-- Profile Tab (Opens Menu) -->
-            <button onclick="App.UI.toggleUserMenu()"
+            <!-- Témoignages Tab -->
+            <button onclick="App.UI.navigateTo('testimonials')"
                 class="nav-btn-mobile text-gray-400 flex flex-col items-center gap-1 active:scale-90 transition">
-                <div class="w-6 h-6 rounded-full overflow-hidden border border-white/20">
-                    <img id="nav-avatar-mobile" class="w-full h-full object-cover"
-                        src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7">
-                </div>
+                <i data-lucide="mic-2" class="w-6 h-6"></i>
             </button>
         </nav>
 
@@ -1250,6 +1247,38 @@
                     <i data-lucide="flag" class="w-5 h-5"></i>
                 </div>
                 <span class="font-semibold">Mes Pages</span>
+            </button>
+
+            <!-- Paramètres -->
+            <button onclick="App.UI.openSettings()"
+                class="flex items-center gap-3 p-3 rounded-xl hover:bg-white/5 transition text-gray-200 group">
+                <div
+                    class="p-2 rounded-lg bg-orange-500/10 text-orange-400 group-hover:bg-orange-500 group-hover:text-white transition">
+                    <i data-lucide="settings" class="w-5 h-5"></i>
+                </div>
+                <span class="font-semibold">Paramètres</span>
+            </button>
+
+            <!-- Notifications -->
+            <button onclick="App.UI.navigateTo('notifications'); App.UI.toggleUserMenu()"
+                class="flex items-center gap-3 p-3 rounded-xl hover:bg-white/5 transition text-gray-200 group">
+                <div
+                    class="p-2 rounded-lg bg-pink-500/10 text-pink-400 group-hover:bg-pink-500 group-hover:text-white transition">
+                    <i data-lucide="bell" class="w-5 h-5"></i>
+                </div>
+                <span class="font-semibold">Notifications</span>
+                <span id="user-menu-notif-badge"
+                    class="ml-auto w-2 h-2 bg-red-500 rounded-full hidden"></span>
+            </button>
+
+            <!-- Confidentialité -->
+            <button onclick="App.UI.openPrivacy()"
+                class="flex items-center gap-3 p-3 rounded-xl hover:bg-white/5 transition text-gray-200 group">
+                <div
+                    class="p-2 rounded-lg bg-cyan-500/10 text-cyan-400 group-hover:bg-cyan-500 group-hover:text-white transition">
+                    <i data-lucide="shield" class="w-5 h-5"></i>
+                </div>
+                <span class="font-semibold">Confidentialité</span>
             </button>
 
             <button onclick="App.UI.toggleTheme()"
