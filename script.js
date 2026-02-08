@@ -3827,7 +3827,7 @@ const App = {
                 
                 if (!testimonial) return;
                 
-                const shareText = `📖 Témoignage FaithConnect\n\n${testimonial.title}\n\n${testimonial.content.substring(0, 100)}${testimonial.content.length > 100 ? '...' : ''}`;
+                const shareText = `📖 Témoignage FaithConnect\n\n${testimonial.title}\n\n${testimonial.content.substring(0, 200)}${testimonial.content.length > 200 ? '...' : ''}`;
                 
                 const { error } = await sb.from('chat_messages').insert({
                     chat_id: chatId,
@@ -3844,6 +3844,57 @@ const App = {
                 
                 App.UI.modals.closeAll();
                 alert('Témoignage partagé dans la discussion ! 🙏');
+            },
+            
+            async shareToSystem() {
+                if (!this.currentTestimonialId) return;
+                
+                const { data: testimonial } = await sb.from(this.table).select('title, content').eq('id', this.currentTestimonialId).single();
+                
+                if (!testimonial) return;
+                
+                const shareData = {
+                    title: 'Témoignage FaithConnect',
+                    text: `${testimonial.title}\n\n${testimonial.content}`,
+                    url: window.location.href
+                };
+                
+                if (navigator.share) {
+                    try {
+                        await navigator.share(shareData);
+                    } catch (err) {
+                        if (err.name !== 'AbortError') {
+                            console.log('Share cancelled');
+                        }
+                    }
+                } else {
+                    // Fallback to copy link
+                    this.copyLink();
+                }
+            },
+            
+            async copyLink() {
+                if (!this.currentTestimonialId) return;
+                
+                const { data: testimonial } = await sb.from(this.table).select('title, content').eq('id', this.currentTestimonialId).single();
+                
+                if (!testimonial) return;
+                
+                const shareText = `📖 ${testimonial.title}\n\n${testimonial.content}\n\nPartagé via FaithConnect`;
+                
+                try {
+                    await navigator.clipboard.writeText(shareText);
+                    alert('Lien copié dans le presse-papiers ! 📋');
+                } catch (err) {
+                    // Fallback
+                    const textarea = document.createElement('textarea');
+                    textarea.value = shareText;
+                    document.body.appendChild(textarea);
+                    textarea.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(textarea);
+                    alert('Lien copié dans le presse-papiers ! 📋');
+                }
             },
             
             escapeHtml(text) {
