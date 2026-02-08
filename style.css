@@ -480,6 +480,25 @@ body {
 .chat-theme-default {
     background: #050510 !important;
 }
+/* Bubble accents per theme */
+.chat-theme-eden .message-bubble {
+    box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.15);
+}
+.chat-theme-grace .message-bubble {
+    box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.15);
+}
+.chat-theme-night .message-bubble {
+    box-shadow: 0 0 0 2px rgba(30, 41, 59, 0.35);
+}
+.chat-theme-default .message-bubble {
+    box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.08);
+}
+.chat-theme-custom {
+    background: var(--chat-custom-color, #050510) !important;
+}
+.chat-theme-custom .message-bubble {
+    box-shadow: 0 0 0 2px color-mix(in oklab, var(--chat-custom-color) 20%, white 80%);
+}
 /* === STORIES SYSTEM STYLES === */
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
