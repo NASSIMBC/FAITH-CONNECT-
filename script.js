@@ -3854,6 +3854,89 @@ const App = {
                     alert('Erreur lors de la publication: ' + err.message);
                 }
             },
+
+            extractTags(title, content, category) {
+                const stop = new Set(['avec','pour','dans','mais','plus','moins','tres','trop','tout','toute','tous','toutes','chez','comme','parce','etait','etre','vous','nous','elle','elles','il','ils','sur','sous','cela','cette','ces','ces','des','une','un','du','de','le','la','les','mon','ma','mes','ton','ta','tes','son','sa','ses','mes','tes','ses','notre','votre','leurs','ainsi','alors','encore','depuis','pendant','avant','apres','par','que','qui','quoi','dont','si','sans','pas','plus','moins','tres','aussi','afin','vers','eux','elle','elles','il','ils','je','tu','on','au','aux','d','l']);
+                const words = `${title} ${content}`.toLowerCase().split(/[^a-zà-ÿ0-9]+/i).filter(w => w.length >= 5 && !stop.has(w));
+                const counts = {};
+                words.forEach(w => { counts[w] = (counts[w] || 0) + 1; });
+                const top = Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 6).map(([w]) => w);
+                const base = category ? [category] : [];
+                const tags = [...base, ...top.map(w => w.charAt(0).toUpperCase() + w.slice(1))];
+                return [...new Set(tags)].slice(0, 8);
+            },
+
+            renderTags(tags) {
+                const container = document.getElementById('testimonial-view-tags');
+                if (!container) return;
+                if (!tags || tags.length === 0) {
+                    container.innerHTML = '<span class="text-xs text-gray-500">Aucune étiquette</span>';
+                    return;
+                }
+                container.innerHTML = tags.map(t => `<span class="testimonial-tag">#${this.escapeHtml(t)}</span>`).join('');
+            },
+
+            async loadSuggested(testimonial) {
+                const container = document.getElementById('testimonial-view-suggested');
+                if (!container) return;
+                container.innerHTML = '<p class="text-xs text-gray-500">Chargement...</p>';
+                this.renderTags(this.extractTags(testimonial.title || '', testimonial.content || '', testimonial.category || ''));
+                let items = [];
+                if (testimonial.category) {
+                    const { data: primary } = await sb.from(this.table)
+                        .select('*')
+                        .eq('category', testimonial.category)
+                        .neq('id', testimonial.id)
+                        .order('created_at', { ascending: false })
+                        .limit(4);
+                    items = primary || [];
+                }
+                if (items.length < 4) {
+                    const { data: more } = await sb.from(this.table)
+                        .select('*')
+                        .neq('id', testimonial.id)
+                        .order('created_at', { ascending: false })
+                        .limit(8);
+                    if (more) {
+                        const ids = new Set(items.map(i => i.id));
+                        for (const m of more) {
+                            if (!ids.has(m.id) && items.length < 4) {
+                                items.push(m);
+                                ids.add(m.id);
+                            }
+                        }
+                    }
+                }
+                if (!items || items.length === 0) {
+                    container.innerHTML = '<p class="text-xs text-gray-500">Aucun témoignage suggéré.</p>';
+                    return;
+                }
+                const userIds = [...new Set(items.map(t => t.user_id))];
+                const { data: profiles } = await sb.from('profiles').select('id, username, avatar_url').in('id', userIds);
+                const profileMap = {};
+                if (profiles) profiles.forEach(p => { profileMap[p.id] = p; });
+                container.innerHTML = items.map(t => {
+                    const profile = profileMap[t.user_id] || {};
+                    const excerptRaw = (t.content || '').slice(0, 90);
+                    const excerpt = excerptRaw.length < (t.content || '').length ? `${excerptRaw}...` : excerptRaw;
+                    return `
+                    <div class="right-sidebar-testimonial-item" onclick="App.Features.Testimonials.viewDetail('${t.id}')">
+                        <span class="right-sidebar-testimonial-category category-${t.category}">${t.category}</span>
+                        <p class="right-sidebar-testimonial-title">${this.escapeHtml(t.title)}</p>
+                        <p class="right-sidebar-testimonial-excerpt">${this.escapeHtml(excerpt)}</p>
+                        <div class="right-sidebar-testimonial-footer">
+                            <div class="right-sidebar-testimonial-author">
+                                <img src="${profile.avatar_url || `https://ui-avatars.com/api/?name=${profile.username || 'U'}&background=random`}" 
+                                     class="right-sidebar-testimonial-avatar">
+                                <span>${profile.username || 'Membre'}</span>
+                            </div>
+                            <span class="right-sidebar-testimonial-date">${this.formatDate(t.created_at)}</span>
+                        </div>
+                    </div>
+                    `;
+                }).join('');
+                if (typeof lucide !== 'undefined') lucide.createIcons();
+            },
             
             async viewDetail(id) {
                 // Fetch full testimonial data
@@ -3901,6 +3984,7 @@ const App = {
                 
                 // Store current testimonial ID
                 this.currentTestimonialId = id;
+                await this.loadSuggested(testimonial);
                 
                 // Show modal
                 document.getElementById('modal-testimonial-view').classList.remove('hidden');
