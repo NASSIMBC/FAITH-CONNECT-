@@ -1259,28 +1259,6 @@
                 <span class="font-semibold">Paramètres</span>
             </button>
 
-            <!-- Notifications -->
-            <button onclick="App.UI.navigateTo('notifications'); App.UI.toggleUserMenu()"
-                class="flex items-center gap-3 p-3 rounded-xl hover:bg-white/5 transition text-gray-200 group">
-                <div
-                    class="p-2 rounded-lg bg-pink-500/10 text-pink-400 group-hover:bg-pink-500 group-hover:text-white transition">
-                    <i data-lucide="bell" class="w-5 h-5"></i>
-                </div>
-                <span class="font-semibold">Notifications</span>
-                <span id="user-menu-notif-badge"
-                    class="ml-auto w-2 h-2 bg-red-500 rounded-full hidden"></span>
-            </button>
-
-            <!-- Confidentialité -->
-            <button onclick="App.UI.openPrivacy()"
-                class="flex items-center gap-3 p-3 rounded-xl hover:bg-white/5 transition text-gray-200 group">
-                <div
-                    class="p-2 rounded-lg bg-cyan-500/10 text-cyan-400 group-hover:bg-cyan-500 group-hover:text-white transition">
-                    <i data-lucide="shield" class="w-5 h-5"></i>
-                </div>
-                <span class="font-semibold">Confidentialité</span>
-            </button>
-
             <button onclick="App.UI.toggleTheme()"
                 class="flex items-center gap-3 p-3 rounded-xl hover:bg-white/5 transition text-gray-200 group">
                 <div
@@ -1552,6 +1530,120 @@
             </div>
             <div id="share-chat-list" class="space-y-2 max-h-64 overflow-y-auto">
                 <!-- Chat list injected here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: Settings -->
+    <div id="modal-settings" class="fixed inset-0 z-[150] flex items-center justify-center bg-black/80 backdrop-blur-sm hidden">
+        <div class="glass-panel w-full max-w-md p-6 rounded-[32px] m-4">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-xl font-bold flex items-center gap-2">
+                    <i data-lucide="settings" class="text-orange-400"></i>
+                    Paramètres
+                </h3>
+                <button onclick="App.UI.modals.closeAll()" class="p-2 hover:bg-white/10 rounded-full">
+                    <i data-lucide="x"></i>
+                </button>
+            </div>
+            
+            <div class="space-y-4">
+                <button onclick="App.UI.toggleTheme()" class="w-full flex items-center justify-between p-4 rounded-xl hover:bg-white/5 transition">
+                    <div class="flex items-center gap-3">
+                        <i data-lucide="moon" class="w-5 h-5 text-yellow-400"></i>
+                        <span class="font-semibold">Mode Sombre</span>
+                    </div>
+                    <i data-lucide="chevron-right" class="w-5 h-5 text-gray-400"></i>
+                </button>
+                
+                <button onclick="App.UI.navigateTo('notifications'); App.UI.modals.closeAll()" class="w-full flex items-center justify-between p-4 rounded-xl hover:bg-white/5 transition">
+                    <div class="flex items-center gap-3">
+                        <i data-lucide="bell" class="w-5 h-5 text-pink-400"></i>
+                        <span class="font-semibold">Notifications</span>
+                    </div>
+                    <i data-lucide="chevron-right" class="w-5 h-5 text-gray-400"></i>
+                </button>
+                
+                <button onclick="App.UI.openPrivacy()" class="w-full flex items-center justify-between p-4 rounded-xl hover:bg-white/5 transition">
+                    <div class="flex items-center gap-3">
+                        <i data-lucide="shield" class="w-5 h-5 text-cyan-400"></i>
+                        <span class="font-semibold">Confidentialité</span>
+                    </div>
+                    <i data-lucide="chevron-right" class="w-5 h-5 text-gray-400"></i>
+                </button>
+                
+                <button onclick="App.UI.navigateTo('profile'); App.UI.modals.closeAll()" class="w-full flex items-center justify-between p-4 rounded-xl hover:bg-white/5 transition">
+                    <div class="flex items-center gap-3">
+                        <i data-lucide="user" class="w-5 h-5 text-purple-400"></i>
+                        <span class="font-semibold">Mon Profil</span>
+                    </div>
+                    <i data-lucide="chevron-right" class="w-5 h-5 text-gray-400"></i>
+                </button>
+                
+                <button onclick="App.UI.navigateTo('help'); App.UI.modals.closeAll()" class="w-full flex items-center justify-between p-4 rounded-xl hover:bg-white/5 transition">
+                    <div class="flex items-center gap-3">
+                        <i data-lucide="help-circle" class="w-5 h-5 text-green-400"></i>
+                        <span class="font-semibold">Aide & Support</span>
+                    </div>
+                    <i data-lucide="chevron-right" class="w-5 h-5 text-gray-400"></i>
+                </button>
+                
+                <button onclick="App.Auth.logout()" class="w-full flex items-center justify-between p-4 rounded-xl hover:bg-red-500/10 transition">
+                    <div class="flex items-center gap-3">
+                        <i data-lucide="log-out" class="w-5 h-5 text-red-400"></i>
+                        <span class="font-semibold text-red-400">Déconnexion</span>
+                    </div>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: Privacy -->
+    <div id="modal-privacy" class="fixed inset-0 z-[150] flex items-center justify-center bg-black/80 backdrop-blur-sm hidden">
+        <div class="glass-panel w-full max-w-md p-6 rounded-[32px] m-4 max-h-[80vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-xl font-bold flex items-center gap-2">
+                    <i data-lucide="shield" class="text-cyan-400"></i>
+                    Confidentialité
+                </h3>
+                <button onclick="App.UI.modals.closeAll()" class="p-2 hover:bg-white/10 rounded-full">
+                    <i data-lucide="x"></i>
+                </button>
+            </div>
+            
+            <div class="space-y-6 text-sm text-gray-300">
+                <div>
+                    <h4 class="font-bold text-white mb-2">Protection des données</h4>
+                    <p>Vos données personnelles sont protégées et ne sont jamais partagées avec des tiers sans votre consentement.</p>
+                </div>
+                
+                <div>
+                    <h4 class="font-bold text-white mb-2">Visibilité du profil</h4>
+                    <label class="flex items-center justify-between p-3 bg-white/5 rounded-xl cursor-pointer">
+                        <span>Profil public</span>
+                        <input type="checkbox" checked class="w-5 h-5 rounded bg-white/10 border-white/20 text-primary">
+                    </label>
+                </div>
+                
+                <div>
+                    <h4 class="font-bold text-white mb-2">Notifications</h4>
+                    <label class="flex items-center justify-between p-3 bg-white/5 rounded-xl cursor-pointer">
+                        <span>Recevoir les notifications</span>
+                        <input type="checkbox" checked class="w-5 h-5 rounded bg-white/10 border-white/20 text-primary">
+                    </label>
+                </div>
+                
+                <div>
+                    <h4 class="font-bold text-white mb-2">Messages</h4>
+                    <label class="flex items-center justify-between p-3 bg-white/5 rounded-xl cursor-pointer">
+                        <span>Accepter les messages de tous</span>
+                        <input type="checkbox" class="w-5 h-5 rounded bg-white/10 border-white/20 text-primary">
+                    </label>
+                </div>
+                
+                <button class="btn-primary w-full py-3 rounded-xl font-bold">
+                    Supprimer mon compte
+                </button>
             </div>
         </div>
     </div>
