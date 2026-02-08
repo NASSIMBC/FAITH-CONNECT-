@@ -455,6 +455,18 @@
 
                 <!-- VIEW: Témoignages -->
                 <section id="view-testimonials" class="page-view hidden p-4 md:p-0">
+                    <!-- Verset du jour en haut de la section -->
+                    <div id="testimonials-verse" class="glass-panel p-4 rounded-[20px] bg-gradient-to-br from-purple-500/10 to-indigo-500/10 border-purple-500/20 mb-6">
+                        <h4 class="text-xs font-bold text-purple-400 uppercase tracking-wider mb-2 flex items-center gap-2">
+                            <i data-lucide="book-open" class="w-4 h-4"></i>
+                            Verset du jour
+                        </h4>
+                        <p id="testimonials-verse-text" class="text-sm font-serif text-gray-200 leading-relaxed italic mb-2">
+                            « Car Dieu a tant aimé le monde... »
+                        </p>
+                        <p id="testimonials-verse-ref" class="text-xs text-gray-500 text-right">Jean 3:16</p>
+                    </div>
+                    
                     <div class="glass-panel p-6 rounded-[32px] mb-6 flex justify-between items-center">
                         <div>
                             <h2 class="text-2xl font-bold mb-1 flex items-center gap-2">
@@ -1410,6 +1422,108 @@
                 <i data-lucide="send" class="w-5 h-5"></i>
                 Partager le témoignage
             </button>
+        </div>
+    </div>
+
+    <!-- MODAL: Full Testimonial View -->
+    <div id="modal-testimonial-view" class="fixed inset-0 z-[100] bg-black hidden flex-col">
+        <!-- Close button -->
+        <button onclick="App.Features.Testimonials.closeViewModal()" 
+            class="absolute top-4 right-4 z-50 p-2 bg-black/50 hover:bg-black/70 rounded-full text-white transition">
+            <i data-lucide="x" class="w-6 h-6"></i>
+        </button>
+        
+        <div class="flex-1 overflow-y-auto custom-scrollbar">
+            <!-- Image section (if exists) -->
+            <div id="testimonial-view-image-container" class="w-full hidden">
+                <img id="testimonial-view-image" src="" alt="" 
+                    class="w-full max-h-[50vh] object-contain cursor-zoom-in"
+                    onclick="App.Features.Testimonials.openImageZoom()">
+            </div>
+            
+            <!-- Content section -->
+            <div class="glass-panel mx-4 mt-[-20px] relative z-10 p-6 rounded-[32px]">
+                <div class="flex items-center gap-3 mb-4">
+                    <img id="testimonial-view-avatar" src="" 
+                        class="w-12 h-12 rounded-full object-cover border border-white/20">
+                    <div class="flex-1">
+                        <p id="testimonial-view-author" class="font-bold text-white">Auteur</p>
+                        <p id="testimonial-view-date" class="text-xs text-gray-400">Date</p>
+                    </div>
+                    <span id="testimonial-view-category" class="px-3 py-1 rounded-full text-xs font-bold">Catégorie</span>
+                </div>
+                
+                <h2 id="testimonial-view-title" class="text-2xl font-bold mb-4">Titre</h2>
+                <p id="testimonial-view-content" class="text-gray-200 leading-relaxed">Contenu</p>
+                
+                <!-- Actions -->
+                <div class="flex items-center gap-4 mt-6 pt-4 border-t border-white/10">
+                    <button onclick="App.Features.Testimonials.likeCurrent()" 
+                        class="testimonial-action-btn flex-1 justify-center">
+                        <i data-lucide="heart" class="w-4 h-4"></i>
+                        <span id="testimonial-view-likes">0</span>
+                    </button>
+                    <button onclick="App.Features.Testimonials.openComments()" 
+                        class="testimonial-action-btn flex-1 justify-center">
+                        <i data-lucide="message-circle" class="w-4 h-4"></i>
+                        <span id="testimonial-view-comments-count">0</span>
+                    </button>
+                    <button onclick="App.Features.Testimonials.shareCurrent()" 
+                        class="testimonial-action-btn flex-1 justify-center">
+                        <i data-lucide="share-2" class="w-4 h-4"></i>
+                        <span>Partager</span>
+                    </button>
+                </div>
+                
+                <!-- Comments section -->
+                <div id="testimonial-view-comments" class="mt-6 pt-4 border-t border-white/10 hidden">
+                    <h4 class="text-sm font-bold text-gray-400 mb-4 flex items-center gap-2">
+                        <i data-lucide="message-square" class="w-4 h-4"></i>
+                        Commentaires
+                    </h4>
+                    <div id="testimonial-comments-list" class="space-y-3 max-h-48 overflow-y-auto">
+                        <!-- Comments injected here -->
+                    </div>
+                    <div class="mt-4 flex gap-2">
+                        <input type="text" id="testimonial-comment-input" 
+                            placeholder="Ajouter un commentaire..."
+                            class="input-field flex-1 px-4 py-2 rounded-xl text-sm">
+                        <button onclick="App.Features.Testimonials.addComment()"
+                            class="btn-primary px-4 py-2 rounded-xl text-sm font-bold">
+                            <i data-lucide="send" class="w-4 h-4"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: Image Zoom -->
+    <div id="modal-image-zoom" class="fixed inset-0 z-[200] bg-black hidden flex items-center justify-center"
+        onclick="App.Features.Testimonials.closeImageZoom()">
+        <button onclick="App.Features.Testimonials.closeImageZoom()" 
+            class="absolute top-4 right-4 p-2 bg-black/50 hover:bg-black/70 rounded-full text-white transition z-20">
+            <i data-lucide="x" class="w-6 h-6"></i>
+        </button>
+        <img id="image-zoom-content" src="" alt="" 
+            class="max-w-full max-h-full object-contain cursor-zoom-out">
+    </div>
+
+    <!-- MODAL: Share to Chat -->
+    <div id="modal-share-chat" class="fixed inset-0 z-[150] flex items-center justify-center bg-black/80 backdrop-blur-sm hidden">
+        <div class="glass-panel w-full max-w-md p-6 rounded-[32px] m-4">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-xl font-bold flex items-center gap-2">
+                    <i data-lucide="share-2" class="text-purple-400"></i>
+                    Partager dans une discussion
+                </h3>
+                <button onclick="App.UI.modals.closeAll()" class="p-2 hover:bg-white/10 rounded-full">
+                    <i data-lucide="x"></i>
+                </button>
+            </div>
+            <div id="share-chat-list" class="space-y-2 max-h-64 overflow-y-auto">
+                <!-- Chat list injected here -->
+            </div>
         </div>
     </div>
 
