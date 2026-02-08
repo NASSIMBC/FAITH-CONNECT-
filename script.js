@@ -3388,6 +3388,7 @@ const App = {
                         <div class="testimonials-empty-state">
                             <i data-lucide="mic-2" class="w-8 h-8 mx-auto"></i>
                             <p>Aucun témoignage pour le moment</p>
+                            <p class="text-[10px] mt-2 text-gray-500">Soyez le premier à partager !</p>
                         </div>
                     `;
                     if (typeof lucide !== 'undefined') lucide.createIcons();
@@ -3395,13 +3396,17 @@ const App = {
                 }
                 
                 container.innerHTML = data.map(t => `
-                    <div class="sidebar-testimonial-item" onclick="App.Features.Testimonials.viewDetail('${t.id}')">
-                        <span class="sidebar-testimonial-category category-${t.category}">${t.category}</span>
-                        <p class="sidebar-testimonial-title truncate">${this.escapeHtml(t.title)}</p>
-                        <div class="sidebar-testimonial-author">
-                            <img src="${t.profiles?.avatar_url || `https://ui-avatars.com/api/?name=${t.profiles?.username || 'U'}&background=random`}" 
-                                 class="sidebar-testimonial-avatar">
-                            <span>${t.profiles?.username || 'Membre'}</span>
+                    <div class="right-sidebar-testimonial-item" onclick="App.Features.Testimonials.viewDetail('${t.id}')">
+                        <span class="right-sidebar-testimonial-category category-${t.category}">${t.category}</span>
+                        <p class="right-sidebar-testimonial-title">${this.escapeHtml(t.title)}</p>
+                        <p class="right-sidebar-testimonial-excerpt">${this.escapeHtml(t.content)}</p>
+                        <div class="right-sidebar-testimonial-footer">
+                            <div class="right-sidebar-testimonial-author">
+                                <img src="${t.profiles?.avatar_url || `https://ui-avatars.com/api/?name=${t.profiles?.username || 'U'}&background=random`}" 
+                                     class="right-sidebar-testimonial-avatar">
+                                <span>${t.profiles?.username || 'Membre'}</span>
+                            </div>
+                            <span class="right-sidebar-testimonial-date">${this.formatDate(t.created_at)}</span>
                         </div>
                     </div>
                 `).join('');
@@ -3466,6 +3471,20 @@ const App = {
                 const div = document.createElement('div');
                 div.textContent = text;
                 return div.innerHTML;
+            },
+            
+            formatDate(dateStr) {
+                const date = new Date(dateStr);
+                const now = new Date();
+                const diffMs = now - date;
+                const diffMins = Math.floor(diffMs / 60000);
+                const diffHours = Math.floor(diffMs / 3600000);
+                const diffDays = Math.floor(diffMs / 86400000);
+                
+                if (diffMins < 60) return `${diffMins}m`;
+                if (diffHours < 24) return `${diffHours}h`;
+                if (diffDays < 7) return `${diffDays}j`;
+                return date.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
             }
         },
 
