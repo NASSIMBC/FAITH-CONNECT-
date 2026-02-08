@@ -3562,8 +3562,9 @@ const App = {
                     
                     alert('Merci ! Votre témoignage a été partagé avec la communauté. 🙏');
                     
-                    // Refresh sidebar
+                    // Refresh both sidebar and full view
                     this.loadSidebar();
+                    this.loadFullView();
                     
                 } catch (err) {
                     console.error('Error publishing testimonial:', err);
