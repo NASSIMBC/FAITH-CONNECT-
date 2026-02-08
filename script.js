@@ -201,6 +201,7 @@ const App = {
         },
 
         navigateTo(viewName, targetId = null, filter = null) {
+            console.log('Navigating to:', viewName);
             // 1. Hide current view & handle mobile cleanup
             document.querySelectorAll('.page-view').forEach(el => {
                 el.classList.add('hidden');
@@ -219,9 +220,12 @@ const App = {
             // 2. Show new view
             const target = document.getElementById('view-' + viewName);
             if (target) {
+                console.log('Found target view:', target.id);
                 target.classList.remove('hidden');
                 target.classList.add('view-transition');
                 window.scrollTo({ top: 0, behavior: 'smooth' });
+            } else {
+                console.error('Target view not found: view-' + viewName);
             }
 
             // 3. Update Nav States
@@ -261,6 +265,10 @@ const App = {
             if (viewName === 'marketplace') App.Features.Marketplace.load ? App.Features.Marketplace.load() : null;
             if (viewName === 'notifications') App.Features.Notifications.fetch();
             if (viewName === 'quiz') App.Features.Quiz.load();
+            if (viewName === 'testimonials') {
+                console.log('Loading testimonials view...');
+                App.Features.Testimonials.loadFullView();
+            }
 
             // Special: Detailed Group/Page
             if (viewName === 'group-detail') App.Features.Groups.loadDetail(targetId);
@@ -3372,6 +3380,7 @@ const App = {
         // === TESTIMONIALS ===
         Testimonials: {
             table: 'testimonials',
+            currentFilter: 'all',
             
             async loadSidebar() {
                 const container = document.getElementById('sidebar-testimonials-list');
@@ -3412,6 +3421,106 @@ const App = {
                 `).join('');
                 
                 if (typeof lucide !== 'undefined') lucide.createIcons();
+            },
+            
+            async loadFullView() {
+                const container = document.getElementById('testimonials-grid');
+                if (!container) {
+                    console.error('Testimonials grid container not found');
+                    return;
+                }
+                
+                let query = sb.from(this.table).select('*, profiles(username, avatar_url)').order('created_at', { ascending: false });
+                
+                if (this.currentFilter !== 'all') {
+                    query = query.eq('category', this.currentFilter);
+                }
+                
+                const { data, error } = await query;
+                
+                // Debug: Log error if any
+                if (error) {
+                    console.error('Supabase error loading testimonials:', error);
+                }
+                
+                if (error || !data || data.length === 0) {
+                    const filterMsg = this.currentFilter !== 'all' ? '<p class="text-gray-600 text-sm mb-2">Essayez un autre filtre.</p>' : '';
+                    container.innerHTML = `
+                        <div class="col-span-full text-center py-16">
+                            <i data-lucide="mic-2" class="w-16 h-16 mx-auto mb-4 text-gray-600"></i>
+                            <p class="text-gray-500 text-lg mb-2">Aucun témoignage trouvé</p>
+                            ${filterMsg}
+                            <p class="text-gray-600 text-sm">Soyez le premier à partager votre témoignage !</p>
+                            <button onclick="App.Features.Testimonials.openModal()" class="btn-primary mt-4 px-4 py-2 rounded-xl text-sm font-bold">
+                                <i data-lucide="plus-circle" class="w-4 h-4 inline mr-1"></i>
+                                Partager
+                            </button>
+                        </div>
+                    `;
+                    if (typeof lucide !== 'undefined') lucide.createIcons();
+                    return;
+                }
+                
+                container.innerHTML = data.map(t => `
+                    <div class="testimonial-card-full">
+                        ${t.image_url ? `<img src="${t.image_url}" class="testimonial-card-image" alt="Image du témoignage">` : ''}
+                        <div class="testimonial-card-header">
+                            <img src="${t.profiles?.avatar_url || `https://ui-avatars.com/api/?name=${t.profiles?.username || 'U'}&background=random`}" 
+                                 class="testimonial-card-avatar">
+                            <div class="testimonial-card-meta">
+                                <p class="testimonial-card-name">${t.profiles?.username || 'Membre anonyme'}</p>
+                                <p class="testimonial-card-date">${this.formatFullDate(t.created_at)}</p>
+                            </div>
+                            <span class="testimonial-card-category category-${t.category}">${t.category}</span>
+                        </div>
+                        <h3 class="testimonial-card-title">${this.escapeHtml(t.title)}</h3>
+                        <p class="testimonial-card-content">${this.escapeHtml(t.content)}</p>
+                        <div class="testimonial-card-footer">
+                            <button class="testimonial-action-btn" onclick="App.Features.Testimonials.like('${t.id}')">
+                                <i data-lucide="heart" class="w-4 h-4"></i>
+                                <span>Encourager</span>
+                            </button>
+                            <button class="testimonial-action-btn">
+                                <i data-lucide="message-circle" class="w-4 h-4"></i>
+                                <span>Commenter</span>
+                            </button>
+                            <button class="testimonial-action-btn ml-auto" onclick="navigator.share?.({ title: 'Témoignage FaithConnect', text: '${this.escapeHtml(t.title)}', url: window.location.href })">
+                                <i data-lucide="share-2" class="w-4 h-4"></i>
+                                <span>Partager</span>
+                            </button>
+                        </div>
+                    </div>
+                `).join('');
+                
+                if (typeof lucide !== 'undefined') lucide.createIcons();
+            },
+            
+            filter(category) {
+                this.currentFilter = category;
+                
+                // Update active button
+                document.querySelectorAll('.filter-testimonial-btn').forEach(btn => {
+                    if (btn.dataset.filter === category) {
+                        btn.classList.remove('bg-white/5', 'text-gray-300');
+                        btn.classList.add('bg-primary', 'text-white');
+                    } else {
+                        btn.classList.remove('bg-primary', 'text-white');
+                        btn.classList.add('bg-white/5', 'text-gray-300');
+                    }
+                });
+                
+                // Reload
+                this.loadFullView();
+            },
+            
+            async like(id) {
+                // Placeholder for like functionality
+                const btn = document.querySelector(`button[onclick*="'${id}'"]`);
+                if (btn) {
+                    btn.classList.add('liked');
+                    btn.querySelector('i').setAttribute('data-lucide', 'heart-fill');
+                    if (typeof lucide !== 'undefined') lucide.createIcons();
+                }
             },
             
             openModal() {
@@ -3485,6 +3594,17 @@ const App = {
                 if (diffHours < 24) return `${diffHours}h`;
                 if (diffDays < 7) return `${diffDays}j`;
                 return date.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
+            },
+            
+            formatFullDate(dateStr) {
+                const date = new Date(dateStr);
+                return date.toLocaleDateString('fr-FR', { 
+                    day: 'numeric', 
+                    month: 'long', 
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
             }
         },
 
