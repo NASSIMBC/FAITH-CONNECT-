@@ -3386,13 +3386,13 @@ const App = {
                 const container = document.getElementById('sidebar-testimonials-list');
                 if (!container) return;
                 
-                const { data, error } = await sb
+                const { data: testimonials, error } = await sb
                     .from(this.table)
-                    .select('*, profiles(username, avatar_url)')
+                    .select('*')
                     .order('created_at', { ascending: false })
                     .limit(5);
                 
-                if (error || !data || data.length === 0) {
+                if (error || !testimonials || testimonials.length === 0) {
                     container.innerHTML = `
                         <div class="testimonials-empty-state">
                             <i data-lucide="mic-2" class="w-8 h-8 mx-auto"></i>
@@ -3404,21 +3404,36 @@ const App = {
                     return;
                 }
                 
-                container.innerHTML = data.map(t => `
+                // Fetch all user profiles for the testimonials
+                const userIds = [...new Set(testimonials.map(t => t.user_id))];
+                const { data: profiles } = await sb.from('profiles').select('id, username, avatar_url').in('id', userIds);
+                
+                // Create a map of user profiles
+                const profileMap = {};
+                if (profiles) {
+                    profiles.forEach(p => {
+                        profileMap[p.id] = p;
+                    });
+                }
+                
+                container.innerHTML = testimonials.map(t => {
+                    const profile = profileMap[t.user_id] || {};
+                    return `
                     <div class="right-sidebar-testimonial-item" onclick="App.Features.Testimonials.viewDetail('${t.id}')">
                         <span class="right-sidebar-testimonial-category category-${t.category}">${t.category}</span>
                         <p class="right-sidebar-testimonial-title">${this.escapeHtml(t.title)}</p>
                         <p class="right-sidebar-testimonial-excerpt">${this.escapeHtml(t.content)}</p>
                         <div class="right-sidebar-testimonial-footer">
                             <div class="right-sidebar-testimonial-author">
-                                <img src="${t.profiles?.avatar_url || `https://ui-avatars.com/api/?name=${t.profiles?.username || 'U'}&background=random`}" 
+                                <img src="${profile.avatar_url || `https://ui-avatars.com/api/?name=${profile.username || 'U'}&background=random`}" 
                                      class="right-sidebar-testimonial-avatar">
-                                <span>${t.profiles?.username || 'Membre'}</span>
+                                <span>${profile.username || 'Membre'}</span>
                             </div>
                             <span class="right-sidebar-testimonial-date">${this.formatDate(t.created_at)}</span>
                         </div>
                     </div>
-                `).join('');
+                    `;
+                }).join('');
                 
                 if (typeof lucide !== 'undefined') lucide.createIcons();
             },
@@ -3430,20 +3445,20 @@ const App = {
                     return;
                 }
                 
-                let query = sb.from(this.table).select('*, profiles(username, avatar_url)').order('created_at', { ascending: false });
+                let query = sb.from(this.table).select('*').order('created_at', { ascending: false });
                 
                 if (this.currentFilter !== 'all') {
                     query = query.eq('category', this.currentFilter);
                 }
                 
-                const { data, error } = await query;
+                const { data: testimonials, error } = await query;
                 
                 // Debug: Log error if any
                 if (error) {
                     console.error('Supabase error loading testimonials:', error);
                 }
                 
-                if (error || !data || data.length === 0) {
+                if (error || !testimonials || testimonials.length === 0) {
                     const filterMsg = this.currentFilter !== 'all' ? '<p class="text-gray-600 text-sm mb-2">Essayez un autre filtre.</p>' : '';
                     container.innerHTML = `
                         <div class="col-span-full text-center py-16">
@@ -3461,14 +3476,28 @@ const App = {
                     return;
                 }
                 
-                container.innerHTML = data.map(t => `
+                // Fetch all user profiles for the testimonials
+                const userIds = [...new Set(testimonials.map(t => t.user_id))];
+                const { data: profiles } = await sb.from('profiles').select('id, username, avatar_url').in('id', userIds);
+                
+                // Create a map of user profiles
+                const profileMap = {};
+                if (profiles) {
+                    profiles.forEach(p => {
+                        profileMap[p.id] = p;
+                    });
+                }
+                
+                container.innerHTML = testimonials.map(t => {
+                    const profile = profileMap[t.user_id] || {};
+                    return `
                     <div class="testimonial-card-full">
                         ${t.image_url ? `<img src="${t.image_url}" class="testimonial-card-image" alt="Image du témoignage">` : ''}
                         <div class="testimonial-card-header">
-                            <img src="${t.profiles?.avatar_url || `https://ui-avatars.com/api/?name=${t.profiles?.username || 'U'}&background=random`}" 
+                            <img src="${profile.avatar_url || `https://ui-avatars.com/api/?name=${profile.username || 'U'}&background=random`}" 
                                  class="testimonial-card-avatar">
                             <div class="testimonial-card-meta">
-                                <p class="testimonial-card-name">${t.profiles?.username || 'Membre anonyme'}</p>
+                                <p class="testimonial-card-name">${profile.username || 'Membre anonyme'}</p>
                                 <p class="testimonial-card-date">${this.formatFullDate(t.created_at)}</p>
                             </div>
                             <span class="testimonial-card-category category-${t.category}">${t.category}</span>
@@ -3490,7 +3519,8 @@ const App = {
                             </button>
                         </div>
                     </div>
-                `).join('');
+                    `;
+                }).join('');
                 
                 if (typeof lucide !== 'undefined') lucide.createIcons();
             },
