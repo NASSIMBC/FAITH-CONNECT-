@@ -503,6 +503,9 @@ body {
     max-height: 70vh;
     overflow-y: auto;
 }
+#conversations-list {
+    overflow-x: hidden;
+}
 .chat-list-only #msg-sidebar {
     width: 100%;
 }
@@ -587,6 +590,22 @@ body {
 }
 #msg-area {
     background: #0b1020;
+}
+#chat-messages {
+    overflow-x: hidden;
+}
+.message-bubble {
+    max-width: 100%;
+}
+#chat-messages img,
+#chat-messages video,
+#chat-messages audio,
+#chat-messages a {
+    max-width: 100%;
+}
+#chat-input {
+    min-height: 34px;
+    line-height: 1.2;
 }
 .message-bubble {
     border-radius: 22px;
