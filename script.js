@@ -1,4 +1,3 @@
-
 // ==========================================
 // FAITH CONNECT 2.0 - MODULAR ARCHITECTURE
 // ==========================================
@@ -1852,11 +1851,24 @@ const App = {
             bindTypingInput(input) {
                 if (!input) return;
                 input.oninput = () => {
+                    // Toggle between mic and send buttons
+                    const btnSend = document.getElementById('btn-send');
+                    const btnMic = document.getElementById('btn-mic');
+                    const hasText = input.value.trim().length > 0;
+                    if (btnSend) btnSend.classList.toggle('hidden', !hasText);
+                    if (btnMic) btnMic.classList.toggle('hidden', hasText);
+                    
                     this.startTyping();
                     if (this.typingTimeout) clearTimeout(this.typingTimeout);
                     this.typingTimeout = setTimeout(() => this.stopTyping(), 2500);
                 };
                 input.onblur = () => this.stopTyping();
+                input.onkeydown = (e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        this.send();
+                    }
+                };
             },
             async startTyping() {
                 if (!this.activeContactId) return;
@@ -2150,31 +2162,21 @@ const App = {
                     }
                 }
                 const colorInput = document.getElementById('chat-custom-color-input');
-                if (colorInput) colorInput.value = customColor || '#8b5cf6';
+                if (colorInput) colorInput.value = customColor || '#0084FF';
 
-                if (headerContent) {
-                    headerContent.innerHTML = `
-                    <div class="flex items-center gap-3">
-                        <button class="p-1 mr-2" onclick="App.Features.Chat.closeMobileChat()"><i data-lucide="arrow-left"></i></button>
-                        <img src="${(avatar && avatar !== 'null') ? avatar : 'https://ui-avatars.com/api/?name=' + username}" class="w-8 h-8 rounded-full">
-                        <div class="flex flex-col">
-                            <span class="font-bold text-white text-sm">${displayName}</span>
-                            ${custom?.nickname ? `<span class="text-[9px] text-gray-500 italic">@${username}</span>` : '<span class="text-[9px] text-green-500">En ligne</span>'}
-                        </div>
-                    </div>
-                    <div class="flex items-center gap-1">
-                        <button onclick="App.Features.Chat.startCall()" class="p-2 hover:bg-white/5 rounded-full transition text-gray-400 hover:text-white" title="Appel vocal">
-                            <i data-lucide="phone" class="w-5 h-5"></i>
-                        </button>
-                        <button onclick="App.Features.Chat.startVideoCall()" class="p-2 hover:bg-white/5 rounded-full transition text-gray-400 hover:text-white" title="Appel vidéo">
-                            <i data-lucide="video" class="w-5 h-5"></i>
-                        </button>
-                        <button onclick="App.Features.Chat.toggleSettings()" class="p-2 hover:bg-white/5 rounded-full transition text-gray-400 hover:text-white" title="Options">
-                            <i data-lucide="settings" class="w-5 h-5"></i>
-                        </button>
-                    </div>
-                `;
-                    if (typeof lucide !== 'undefined') lucide.createIcons();
+                // Update header elements directly
+                const headerAvatar = document.getElementById('chat-header-avatar');
+                const headerName = document.getElementById('chat-header-name');
+                const headerActive = document.getElementById('chat-header-active');
+                
+                if (headerAvatar) {
+                    headerAvatar.src = (avatar && avatar !== 'null') ? avatar : 'https://ui-avatars.com/api/?name=' + username;
+                }
+                if (headerName) {
+                    headerName.textContent = displayName;
+                }
+                if (headerActive) {
+                    headerActive.textContent = custom?.nickname ? `@${username}` : 'Active now';
                 }
 
                 if (input) {
@@ -2233,23 +2235,52 @@ const App = {
                 const isMe = msg.sender_id === App.state.user.id;
                 const div = document.createElement('div');
                 div.id = `msg-${msg.id || Date.now()}`;
-                div.className = `flex flex-col ${isMe ? 'items-end' : 'items-start'} group mb-4`;
+                div.className = `message-row ${isMe ? 'sent' : 'received'}`;
+                div.dataset.senderId = msg.sender_id;
+
+                // Check if previous message is from same sender for grouping
+                const allMessages = container.querySelectorAll('.message-row');
+                const lastMessage = allMessages[allMessages.length - 1];
+                const isFirstInGroup = !lastMessage || lastMessage.dataset.senderId !== msg.sender_id;
+                
+                if (isFirstInGroup) {
+                    div.classList.add('first-in-group');
+                }
+                if (lastMessage) {
+                    lastMessage.classList.add('last-in-group');
+                }
 
                 let contentHtml = '';
                 if (msg.type === 'image') {
-                    contentHtml = `<img src="${msg.content}" class="rounded-xl max-w-full h-48 object-cover cursor-pointer border border-white/10 hover:opacity-90 transition" onclick="window.open('${msg.content}')">`;
+                    contentHtml = `<img src="${msg.content}" class="rounded-xl max-w-full h-auto max-h-64 object-cover cursor-pointer" onclick="window.open('${msg.content}')">`;
                 } else if (msg.type === 'file') {
                     const fileName = (() => {
                         try { return decodeURIComponent(msg.content.split('/').pop() || 'Fichier'); } catch { return 'Fichier'; }
                     })();
-                    contentHtml = `<a href="${msg.content}" target="_blank" rel="noopener" class="flex items-center gap-2 px-3 py-2 bg-white/5 hover:bg-white/10 rounded-xl">
+                    contentHtml = `<a href="${msg.content}" target="_blank" rel="noopener" class="flex items-center gap-2">
                         <i data-lucide="paperclip" class="w-4 h-4"></i>
-                        <span class="text-sm break-all">${fileName}</span>
+                        <span class="break-all">${fileName}</span>
                     </a>`;
                 } else if (msg.type === 'audio') {
-                    contentHtml = `<audio controls src="${msg.content}" class="w-64 max-w-full"></audio>`;
+                    // Voice message with waveform visualization
+                    const duration = msg.duration || '0:27';
+                    contentHtml = `
+                        <div class="flex items-center gap-3">
+                            <button onclick="this.nextElementSibling.play()" class="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center hover:bg-white/30 transition">
+                                <i data-lucide="play" class="w-4 h-4 fill-current"></i>
+                            </button>
+                            <div class="voice-waveform">
+                                ${Array.from({length: 20}, (_, i) => {
+                                    const height = 8 + Math.random() * 16;
+                                    return `<div class="bar" style="height: ${height}px; opacity: ${0.3 + Math.random() * 0.7}"></div>`;
+                                }).join('')}
+                            </div>
+                            <audio src="${msg.content}" class="hidden"></audio>
+                            <span class="voice-duration text-xs opacity-80">${duration}</span>
+                        </div>
+                    `;
                 } else {
-                    contentHtml = `<p class="text-sm break-words">${msg.content}</p>`;
+                    contentHtml = `<p>${msg.content}</p>`;
                 }
 
                 // Reactions rendering
@@ -2260,61 +2291,44 @@ const App = {
                         return acc;
                     }, {});
 
-                    reactionsHtml = `<div class="flex flex-wrap gap-1 mt-1">` + Object.entries(counts).map(([emoji, count]) => `
-                    <button onclick="App.Features.Chat.toggleReaction('${msg.id}', '${emoji}')" class="flex items-center gap-1 bg-white/10 hover:bg-white/20 px-1.5 py-0.5 rounded-full text-[10px] transition">
-                        <span>${emoji}</span>
-                        <span class="opacity-60">${count}</span>
-                    </button>
-                `).join('') + `</div>`;
+                    reactionsHtml = `<div class="flex flex-wrap gap-1 mt-1 ${isMe ? 'justify-end' : 'justify-start'}">` + Object.entries(counts).map(([emoji, count]) => `
+                        <button onclick="App.Features.Chat.toggleReaction('${msg.id}', '${emoji}')" class="flex items-center gap-1 bg-white shadow-sm px-1.5 py-0.5 rounded-full text-xs">
+                            <span>${emoji}</span>
+                            <span class="text-gray-500">${count}</span>
+                        </button>
+                    `).join('') + `</div>`;
                 }
 
                 // Reply indicator
                 let replyHtml = '';
                 if (msg.parent_id) {
                     replyHtml = `
-                    <div class="mb-2 text-[10px] opacity-60 border-l-2 border-primary pl-2 italic bg-white/5 p-1 rounded-r-lg max-w-full truncate">
-                        Réponse au message...
-                    </div>
-                `;
+                        <div class="mb-1.5 text-xs opacity-70 border-l-2 ${isMe ? 'border-white/40' : 'border-gray-400'} pl-2 italic">
+                            Réponse au message...
+                        </div>
+                    `;
                 }
 
+                const timeStr = new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
                 const hasBeenRead = Array.isArray(msg.read_by) ? msg.read_by.includes(this.activeContactId) : !!msg.is_read;
-                const readIcon = isMe ? (hasBeenRead ? '<i data-lucide="check-check" class="w-3 h-3"></i>' : '<i data-lucide="check" class="w-3 h-3"></i>') : '';
+                const readStatus = isMe ? `<span class="ml-1">${hasBeenRead ? '✓✓' : '✓'}</span>` : '';
 
                 div.innerHTML = `
-                <div class="max-w-[85%] relative">
-                    <div class="message-bubble px-4 py-2 rounded-2xl ${isMe ? 'bg-primary text-white rounded-br-none' : 'bg-gray-800 text-gray-200 rounded-bl-none'} shadow-sm relative group/bubble">
+                    <div class="message-bubble ${msg.type === 'image' ? 'image' : ''} ${msg.type === 'audio' ? 'voice' : ''}">
                         ${replyHtml}
                         ${contentHtml}
-                        <div class="flex items-center justify-between gap-4 mt-1">
-                            <span class="text-[8px] opacity-40">${msg.is_edited ? 'Modifié' : ''}</span>
-                            <span class="flex items-center gap-1 text-[9px] opacity-50 ms-auto text-right">${new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} ${readIcon}</span>
-                        </div>
-
-                        ${reactionsHtml}
-
-                        <!-- Context Actions (Hover) -->
-                        <div class="absolute ${isMe ? '-left-12' : '-right-12'} top-0 flex flex-col gap-1 opacity-0 group-hover/bubble:opacity-100 transition-all z-20">
-                            <button onclick="App.Features.Chat.setReply('${msg.id}', '${msg.content?.substring(0, 30) || 'Image'}')" class="p-1.5 bg-gray-900 border border-white/10 rounded-full hover:text-primary transition" title="Répondre"><i data-lucide="corner-up-left" class="w-3 h-3"></i></button>
-                            ${isMe ? `
-                                <button onclick="App.Features.Chat.editMessage('${msg.id}', '${msg.content}')" class="p-1.5 bg-gray-900 border border-white/10 rounded-full hover:text-blue-400 transition" title="Modifier"><i data-lucide="edit-3" class="w-3 h-3"></i></button>
-                                <button onclick="App.Features.Chat.deleteMessage('${msg.id}')" class="p-1.5 bg-gray-900 border border-white/10 rounded-full hover:text-red-400 transition" title="Supprimer"><i data-lucide="trash-2" class="w-3 h-3"></i></button>
-                            ` : ''}
-                            <div class="flex gap-1 bg-gray-900 border border-white/10 rounded-full p-1 mt-1 shadow-lg">
-                                <button onclick="App.Features.Chat.toggleReaction('${msg.id}', '👍')" class="hover:scale-125 transition">👍</button>
-                                <button onclick="App.Features.Chat.toggleReaction('${msg.id}', '❤️')" class="hover:scale-125 transition">❤️</button>
-                                <button onclick="App.Features.Chat.toggleReaction('${msg.id}', '😂')" class="hover:scale-125 transition">😂</button>
-                                <button onclick="App.Features.Chat.toggleReaction('${msg.id}', '😮')" class="hover:scale-125 transition">😮</button>
-                                <button onclick="App.Features.Chat.toggleReaction('${msg.id}', '😢')" class="hover:scale-125 transition">😢</button>
-                                <button onclick="App.Features.Chat.toggleReaction('${msg.id}', '😡')" class="hover:scale-125 transition">😡</button>
-                                <button onclick="App.Features.Chat.toggleReaction('${msg.id}', '🙏')" class="hover:scale-125 transition">🙏</button>
-                            </div>
+                        <div class="flex items-center justify-end gap-1 mt-1 message-time">
+                            ${msg.is_edited ? '<span>Modifié •</span>' : ''}
+                            <span>${timeStr}${readStatus}</span>
                         </div>
                     </div>
-                </div>
-            `;
+                    ${reactionsHtml}
+                `;
+                
                 container.appendChild(div);
                 if (typeof lucide !== 'undefined') lucide.createIcons();
+                
+                // Scroll to bottom
                 setTimeout(() => { container.scrollTop = container.scrollHeight; }, 50);
             },
 
@@ -2339,9 +2353,14 @@ const App = {
 
                 if (error) await App.UI.Modal.alert("Erreur envoi: " + error.message, "Erreur");
                 else {
-                    if (!contentOverride) input.value = "";
+                    if (!contentOverride && input) input.value = "";
                     this.clearReply();
-                    input.focus();
+                    // Reset mic/send buttons
+                    const btnSend = document.getElementById('btn-send');
+                    const btnMic = document.getElementById('btn-mic');
+                    if (btnSend) btnSend.classList.add('hidden');
+                    if (btnMic) btnMic.classList.remove('hidden');
+                    if (input) input.focus();
                     this.loadConversations();
 
                     // Créer une notification pour le destinataire
