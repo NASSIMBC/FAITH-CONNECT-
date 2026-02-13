@@ -1,3 +1,4 @@
+
 // ==========================================
 // FAITH CONNECT 2.0 - MODULAR ARCHITECTURE
 // ==========================================
@@ -1858,11 +1859,12 @@ const App = {
                     if (btnSend) btnSend.classList.toggle('hidden', !hasText);
                     if (btnMic) btnMic.classList.toggle('hidden', hasText);
                     
-                    this.startTyping();
-                    if (this.typingTimeout) clearTimeout(this.typingTimeout);
-                    this.typingTimeout = setTimeout(() => this.stopTyping(), 2500);
+                    // Typing indicator disabled - chat_typing table not available
+                    // this.startTyping();
+                    // if (this.typingTimeout) clearTimeout(this.typingTimeout);
+                    // this.typingTimeout = setTimeout(() => this.stopTyping(), 2500);
                 };
-                input.onblur = () => this.stopTyping();
+                // input.onblur = () => this.stopTyping();
                 input.onkeydown = (e) => {
                     if (e.key === 'Enter' && !e.shiftKey) {
                         e.preventDefault();
@@ -1871,51 +1873,38 @@ const App = {
                 };
             },
             async startTyping() {
-                if (!this.activeContactId) return;
-                try {
-                    await sb.from('chat_typing').upsert({
-                        user_id: App.state.user.id,
-                        contact_id: this.activeContactId,
-                        is_typing: true,
-                        updated_at: new Date().toISOString()
-                    }, { onConflict: 'user_id,contact_id' });
-                } catch {}
+                // Disabled - chat_typing table not available in database
+                return;
             },
             async stopTyping() {
-                if (!this.activeContactId) return;
-                try {
-                    await sb.from('chat_typing').upsert({
-                        user_id: App.state.user.id,
-                        contact_id: this.activeContactId,
-                        is_typing: false,
-                        updated_at: new Date().toISOString()
-                    }, { onConflict: 'user_id,contact_id' });
-                } catch {}
+                // Disabled - chat_typing table not available in database
+                return;
             },
             async markRead() {
-                if (!this.activeContactId) return;
+                if (!this.activeContactId || !App.state.user) return;
                 try {
-                    await sb.from('messages').update({
-                        is_read: true,
-                        read_at: new Date().toISOString()
-                    }).eq('receiver_id', App.state.user.id).eq('sender_id', this.activeContactId);
-                } catch {}
-                try {
+                    // Get unread messages from this contact
                     const { data: unread } = await sb.from('messages')
                         .select('id, read_by')
                         .eq('receiver_id', App.state.user.id)
                         .eq('sender_id', this.activeContactId)
-                        .limit(200);
+                        .eq('is_read', false)
+                        .limit(50);
+                    
                     if (unread && unread.length > 0) {
+                        // Mark each as read
                         for (const m of unread) {
-                            const current = Array.isArray(m.read_by) ? m.read_by : [];
-                            if (!current.includes(App.state.user.id)) {
-                                const updated = [...current, App.state.user.id];
-                                await sb.from('messages').update({ read_by: updated }).eq('id', m.id);
-                            }
+                            await sb.from('messages')
+                                .update({ 
+                                    is_read: true, 
+                                    read_at: new Date().toISOString() 
+                                })
+                                .eq('id', m.id);
                         }
                     }
-                } catch {}
+                } catch (e) {
+                    console.log('markRead error:', e);
+                }
             },
 
             setReply(msgId, text) {
@@ -2003,11 +1992,19 @@ const App = {
                 const container = document.getElementById('conversations-list');
                 if (!container || !App.state.user) return;
 
-                // 1. Fetch current friends (accepted)
-                const { data: friendships } = await sb.from('friends').select('user_id, friend_id').or(`user_id.eq.${App.state.user.id},friend_id.eq.${App.state.user.id}`).eq('status', 'accepted');
+                // 1. Fetch current friends (accepted) - simplified queries
+                const [{ data: friendshipsSent }, { data: friendshipsReceived }] = await Promise.all([
+                    sb.from('friends').select('user_id, friend_id').eq('user_id', App.state.user.id).eq('status', 'accepted'),
+                    sb.from('friends').select('user_id, friend_id').eq('friend_id', App.state.user.id).eq('status', 'accepted')
+                ]);
+                const friendships = [...(friendshipsSent || []), ...(friendshipsReceived || [])];
 
-                // 2. Fetch people with existing messages (even if not friends)
-                const { data: recentMsgs } = await sb.from('messages').select('sender_id, receiver_id').or(`sender_id.eq.${App.state.user.id},receiver_id.eq.${App.state.user.id}`).order('created_at', { ascending: false }).limit(50);
+                // 2. Fetch people with existing messages - simplified queries
+                const [{ data: msgsSent }, { data: msgsReceived }] = await Promise.all([
+                    sb.from('messages').select('sender_id, receiver_id').eq('sender_id', App.state.user.id).order('created_at', { ascending: false }).limit(50),
+                    sb.from('messages').select('sender_id, receiver_id').eq('receiver_id', App.state.user.id).order('created_at', { ascending: false }).limit(50)
+                ]);
+                const recentMsgs = [...(msgsSent || []), ...(msgsReceived || [])];
 
                 const partnerIds = new Set();
                 if (friendships) {
@@ -2023,10 +2020,10 @@ const App = {
                         container.innerHTML = `
                             <div class="chat-list-header px-4 py-3">
                                 <div class="flex items-center justify-between">
-                                    <p class="font-semibold text-white text-sm">Messages</p>
-                                    <div class="flex items-center gap-2 text-gray-400">
-                                        <button class="p-2 rounded-lg hover:bg-white/5"><i data-lucide="search" class="w-4 h-4"></i></button>
-                                        <button class="p-2 rounded-lg hover:bg-white/5"><i data-lucide="more-horizontal" class="w-4 h-4"></i></button>
+                                    <p class="font-bold text-gray-900 text-lg">Messages</p>
+                                    <div class="flex items-center gap-1">
+                                        <button class="p-2 rounded-full hover:bg-gray-100 text-gray-600"><i data-lucide="search" class="w-5 h-5"></i></button>
+                                        <button class="p-2 rounded-full hover:bg-gray-100 text-gray-600"><i data-lucide="more-horizontal" class="w-5 h-5"></i></button>
                                     </div>
                                 </div>
                             </div>
@@ -2050,7 +2047,7 @@ const App = {
                         if (typeof lucide !== 'undefined') lucide.createIcons();
                     }
                 } else {
-                    container.innerHTML = `<div class="p-10 text-center text-xs text-gray-500 italic">Aucune discussion. ✨</div>`;
+                    container.innerHTML = `<div class="p-10 text-center text-sm text-gray-500">Aucune discussion. ✨</div>`;
                 }
             },
 
@@ -2089,6 +2086,8 @@ const App = {
                     })
                     .subscribe();
 
+                // Typing indicator subscription disabled - chat_typing table not available
+                /*
                 sb.channel('realtime_typing')
                     .on('postgres_changes', {
                         event: '*',
@@ -2103,6 +2102,7 @@ const App = {
                         }
                     })
                     .subscribe();
+                */
             },
 
             async openChat(userId, username, avatar) {
@@ -2195,19 +2195,32 @@ const App = {
                 const msgsContainer = document.getElementById('chat-messages');
                 if (!msgsContainer) return;
 
-                const { data: messages } = await sb.from('messages')
-                    .select('*')
-                    .or(`and(sender_id.eq.${App.state.user.id},receiver_id.eq.${userId}),and(sender_id.eq.${userId},receiver_id.eq.${App.state.user.id})`)
-                    .order('created_at', { ascending: true });
+                // Simplified query - get all messages where user is sender or receiver
+                const [sent, received] = await Promise.all([
+                    sb.from('messages')
+                        .select('*')
+                        .eq('sender_id', App.state.user.id)
+                        .eq('receiver_id', userId)
+                        .order('created_at', { ascending: true }),
+                    sb.from('messages')
+                        .select('*')
+                        .eq('sender_id', userId)
+                        .eq('receiver_id', App.state.user.id)
+                        .order('created_at', { ascending: true })
+                ]);
+
+                // Combine and sort by created_at
+                const allMessages = [...(sent.data || []), ...(received.data || [])]
+                    .sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
 
                 msgsContainer.innerHTML = '';
-                if (messages && messages.length > 0) {
-                    messages.forEach(m => this.renderMessage(m));
+                if (allMessages.length > 0) {
+                    allMessages.forEach(m => this.renderMessage(m));
                 } else {
-                    msgsContainer.innerHTML = '<div class="text-center text-xs text-gray-500 py-10">Aucun message. Dites bonjour ! 👋</div>';
+                    msgsContainer.innerHTML = '<div class="text-center text-xs text-gray-400 py-10">Aucun message. Dites bonjour ! 👋</div>';
                 }
                 msgsContainer.scrollTop = msgsContainer.scrollHeight;
-                if (messages && messages.length > 0) {
+                if (allMessages.length > 0) {
                     this.markRead();
                 }
             },
@@ -2221,9 +2234,9 @@ const App = {
                 if (view) {
                     view.classList.add('chat-list-only');
                 }
-                this.stopTyping();
+                // stopTyping disabled - table not available
+                // this.stopTyping();
                 this.activeContactId = null;
-
             },
 
             renderMessage(msg) {
